@@ -47,13 +47,13 @@ impl Game {
 
     fn each_owner_contains_k(vec: &Vec<(u8,u8,u8,char)>) -> bool{
         let mut num_players:u8 = 0;
-        for (owner, x, y, pce) in vec {
+        for (owner, _x, _y, _pce) in vec {
             if *owner >= num_players {
                 num_players = owner + 1;
             }
         }
         let mut has_k = vec![false; num_players as usize];
-        for (owner, x, y, pce_char) in vec {
+        for (owner, _x, _y, pce_char) in vec {
             if pce_char.to_ascii_lowercase() == 'k' {
                 has_k[*owner as usize] = true;
             }
@@ -145,7 +145,6 @@ pub struct Engine {
 impl Engine {
     /// Initializes a new engine
     pub fn default() -> Engine{
-        let dims = Dimensions{width:8,height:8};
         Engine{
             move_generator: MoveGenerator::new(),
             current_position: Position::default(),
@@ -170,7 +169,7 @@ impl Engine {
     }
 
     /// Adds a new piece on the board
-    pub fn add_piece(&mut self, owner:usize, piece_type:PieceType, x: u8, y:u8) {
+    pub fn add_piece(&mut self, _owner:usize, _piece_type:PieceType, x: u8, y:u8) {
         self.current_position.add_piece(0, PieceType::Custom('a'), to_index(x,y) as u8);
     }
 

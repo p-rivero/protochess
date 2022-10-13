@@ -37,7 +37,7 @@ impl ZobristTable {
         zobrist.push(Vec::new());
         zobrist.push(Vec::new());
         for i in 0..2 {
-            for j in 0..6 {
+            for _j in 0..6 {
                 let mut randoms = Vec::with_capacity(256);
                 for _ in 0..=255 {
                     randoms.push(rng.gen::<u64>());
@@ -63,7 +63,7 @@ impl ZobristTable {
     }
 
     /// Zobrist for the player to move
-    pub fn get_to_move_zobrist(&self, player_num: u8) -> u64 {
+    pub fn get_to_move_zobrist(&self, _player_num: u8) -> u64 {
         self.white_to_move
     }
 
@@ -97,7 +97,7 @@ impl ZobristTable {
             PieceType::Pawn => {
                 self.zobrist[owner as usize][5][index as usize]
             }
-            PieceType::Custom(c) => {
+            PieceType::Custom(_c) => {
                 if !self.custom_zobrist.contains_key(&(owner, pt.to_owned())) {
                     return 0;
                     //self.register_piecetype(owner, pt);
@@ -123,7 +123,7 @@ impl ZobristTable {
 
     fn make_randoms(&mut self) -> Vec<u64> {
         let mut randoms = Vec::with_capacity(256);
-        for i in 0..=255 {
+        for _i in 0..=255 {
             randoms.push(self.rng.gen::<u64>());
         }
         randoms

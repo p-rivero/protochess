@@ -3,7 +3,6 @@ use crate::position::Position;
 use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 use crate::transposition_table::{TranspositionTable, Entry, EntryFlag};
-use instant::{Instant, Duration};
 
 //An entry in the transposition table
 
@@ -13,7 +12,7 @@ pub(crate) struct Searcher {
     //indexed by killer_moves[depth][0] or killer_moves[depth][0]
     killer_moves: [[Move;2];64],
     //Indexed by history_moves[side2move][from][to]
-    history_moves: [[u8;256];256],
+    history_moves: [[u16;256];256],
 
     //Stats
     //Counter for the number of nodes searched
@@ -148,11 +147,11 @@ impl Searcher {
 
             num_legal_moves += 1;
             position.make_move((&move_).to_owned());
-            let mut score = 0;
+            let mut score: isize;
             if num_legal_moves == 1 {
                 score = -self.alphabeta(position, eval, movegen,
                                         depth - 1, -beta, -alpha, true);
-            }else{
+            } else {
 
                 //Try late move reduction
                 if num_legal_moves > 4
@@ -264,7 +263,6 @@ impl Searcher {
             alpha = score;
         }
 
-        let mut best_move = Move::null();
         let mut num_legal_moves = 0;
         let mut moves_and_score = self.get_scored_capture_moves(eval, movegen, position, depth);
         //for (score, move_) in moves_and_score {
@@ -292,7 +290,7 @@ impl Searcher {
             }
             if score > alpha {
                 alpha = score;
-                best_move = move_;
+                // best_move = move_;
             }
         }
 
@@ -352,7 +350,7 @@ impl Searcher {
         if !move_.get_is_capture() {
             self.history_moves
                 [move_.get_from() as usize]
-                [move_.get_to() as usize] += depth;
+                [move_.get_to() as usize] += depth as u16;
         }
     }
 
@@ -360,7 +358,7 @@ impl Searcher {
     fn get_scored_pseudo_moves(&mut self, eval: &mut Evaluator, movegen: &MoveGenerator, position: &mut Position, depth: u8) -> Vec<(usize, Move)> {
         let mut moves_and_score:Vec<(usize, Move)> = movegen.get_pseudo_moves(position)
             .map(|mv| {
-                (eval.score_move(depth,&self.history_moves,&self.killer_moves, position, &mv), mv)
+                (eval.score_move(depth, &self.history_moves, &self.killer_moves, position, &mv), mv)
             }).collect();
 
         //Assign PV/hash moves to usize::MAX
@@ -380,7 +378,7 @@ impl Searcher {
     fn get_scored_capture_moves(&mut self, eval: &mut Evaluator, movegen: &MoveGenerator, position: &mut Position, depth: u8) -> Vec<(usize, Move)> {
         let mut moves_and_score:Vec<(usize, Move)> = movegen.get_capture_moves(position)
             .map(|mv| {
-                (eval.score_move(depth,&self.history_moves,&self.killer_moves, position, &mv), mv)
+                (eval.score_move(depth, &self.history_moves, &self.killer_moves, position, &mv), mv)
             }).collect();
 
         //Assign PV/hash moves to usize::MAX
@@ -398,7 +396,7 @@ impl Searcher {
 
     #[inline]
     fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator,
-                 depth: u8, alpha: isize, beta: isize, do_null: bool) -> Option<isize> {
+                 depth: u8, _alpha: isize, beta: isize, do_null: bool) -> Option<isize> {
         if do_null {
             if depth > 3 && eval.can_do_null_move(position)
                 && !movegen.in_check(position) {

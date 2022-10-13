@@ -337,7 +337,7 @@ impl AttackTables {
 mod tests {
     use crate::move_generator::attack_tables::AttackTables;
     use crate::types::bitboard::Bitboard;
-    use crate::types::bitboard::to_string;
+    //use crate::types::bitboard::to_string;
 
 
     #[test]
@@ -348,9 +348,9 @@ mod tests {
 
 
 
-        println!("occ \n{}", to_string(&bb));
-        //let rankatt = attacktb.get_rank_attack(2,&bb);
-        //println!("{}", to_string(&rankatt));
+        // println!("occ \n{}", to_string(&bb));
+        // let rankatt = _attacktb.get_rank_attack(2,&bb);
+        // println!("{}", to_string(&rankatt));
 
 
     }

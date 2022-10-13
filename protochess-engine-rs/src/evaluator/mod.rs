@@ -17,7 +17,6 @@ const ROOK_SCORE:isize = 500;
 const BISHOP_SCORE:isize = 350;
 const KNIGHT_SCORE:isize = 300;
 const PAWN_SCORE:isize = 100;
-const CHECKMATED_SCORE:isize = -99999;
 const CASTLING_BONUS:isize = 400;
 //Multiplier for the piece square table
 const PST_MULTIPLIER:isize = 5;
@@ -44,25 +43,35 @@ impl Evaluator {
     pub fn evaluate(&mut self, position: &mut Position, movegen: &MoveGenerator) -> isize {
         let mut score = 0;
         let player_num = position.whos_turn;
+        
         //Material score
         let mut total_material_score = 0;
         for ps in position.pieces.iter() {
-            let side_multiplier = if ps.player_num == player_num { 1 } else { -1 };
             let material_score = self.get_material_score_for_pieceset(position, ps);
-            score += side_multiplier * material_score;
+            
+            if ps.player_num == player_num {
+                score += material_score;
+            } else {
+                score -= material_score;
+            }
+            
             total_material_score += material_score;
         }
 
         //Positional score
         let is_endgame = total_material_score < 2 * KING_SCORE + 2 * QUEEN_SCORE + 2 * ROOK_SCORE;
         for ps in position.pieces.iter(){
-            let side_multiplier = if ps.player_num == player_num { 1 } else { -1 };
             let positional_score = self.get_positional_score(is_endgame, position, ps,movegen);
             //Castling bonus
             if position.properties.castling_rights.did_player_castle(ps.player_num) && !is_endgame {
                 score += CASTLING_BONUS;
             }
-            score += side_multiplier * positional_score;
+            
+            if ps.player_num == player_num {
+                score += positional_score;
+            } else {
+                score -= positional_score;
+            }
         }
 
         score
@@ -81,12 +90,13 @@ impl Evaluator {
             if self.custom_piece_value_table.contains_key(&custom.piece_type){
                 let score = *self.custom_piece_value_table.get(&custom.piece_type).unwrap();
                 material_score += custom.bitboard.count_ones() as isize * score;
-            }else{
+            }
+            else {
                 let option_mp = position.get_movement_pattern(&custom.piece_type);
                 let score = {
                     if let Some(mp) = option_mp {
                         Evaluator::score_movement_pattern(mp)
-                    }else{
+                    } else {
                         0
                     }
                 };
@@ -98,7 +108,7 @@ impl Evaluator {
     }
 
     /// Scores a move on a position
-    pub fn score_move(&mut self, depth:u8, history_moves: &[[u8;256];256], killer_moves: &[[Move;2];64], position: &mut Position, move_:&Move) -> usize {
+    pub fn score_move(&mut self, depth:u8, history_moves: &[[u16;256];256], killer_moves: &[[Move;2];64], position: &mut Position, move_:&Move) -> usize {
         if !move_.get_is_capture() {
             return if move_ == &killer_moves[depth as usize][0] || move_ == &killer_moves[depth as usize][1] {
                 9000
@@ -124,7 +134,7 @@ impl Evaluator {
             PieceType::Rook => { ROOK_SCORE }
             PieceType::Queen => { QUEEN_SCORE }
             PieceType::King => { KING_SCORE }
-            PieceType::Custom(c) => {
+            PieceType::Custom(_c) => {
                 if self.custom_piece_value_table.contains_key(&piece_type){
                     *self.custom_piece_value_table.get(&piece_type).unwrap()
                 }else{

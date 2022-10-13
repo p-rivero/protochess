@@ -1,7 +1,8 @@
-#[macro_use] extern crate scan_rules;
+//#[macro_use] extern crate scan_rules;
 
 pub fn main() {
-    let mut engine = protochess_engine_rs::Engine::default();
+    //let mut engine = protochess_engine_rs::Engine::default();
+    let mut engine = protochess_engine_rs::Engine::from_fen("R3b3/4k3/2n5/p4p1p/4p3/2B5/1PP2PPP/5K2 w - - 10 36".parse().unwrap());
     //let mut engine = protochess_engine_rs::Engine::from_fen("rnbqkbnr/nnnnnnnn/rrrrrrrr/8/8/8/QQQQQQQQ/RNBQKBNR w KQkq - 0 1".parse().unwrap());
     //let mut engine = protochess_engine_rs::Engine::from_fen(("rnbqkbnr/pp4pp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").parse().unwrap());
     //let mut engine = protochess_engine_rs::Engine::from_fen("r1b3nr/ppqk1Bbp/2pp4/4P1B1/3n4/3P4/PPP2QPP/R4RK1 w - - 1 0".parse().unwrap());

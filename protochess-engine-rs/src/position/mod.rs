@@ -19,7 +19,6 @@ mod zobrist_table;
 pub mod piece;
 pub mod piece_set;
 pub mod movement_pattern;
-use std::sync::RwLock;
 
 //No reason to have more than one zobrist table
 lazy_static! {
@@ -69,8 +68,8 @@ impl Position {
 
     pub fn get_char_movementpattern_map(&self) -> HashMap<char, MovementPatternExternal> {
         let mut return_map = HashMap::new();
-        for (pieceType, movement_pattern) in self.movement_rules.iter(){
-            match pieceType {
+        for (piece_type, movement_pattern) in self.movement_rules.iter(){
+            match piece_type {
                 PieceType::Custom(c) => {
                     return_map.insert(*c, internal_mp_to_external(movement_pattern.to_owned()));
                 }
@@ -448,7 +447,7 @@ impl Position {
         let mut occupied = Bitboard::zero();
         occupied |= &w_pieces.occupied;
         occupied |= &b_pieces.occupied;
-        let mut zobrist_table = ZobristTable::new();
+        let zobrist_table = ZobristTable::new();
         let mut zobrist_key = 0;
 
         let mut properties = PositionProperties::default();
@@ -616,7 +615,7 @@ mod pos_test {
 
     #[test]
     fn print_pieces(){
-        let mut pos = Position::default();
+        let pos = Position::default();
         for pce in pos.pieces_as_tuples(){
             println!("{:?}", pce);
         }
@@ -631,7 +630,7 @@ mod pos_test {
     #[test]
     fn null_move_eq() {
         let mut pos = Position::default();
-        let movegen = MoveGenerator::new();
+        //let movegen = MoveGenerator::new();
         let zob_0 = pos.get_zobrist();
         pos.make_move(Move::null());
         pos.make_move(Move::null());
@@ -648,7 +647,6 @@ mod pos_test {
         let mut pos = Position::default();
         let movegen = MoveGenerator::new();
         let zob_0 = pos.get_zobrist();
-        let moves =
         for move_ in movegen.get_pseudo_moves(&mut pos) {
             pos.make_move(move_);
             for move_ in movegen.get_pseudo_moves(&mut pos) {
