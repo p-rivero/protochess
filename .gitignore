@@ -4,3 +4,4 @@ protochess-engine-rs/game
 protochess-engine-rs/Cargo.lock
 protochess-engine-rs/perf.data
 protochess-engine-rs/perf.data.old
+.vscode

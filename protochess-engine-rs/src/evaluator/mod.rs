@@ -108,9 +108,10 @@ impl Evaluator {
     }
 
     /// Scores a move on a position
-    pub fn score_move(&mut self, depth:u8, history_moves: &[[u16;256];256], killer_moves: &[[Move;2];64], position: &mut Position, move_:&Move) -> usize {
+    /// This is used for move ordering in order to search the moves with the most potential first
+    pub fn score_move(&mut self, history_moves: &[[u16;256];256], killer_moves: &[Move;2], position: &mut Position, move_:&Move) -> usize {
         if !move_.get_is_capture() {
-            return if move_ == &killer_moves[depth as usize][0] || move_ == &killer_moves[depth as usize][1] {
+            return if move_ == &killer_moves[0] || move_ == &killer_moves[1] {
                 9000
             } else {
                 history_moves[move_.get_from() as usize][move_.get_to() as usize] as usize
