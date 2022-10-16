@@ -56,7 +56,7 @@ impl Iterator for BitboardMoves {
                     let promo_options = {
                         if let Some(pv) = &mut self.current_promo_vals {
                             pv
-                        }else{
+                        } else {
                             self.current_promo_vals = (&self.promo_vals).to_owned();
                             self.current_promo_vals.as_mut().unwrap()
                         }
@@ -71,7 +71,7 @@ impl Iterator for BitboardMoves {
                     }
                     //Unwrap intentionally here; want to panic if this goes wrong
                     Some(next_char)
-                }else{
+                } else {
                     //No promotion chars left, go to next after this
                     self.moves.set_bit(to, false);
                     None

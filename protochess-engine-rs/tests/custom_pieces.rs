@@ -56,7 +56,7 @@ mod custom_pieces {
             translate_southwest: false
         });
 
-        for thing in pos.get_char_movementpattern_map(){
+        for thing in pos.get_char_movementpattern_map() {
             println!("{:?}", thing);
         }
 

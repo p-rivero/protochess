@@ -116,7 +116,7 @@ impl ZobristTable {
     }
 
     //Registers a custom piece type
-    pub fn register_piecetype(&mut self, player_num:u8, pt:&PieceType){
+    pub fn register_piecetype(&mut self, player_num:u8, pt:&PieceType) {
         let randoms = self.make_randoms();
         self.custom_zobrist.insert((player_num, pt.to_owned()), randoms);
     }

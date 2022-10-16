@@ -60,7 +60,7 @@ impl Evaluator {
 
         //Positional score
         let is_endgame = total_material_score < 2 * KING_SCORE + 2 * QUEEN_SCORE + 2 * ROOK_SCORE;
-        for ps in position.pieces.iter(){
+        for ps in position.pieces.iter() {
             let positional_score = self.get_positional_score(is_endgame, position, ps,movegen);
             //Castling bonus
             if position.properties.castling_rights.did_player_castle(ps.player_num) && !is_endgame {
@@ -87,7 +87,7 @@ impl Evaluator {
         material_score += piece_set.pawn.bitboard.count_ones() as isize * PAWN_SCORE;
 
         for custom in &piece_set.custom {
-            if self.custom_piece_value_table.contains_key(&custom.piece_type){
+            if self.custom_piece_value_table.contains_key(&custom.piece_type) {
                 let score = *self.custom_piece_value_table.get(&custom.piece_type).unwrap();
                 material_score += custom.bitboard.count_ones() as isize * score;
             }
@@ -109,16 +109,16 @@ impl Evaluator {
 
     /// Scores a move on a position
     /// This is used for move ordering in order to search the moves with the most potential first
-    pub fn score_move(&mut self, history_moves: &[[u16;256];256], killer_moves: &[Move;2], position: &mut Position, move_:&Move) -> usize {
-        if !move_.get_is_capture() {
-            return if move_ == &killer_moves[0] || move_ == &killer_moves[1] {
+    pub fn score_move(&mut self, history_moves: &[[u16;256];256], killer_moves: &[Move;2], position: &mut Position, mv:&Move) -> usize {
+        if !mv.get_is_capture() {
+            return if mv == &killer_moves[0] || mv == &killer_moves[1] {
                 9000
             } else {
-                history_moves[move_.get_from() as usize][move_.get_to() as usize] as usize
+                history_moves[mv.get_from() as usize][mv.get_to() as usize] as usize
             }
         }
-        let attacker:PieceType = (&position.piece_at(move_.get_from() as usize).unwrap().1.piece_type).to_owned();
-        let victim:PieceType = (&position.piece_at(move_.get_target() as usize).unwrap().1.piece_type).to_owned();
+        let attacker:PieceType = (&position.piece_at(mv.get_from() as usize).unwrap().1.piece_type).to_owned();
+        let victim:PieceType = (&position.piece_at(mv.get_target() as usize).unwrap().1.piece_type).to_owned();
 
         let attack_score = self.get_material_score(attacker, position);
         let victim_score = self.get_material_score(victim, position);
@@ -136,14 +136,14 @@ impl Evaluator {
             PieceType::Queen => { QUEEN_SCORE }
             PieceType::King => { KING_SCORE }
             PieceType::Custom(_c) => {
-                if self.custom_piece_value_table.contains_key(&piece_type){
+                if self.custom_piece_value_table.contains_key(&piece_type) {
                     *self.custom_piece_value_table.get(&piece_type).unwrap()
-                }else{
+                } else {
                     let option_mp = position.get_movement_pattern(&piece_type);
                     let score = {
                         if let Some(mp) = option_mp {
                             Evaluator::score_movement_pattern(mp)
-                        }else{
+                        } else {
                             0
                         }
                     };
@@ -184,7 +184,7 @@ impl Evaluator {
 
         score += (mp.translate_jump_deltas.len() * 18) as isize;
         score += (mp.attack_jump_deltas.len() * 18) as isize;
-        for d in mp.translate_sliding_deltas.iter().chain(mp.attack_sliding_deltas.iter()){
+        for d in mp.translate_sliding_deltas.iter().chain(mp.attack_sliding_deltas.iter()) {
             score += (d.len() * 18) as isize;
         }
 
@@ -214,10 +214,10 @@ impl Evaluator {
                 if  p.piece_type == PieceType::King {
                     if !is_endgame {
                         score += -score_table[index] * PST_MULTIPLIER;
-                    }else{
+                    } else {
                         score += score_table[index] * PST_MULTIPLIER;
                     }
-                }else{
+                } else {
                     score += score_table[index] * PST_MULTIPLIER;
                 }
 

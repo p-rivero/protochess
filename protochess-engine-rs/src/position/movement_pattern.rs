@@ -80,7 +80,7 @@ pub fn external_mp_to_internal(mpe: MovementPatternExternal) -> MovementPattern{
                 bb.set_bit(to_index(x, y), true);
             }
             Some(bb)
-        }else{
+        } else {
             None
         }
     };
@@ -121,7 +121,7 @@ pub fn internal_mp_to_external(mp: MovementPattern) -> MovementPatternExternal {
             }
             if sq.len() != 0 {
                 Some(sq)
-            }else{
+            } else {
                 None
             }
         } else {

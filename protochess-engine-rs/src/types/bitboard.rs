@@ -13,9 +13,9 @@ pub fn from_index(index:usize) -> (u8, u8) {
 //     let mut return_str = String::new();
 //     for y in (0..16).rev() {
 //         for x in 0..16 {
-//             if bitboard.bit(to_index(x, y)).unwrap(){
+//             if bitboard.bit(to_index(x, y)).unwrap() {
 //                 return_str.push('1');
-//             }else{
+//             } else {
 //                 return_str.push('.');
 //             }
 //             return_str.push(' ');

@@ -32,21 +32,21 @@ impl PieceSet {
     }
 
     pub fn piece_at(&mut self, index:usize) -> Option<&mut Piece> {
-        if self.king.bitboard.bit(index).unwrap(){
+        if self.king.bitboard.bit(index).unwrap() {
             Some(&mut self.king)
-        }else if self.queen.bitboard.bit(index).unwrap(){
+        } else if self.queen.bitboard.bit(index).unwrap() {
             Some(&mut self.queen)
-        }else if self.bishop.bitboard.bit(index).unwrap(){
+        } else if self.bishop.bitboard.bit(index).unwrap() {
             Some(&mut self.bishop)
-        }else if self.knight.bitboard.bit(index).unwrap(){
+        } else if self.knight.bitboard.bit(index).unwrap() {
             Some(&mut self.knight)
-        }else if self.rook.bitboard.bit(index).unwrap(){
+        } else if self.rook.bitboard.bit(index).unwrap() {
             Some(&mut self.rook)
-        }else if self.pawn.bitboard.bit(index).unwrap(){
+        } else if self.pawn.bitboard.bit(index).unwrap() {
             Some(&mut self.pawn)
-        }else{
-            for p in self.custom.iter_mut(){
-                if p.bitboard.bit(index).unwrap(){
+        } else {
+            for p in self.custom.iter_mut() {
+                if p.bitboard.bit(index).unwrap() {
                     return Some(p);
                 }
             }
@@ -69,7 +69,7 @@ impl PieceSet {
     }
 
     //Recomputes occupied bb
-    pub fn update_occupied(&mut self){
+    pub fn update_occupied(&mut self) {
         self.occupied = Bitboard::zero();
         self.occupied |= &self.king.bitboard;
         self.occupied |= &self.queen.bitboard;

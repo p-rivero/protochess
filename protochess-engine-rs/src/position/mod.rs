@@ -68,7 +68,7 @@ impl Position {
 
     pub fn get_char_movementpattern_map(&self) -> HashMap<char, MovementPatternExternal> {
         let mut return_map = HashMap::new();
-        for (piece_type, movement_pattern) in self.movement_rules.iter(){
+        for (piece_type, movement_pattern) in self.movement_rules.iter() {
             match piece_type {
                 PieceType::Custom(c) => {
                     return_map.insert(*c, internal_mp_to_external(movement_pattern.to_owned()));
@@ -83,14 +83,14 @@ impl Position {
        self.movement_rules.get(piece_type)
     }
 
-    pub(crate) fn set_bounds(&mut self, dims: Dimensions, bounds: Bitboard){
+    pub(crate) fn set_bounds(&mut self, dims: Dimensions, bounds: Bitboard) {
         self.dimensions = dims;
         self.bounds = bounds;
     }
 
 
     /// Modifies the position to make the move
-    pub fn make_move(&mut self, move_: Move) {
+    pub fn make_move(&mut self, mv: Move) {
         let zobrist_table = &ZOBRIST_TABLE;
         let my_player_num = self.whos_turn;
         self.whos_turn = (self.whos_turn + 1) % self.num_players;
@@ -99,20 +99,20 @@ impl Position {
         new_props.zobrist_key ^= zobrist_table.get_to_move_zobrist(self.whos_turn);
         //In the special case of the null move, don't do anything except update whos_turn
         //And update props
-        if move_.get_move_type() == MoveType::Null {
+        if mv.get_move_type() == MoveType::Null {
             //Update props
             //Since we're passing, there cannot be an ep square
             new_props.ep_square = None;
-            new_props.move_played = Some(move_);
+            new_props.move_played = Some(mv);
             new_props.prev_properties = Some(Arc::clone(&self.properties));
             self.properties = Arc::new(new_props);
             return;
         }
 
         //Special moves
-        match move_.get_move_type() {
+        match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
-                let capt_index = move_.get_target();
+                let capt_index = mv.get_target();
                 let (owner, captd) = self.piece_at(capt_index as usize).unwrap();
                 let captd_piece_type = (&captd.piece_type).to_owned();
                 let captd_owner = captd.player_num;
@@ -121,8 +121,8 @@ impl Position {
                 self._remove_piece(capt_index);
             },
             MoveType::KingsideCastle => {
-                let rook_from = move_.get_target();
-                let (x, y) = from_index(move_.get_to() as usize);
+                let rook_from = mv.get_target();
+                let (x, y) = from_index(mv.get_to() as usize);
                 let rook_to = to_index(x - 1, y) as u8;
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_from);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_to);
@@ -130,8 +130,8 @@ impl Position {
                 new_props.castling_rights.set_player_castled(my_player_num);
             },
             MoveType::QueensideCastle => {
-                let rook_from = move_.get_target();
-                let (x, y) = from_index(move_.get_to() as usize);
+                let rook_from = mv.get_target();
+                let (x, y) = from_index(mv.get_to() as usize);
                 let rook_to = to_index(x + 1, y) as u8;
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_from);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_to);
@@ -141,8 +141,8 @@ impl Position {
             _ => {}
         }
 
-        let from= move_.get_from();
-        let to = move_.get_to();
+        let from= mv.get_from();
+        let to = mv.get_to();
         let from_piece = self.piece_at(from as usize).unwrap().1;
         let from_piece_type = from_piece.piece_type.to_owned();
         new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&from_piece_type, my_player_num, from);
@@ -151,12 +151,12 @@ impl Position {
         //Move piece to location
         self.move_piece(from, to);
         //Promotion
-        match move_.get_move_type() {
+        match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
                 new_props.promote_from = Some(from_piece_type.to_owned());
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&from_piece_type, my_player_num, to);
                 self._remove_piece(to);
-                let promote_to_pt = PieceType::from_char(move_.get_promotion_char().unwrap());
+                let promote_to_pt = PieceType::from_char(mv.get_promotion_char().unwrap());
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&promote_to_pt, my_player_num, to);
                 self._add_piece(my_player_num, promote_to_pt, to);
             },
@@ -197,12 +197,12 @@ impl Position {
                 new_props.zobrist_key ^= zobrist_table.get_castling_zobrist(my_player_num, false);
                 new_props.castling_rights.disable_kingside_castle(my_player_num);
                 new_props.castling_rights.disable_queenside_castle(my_player_num);
-            }else if from_piece_type == PieceType::Rook {
+            } else if from_piece_type == PieceType::Rook {
                 //King side
                 if x1 >= self.dimensions.width/2 {
                     new_props.castling_rights.disable_kingside_castle(my_player_num);
                     new_props.zobrist_key ^= zobrist_table.get_castling_zobrist(my_player_num, true);
-                }else{
+                } else {
                     new_props.castling_rights.disable_queenside_castle(my_player_num);
                     new_props.zobrist_key ^= zobrist_table.get_castling_zobrist(my_player_num, false);
                 }
@@ -210,7 +210,7 @@ impl Position {
         }
 
         //Update props
-        new_props.move_played = Some(move_);
+        new_props.move_played = Some(mv);
         new_props.prev_properties = Some(Arc::clone(&self.properties));
         self.properties = Arc::new(new_props);
         //Update occupied bbs for future calculations
@@ -222,27 +222,27 @@ impl Position {
 
         if self.whos_turn == 0 {
             self.whos_turn = self.num_players -1;
-        }else{
+        } else {
             self.whos_turn = (self.whos_turn - 1) % self.num_players;
         }
 
         let my_player_num = self.whos_turn;
-        let move_ = self.properties.move_played.unwrap();
+        let mv = self.properties.move_played.unwrap();
         //Undo null moves
-        if move_.get_move_type() == MoveType::Null {
+        if mv.get_move_type() == MoveType::Null {
             //Update props
             //Consume prev props; never to return again
             self.properties = self.properties.get_prev().unwrap();
             return;
         }
-        let from = move_.get_from();
-        let to= move_.get_to();
+        let from = mv.get_from();
+        let to= mv.get_to();
 
         //Undo move piece to location
         //Remove piece here
         self.move_piece(to, from);
         //Undo Promotion
-        match move_.get_move_type() {
+        match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
                 self._remove_piece(from);
                 self._add_piece(my_player_num, self.properties.promote_from.as_ref().unwrap().to_owned(), from);
@@ -252,21 +252,21 @@ impl Position {
 
         //Undo special moves
         //Special moves
-        match move_.get_move_type() {
+        match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
-                let capt = move_.get_target();
+                let capt = mv.get_target();
                 let (owner, pt) = self.properties.captured_piece.as_ref().unwrap();
                 self._add_piece(*owner, pt.to_owned(), capt);
             },
             MoveType::KingsideCastle => {
-                let rook_from = move_.get_target();
-                let (x, y) = from_index(move_.get_to() as usize);
+                let rook_from = mv.get_target();
+                let (x, y) = from_index(mv.get_to() as usize);
                 let rook_to = to_index(x - 1, y) as u8;
                 self.move_piece(rook_to,rook_from);
             },
             MoveType::QueensideCastle => {
-                let rook_from = move_.get_target();
-                let (x, y) = from_index(move_.get_to() as usize);
+                let rook_from = mv.get_target();
+                let (x, y) = from_index(mv.get_to() as usize);
                 let rook_to = to_index(x + 1, y) as u8;
                 self.move_piece(rook_to,rook_from);
             }
@@ -286,13 +286,13 @@ impl Position {
         for y in (0..self.dimensions.height).rev() {
             return_str = format!("{} {} ", return_str, y);
             for x in 0..self.dimensions.width {
-                if let Some((player_num, piece)) = self.piece_at(bitboard::to_index(x,y)){
+                if let Some((player_num, piece)) = self.piece_at(bitboard::to_index(x,y)) {
                     if player_num == 0 {
                         return_str.push(piece.char_rep.to_ascii_uppercase());
-                    }else{
+                    } else {
                         return_str.push(piece.char_rep.to_ascii_lowercase());
                     }
-                }else{
+                } else {
                     return_str.push('.');
                 }
                 return_str.push(' ');
@@ -311,9 +311,9 @@ impl Position {
     pub fn pieces_as_tuples(&self) -> Vec<(u8, u8, u8, char)>{
         let mut tuples = Vec::new();
         for (i, ps) in self.pieces.iter().enumerate() {
-            for piece in ps.get_piece_refs(){
+            for piece in ps.get_piece_refs() {
                 let mut bb_copy = (&piece.bitboard).to_owned();
-                while !bb_copy.is_zero(){
+                while !bb_copy.is_zero() {
                     let indx = bb_copy.lowest_one().unwrap();
                     let (x, y) = from_index(indx);
                     tuples.push((i as u8, x, y, piece.char_rep));
@@ -328,10 +328,10 @@ impl Position {
         let mut squares = Vec::new();
         for x in 0..self.dimensions.width {
             for y in 0..self.dimensions.height {
-                if self.xy_in_bounds(x, y){
+                if self.xy_in_bounds(x, y) {
                     let char_rep = if (x + y) % 2 == 0 {'b'} else {'w'};
                     squares.push((x, y, char_rep));
-                }else{
+                } else {
                     squares.push((x, y, 'x'));
                 }
             }
@@ -373,7 +373,7 @@ impl Position {
         let mut can_b_castle_k = false;
         let mut can_w_castle_q = false;
         let mut can_b_castle_q = false;
-        for c in fen.chars(){
+        for c in fen.chars() {
             if c == ' ' {
                 field += 1;
             }
@@ -384,31 +384,24 @@ impl Position {
                         x = 0;
                         y -= 1;
                         continue;
-                    }else if c.is_numeric() {
+                    } else if c.is_numeric() {
                         x += c.to_digit(10).expect("Not a digit!") as u8;
                         continue;
                     }
 
                     let index = bitboard::to_index(x, y);
+                    let pieces = if c.is_ascii_uppercase() {
+                        &mut w_pieces
+                    } else {
+                        &mut b_pieces
+                    };
                     let bitboard: &mut Bitboard = match c.to_ascii_lowercase() {
-                        'k' => {
-                            if c.is_uppercase() { &mut w_pieces.king.bitboard } else { &mut b_pieces.king.bitboard }
-                        },
-                        'q' => {
-                            if c.is_uppercase() { &mut w_pieces.queen.bitboard } else { &mut b_pieces.queen.bitboard }
-                        },
-                        'r' => {
-                            if c.is_uppercase() { &mut w_pieces.rook.bitboard } else { &mut b_pieces.rook.bitboard }
-                        },
-                        'b' => {
-                            if c.is_uppercase() { &mut w_pieces.bishop.bitboard } else { &mut b_pieces.bishop.bitboard }
-                        },
-                        'n' => {
-                            if c.is_uppercase() { &mut w_pieces.knight.bitboard } else { &mut b_pieces.knight.bitboard }
-                        },
-                        'p' => {
-                            if c.is_uppercase() { &mut w_pieces.pawn.bitboard } else { &mut b_pieces.pawn.bitboard }
-                        },
+                        'k' => { &mut pieces.king.bitboard },
+                        'q' => { &mut pieces.queen.bitboard },
+                        'r' => { &mut pieces.rook.bitboard },
+                        'b' => { &mut pieces.bishop.bitboard },
+                        'n' => { &mut pieces.knight.bitboard },
+                        'p' => { &mut pieces.pawn.bitboard },
                         _ => continue,
                     };
 
@@ -420,7 +413,7 @@ impl Position {
                 1 => {
                     if c == 'w' {
                         whos_turn = 0;
-                    }else{
+                    } else {
                         whos_turn = 1;
                     }
                 }
@@ -478,7 +471,7 @@ impl Position {
 
         for piece in w_pieces.get_piece_refs().into_iter().chain(b_pieces.get_piece_refs().into_iter()) {
             let mut bb_copy = (&piece.bitboard).to_owned();
-            while !bb_copy.is_zero(){
+            while !bb_copy.is_zero() {
                 let indx = bb_copy.lowest_one().unwrap();
                 zobrist_key ^= zobrist_table.get_zobrist_sq(piece, indx as u8);
                 bb_copy.set_bit(indx, false);
@@ -541,11 +534,11 @@ impl Position {
         false
     }
 
-    pub fn move_piece(&mut self, from:u8, to:u8){
-        if let Some(source_bb) = self.piece_bb_at(from as usize){
+    pub fn move_piece(&mut self, from:u8, to:u8) {
+        if let Some(source_bb) = self.piece_bb_at(from as usize) {
             source_bb.set_bit(from as usize, false);
             source_bb.set_bit(to as usize, true);
-        }else{
+        } else {
             println!("nothing to move??");
             println!("from {} {}", from_index(from as usize).0, from_index(from as usize).1);
             println!("to {} {}", from_index(to as usize).0, from_index(to as usize).1);
@@ -561,7 +554,7 @@ impl Position {
 
     /// Adds a piece to the position, assuming the piecetype already exists
     /// Does nothing if a custom piece isn't registered yet
-    fn _add_piece(&mut self, owner:u8, pt: PieceType, index:u8){
+    fn _add_piece(&mut self, owner:u8, pt: PieceType, index:u8) {
         match pt {
             PieceType::King => {self.pieces[owner as usize].king.bitboard.set_bit(index as usize, true);},
             PieceType::Queen => {self.pieces[owner as usize].queen.bitboard.set_bit(index as usize, true);},
@@ -582,7 +575,7 @@ impl Position {
 
     /// Updates the occupied bitboard
     /// Must be called after every position update/modification
-    fn update_occupied(&mut self){
+    fn update_occupied(&mut self) {
         self.occupied = Bitboard::zero();
         for (_i, ps) in self.pieces.iter_mut().enumerate() {
             ps.update_occupied();
@@ -614,13 +607,13 @@ mod pos_test {
     use crate::types::chess_move::Move;
 
     #[test]
-    fn print_pieces(){
+    fn print_pieces() {
         let pos = Position::default();
-        for pce in pos.pieces_as_tuples(){
+        for pce in pos.pieces_as_tuples() {
             println!("{:?}", pce);
         }
 
-        for pce in pos.tiles_as_tuples(){
+        for pce in pos.tiles_as_tuples() {
             println!("{:?}", pce);
         }
 
@@ -647,12 +640,12 @@ mod pos_test {
         let mut pos = Position::default();
         let movegen = MoveGenerator::new();
         let zob_0 = pos.get_zobrist();
-        for move_ in movegen.get_pseudo_moves(&mut pos) {
-            pos.make_move(move_);
-            for move_ in movegen.get_pseudo_moves(&mut pos) {
-                pos.make_move(move_);
-                for move_ in movegen.get_pseudo_moves(&mut pos) {
-                    pos.make_move(move_);
+        for mv in movegen.get_pseudo_moves(&mut pos) {
+            pos.make_move(mv);
+            for mv in movegen.get_pseudo_moves(&mut pos) {
+                pos.make_move(mv);
+                for mv in movegen.get_pseudo_moves(&mut pos) {
+                    pos.make_move(mv);
                     pos.unmake_move();
                 }
                 pos.unmake_move();

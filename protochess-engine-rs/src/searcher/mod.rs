@@ -38,8 +38,8 @@ impl Searcher {
             println!("score:{} depth: {}", best_score, d);
         }
 
-        match self.transposition_table.retrieve(position.get_zobrist()){
-            Some(entry) => {Some((&entry.move_).to_owned())}
+        match self.transposition_table.retrieve(position.get_zobrist()) {
+            Some(entry) => {Some((&entry.mv).to_owned())}
             None => None
         }
     }
@@ -66,8 +66,8 @@ impl Searcher {
             d += 1;
         }
 
-        match self.transposition_table.retrieve(position.get_zobrist()){
-            Some(entry) => {Some(((&entry.move_).to_owned(), d))}
+        match self.transposition_table.retrieve(position.get_zobrist()) {
+            Some(entry) => {Some(((&entry.mv).to_owned(), d))}
             None => None
         }
     }
@@ -120,14 +120,14 @@ impl Searcher {
         let in_check = movegen.in_check(position);
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
-        for (_move_score, move_) in self.sort_moves_by_score(eval, movegen.get_pseudo_moves(position), position, depth) {
+        for (_move_score, mv) in self.sort_moves_by_score(eval, movegen.get_pseudo_moves(position), position, depth) {
             
-            if !movegen.is_move_legal(&move_, position) {
+            if !movegen.is_move_legal(&mv, position) {
                 continue;
             }
 
             num_legal_moves += 1;
-            position.make_move((&move_).to_owned());
+            position.make_move((&mv).to_owned());
             let mut score: isize;
             if num_legal_moves == 1 {
                 score = -self.alphabeta(position, eval, movegen,
@@ -136,7 +136,7 @@ impl Searcher {
 
                 //Try late move reduction
                 if num_legal_moves > 4
-                    && move_.get_move_type() == MoveType::Quiet
+                    && mv.get_move_type() == MoveType::Quiet
                     && !is_pv
                     && depth >= 5
                     && !in_check {
@@ -147,7 +147,7 @@ impl Searcher {
                     }
                     score = -self.alphabeta(position, eval, movegen,
                                             reduced_depth, -alpha - 1, -alpha, true);
-                }else{
+                } else {
                     //Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
                 }
@@ -170,18 +170,18 @@ impl Searcher {
 
             if score > best_score {
                 best_score = score;
-                best_move = move_;
+                best_move = mv;
 
                 if score > alpha {
                     if score >= beta {
                         //Record new killer moves
-                        self.update_killers(depth, (&move_).to_owned());
+                        self.update_killers(depth, (&mv).to_owned());
                         //Beta cutoff, store in transpositon table
                         self.transposition_table.insert(position.get_zobrist(), Entry{
                             key: position.get_zobrist(),
                             flag: EntryFlag::BETA,
                             value: beta,
-                            move_,
+                            mv,
                             depth,
                             ancient: false
                         });
@@ -190,7 +190,7 @@ impl Searcher {
                     alpha = score;
 
                     //History heuristic
-                    self.update_history_heuristic(depth, &move_);
+                    self.update_history_heuristic(depth, &mv);
                 }
             }
         }
@@ -211,16 +211,16 @@ impl Searcher {
                 key: position.get_zobrist(),
                 flag: EntryFlag::EXACT,
                 value: best_score,
-                move_: (&best_move).to_owned(),
+                mv: (&best_move).to_owned(),
                 depth,
                 ancient: false
             })
-        }else{
+        } else {
             self.transposition_table.insert(position.get_zobrist(), Entry{
                 key: position.get_zobrist(),
                 flag: EntryFlag::ALPHA,
                 value: alpha,
-                move_: best_move,
+                mv: best_move,
                 depth,
                 ancient: false
             })
@@ -239,12 +239,12 @@ impl Searcher {
         }
 
         // Get only captures, sorted by move ordering heuristics (try the most promising moves first)
-        for (_move_score, move_) in self.sort_moves_by_score(eval, movegen.get_capture_moves(position), position, depth) {
-            if !movegen.is_move_legal(&move_, position) {
+        for (_move_score, mv) in self.sort_moves_by_score(eval, movegen.get_capture_moves(position), position, depth) {
+            if !movegen.is_move_legal(&mv, position) {
                 continue;
             }
 
-            position.make_move((&move_).to_owned());
+            position.make_move((&mv).to_owned());
             let score = -self.quiesce(position, eval, movegen, depth, -beta, -alpha);
             position.unmake_move();
 
@@ -253,7 +253,7 @@ impl Searcher {
             }
             if score > alpha {
                 alpha = score;
-                // best_move = move_;
+                // best_move = mv;
             }
         }
 
@@ -277,26 +277,25 @@ impl Searcher {
 
 
     #[inline]
-    fn update_killers(&mut self, depth: u8, move_: Move) {
-        if !move_.get_is_capture(){
-            if move_ != self.killer_moves[depth as usize][0] && move_ != self.killer_moves[depth as usize][1] {
+    fn update_killers(&mut self, depth: u8, mv: Move) {
+        if !mv.get_is_capture() {
+            if mv != self.killer_moves[depth as usize][0] && mv != self.killer_moves[depth as usize][1] {
                 self.killer_moves[depth as usize][1] = self.killer_moves[depth as usize][0];
-                self.killer_moves[depth as usize][0] = move_;
+                self.killer_moves[depth as usize][0] = mv;
             }
         }
     }
 
     #[inline]
-    fn update_history_heuristic(&mut self, depth: u8, move_:&Move) {
-        if !move_.get_is_capture() {
+    fn update_history_heuristic(&mut self, depth: u8, mv:&Move) {
+        if !mv.get_is_capture() {
             self.history_moves
-                [move_.get_from() as usize]
-                [move_.get_to() as usize] += depth as u16;
+                [mv.get_from() as usize]
+                [mv.get_to() as usize] += depth as u16;
         }
     }
 
     #[inline]
-    // TODO: Reorder arguments
     fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, eval: &mut Evaluator, moves: I, position: &mut Position, depth: u8) -> Vec<(usize, Move)> {
         let mut moves_and_score:Vec<(usize, Move)> = moves.map(|mv| {
             (eval.score_move(&self.history_moves, &self.killer_moves[depth as usize], position, &mv), mv)
@@ -304,8 +303,8 @@ impl Searcher {
 
         //Assign PV/hash moves to usize::MAX
         if let Some(entry) = self.transposition_table.retrieve(position.get_zobrist()) {
-            let best_move = &entry.move_;
-            for i in 0..moves_and_score.len(){
+            let best_move = &entry.mv;
+            for i in 0..moves_and_score.len() {
                 if moves_and_score[i].1 == *best_move {
                     moves_and_score[i] = (usize::MAX, moves_and_score[i].1);
                     break;

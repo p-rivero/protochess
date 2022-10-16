@@ -22,12 +22,12 @@ impl MoveGenerator {
     }
     pub fn get_legal_moves_as_tuples(&self, position: &mut Position) -> Vec<((u8,u8), (u8,u8))> {
         let mut legal_tuples = Vec::new();
-        for move_ in self.get_pseudo_moves(position){
-            if !self.is_move_legal(&move_, position){
+        for mv in self.get_pseudo_moves(position) {
+            if !self.is_move_legal(&mv, position) {
                 continue;
             }
-            legal_tuples.push((from_index(move_.get_from() as usize),
-                               from_index(move_.get_to() as usize)));
+            legal_tuples.push((from_index(mv.get_from() as usize),
+                               from_index(mv.get_to() as usize)));
         }
         legal_tuples
     }
@@ -126,8 +126,8 @@ impl MoveGenerator {
                     } else {
                         cap_y += 1;
                     }
-                    let move_ = Move::new(index, ep_sq,  Some(to_index(cap_x,cap_y) as u8), MoveType::Capture, None);
-                    extra_moves.push(move_);
+                    let mv = Move::new(index, ep_sq,  Some(to_index(cap_x,cap_y) as u8), MoveType::Capture, None);
+                    extra_moves.push(mv);
                 }
             }
             p_copy.set_bit(index as usize, false);
@@ -148,10 +148,8 @@ impl MoveGenerator {
                             //See if we can move the king one step east without stepping into check
                             let king_one_step_indx = to_index(kx + 1, ky) as u8;
                             if self.is_move_legal(&Move::null(), position)
-                                && self.is_move_legal(
-                                &Move::new(king_index as u8, king_one_step_indx, None, MoveType::Quiet, None),
-                                position
-                            ){
+                                && self.is_move_legal(&Move::new(king_index as u8, king_one_step_indx, None, MoveType::Quiet, None), position)
+                            {
                                 let to_index = to_index(kx + 2, ky) as u8;
                                 extra_moves.push(Move::new(king_index as u8,
                                                            to_index,
@@ -175,10 +173,8 @@ impl MoveGenerator {
                             //See if we can move the king one step east without stepping into check
                             let king_one_step_indx = to_index(kx - 1, ky) as u8;
                             if self.is_move_legal(&Move::null(), position)
-                                && self.is_move_legal(
-                                &Move::new(king_index as u8, king_one_step_indx, None, MoveType::Quiet, None),
-                                position
-                            ){
+                                && self.is_move_legal(&Move::new(king_index as u8, king_one_step_indx, None, MoveType::Quiet, None), position)
+                            {
                                 let to_index = to_index(kx - 2, ky) as u8;
                                 extra_moves.push(Move::new(king_index as u8,
                                                            to_index,
@@ -216,9 +212,9 @@ impl MoveGenerator {
         for p in &my_pieces.custom {
             //let movement = p.movement_pattern.as_ref().unwrap();
             let movement = {
-                if let Some(mp) = position.get_movement_pattern(&p.piece_type){
+                if let Some(mp) = position.get_movement_pattern(&p.piece_type) {
                     mp
-                }else{
+                } else {
                     continue;
                 }
             };
@@ -234,7 +230,7 @@ impl MoveGenerator {
                     &occ_or_not_in_bounds,
                     movement.attack_north,
                     movement.attack_east,
-                   movement.attack_south,
+                    movement.attack_south,
                     movement.attack_west,
                     movement.attack_northeast,
                     movement.attack_northwest,
@@ -287,12 +283,12 @@ impl MoveGenerator {
                     let to = to_index(x2 as u8, y2 as u8);
                     if position.xy_in_bounds(x2 as u8, y2 as u8) && !position.occupied.bit(to).unwrap() {
                         //Promotion here?
-                        if movement.promotion_at(to){
+                        if movement.promotion_at(to) {
                             //Add all the promotion moves
                             for c in movement.promo_vals.as_ref().unwrap() {
                                 moves.push(Move::new(index, to as u8, None, MoveType::Promotion, Some(*c)));
                             }
-                        }else{
+                        } else {
                             moves.push(Move::new(index, to as u8, None, MoveType::Quiet, None));
                         }
                     }
@@ -312,7 +308,7 @@ impl MoveGenerator {
                             for c in movement.promo_vals.as_ref().unwrap() {
                                 moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::PromotionCapture, Some(*c)));
                             }
-                        }else{
+                        } else {
                             moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::Capture, None));
                         }
                     }
@@ -338,7 +334,7 @@ impl MoveGenerator {
                                 for c in movement.promo_vals.as_ref().unwrap() {
                                     moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::PromotionCapture, Some(*c)));
                                 }
-                            }else{
+                            } else {
                                 moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::Capture, None));
                             }
                             break;
@@ -368,7 +364,7 @@ impl MoveGenerator {
                             for c in movement.promo_vals.as_ref().unwrap() {
                                 moves.push(Move::new(index, to as u8, None, MoveType::Quiet, Some(*c)));
                             }
-                        }else {
+                        } else {
                             moves.push(Move::new(index, to as u8, None, MoveType::Quiet, None));
                         }
                     }
@@ -398,9 +394,9 @@ impl MoveGenerator {
             PieceType::Pawn => {self.attack_tables.get_north_pawn_attack(index, &not_in_bounds, &zero)}
             PieceType::Custom(_c) => {
                 let mp = {
-                    if let Some(mp) = position.get_movement_pattern(&piece.piece_type){
+                    if let Some(mp) = position.get_movement_pattern(&piece.piece_type) {
                         mp
-                    }else{
+                    } else {
                         return 0;
                     }
                 };
@@ -475,7 +471,7 @@ impl MoveGenerator {
         let patt = {
             if my_player_num == 0 {
                 self.attack_tables.get_north_pawn_attack_masked(loc_index, &occ_or_not_in_bounds, &enemies)
-            }else{
+            } else {
                 self.attack_tables.get_south_pawn_attack_masked(loc_index, &occ_or_not_in_bounds, &enemies)
             }
         };
@@ -518,8 +514,8 @@ impl MoveGenerator {
             in_check = true;
         }
         //Custom pieces
-        for move_ in self.get_custom_psuedo_moves(position)  {
-            if move_.get_is_capture() && position.piece_at(move_.get_target() as usize).unwrap().1.piece_type == PieceType::King {
+        for mv in self.get_custom_psuedo_moves(position)  {
+            if mv.get_is_capture() && position.piece_at(mv.get_target() as usize).unwrap().1.piece_type == PieceType::King {
                 in_check = true;
                 break;
             }
@@ -529,22 +525,22 @@ impl MoveGenerator {
     }
 
     ///Checks if a move is legal
-    pub fn is_move_legal(&self, move_:&Move, position:&mut Position) -> bool{
+    pub fn is_move_legal(&self, mv:&Move, position:&mut Position) -> bool{
         //You cannot capture kings
-        if move_.get_move_type() == MoveType::PromotionCapture || move_.get_move_type() == MoveType::Capture {
-            if position.piece_at(move_.get_target() as usize).unwrap().1.piece_type == PieceType::King {
+        if mv.get_move_type() == MoveType::PromotionCapture || mv.get_move_type() == MoveType::Capture {
+            if position.piece_at(mv.get_target() as usize).unwrap().1.piece_type == PieceType::King {
                 return false;
             }
         }
         let my_player_num = position.whos_turn;
         let mut legality = true;
-        position.make_move(move_.to_owned());
+        position.make_move(mv.to_owned());
         if self.is_in_check_from_king(position, my_player_num) {
             legality = false;
         }
         //Custom pieces
-        for move_ in self.get_custom_psuedo_moves(position)  {
-            if move_.get_is_capture() && position.piece_at(move_.get_target() as usize).unwrap().1.piece_type == PieceType::King {
+        for mv in self.get_custom_psuedo_moves(position)  {
+            if mv.get_is_capture() && position.piece_at(mv.get_target() as usize).unwrap().1.piece_type == PieceType::King {
                 legality = false;
                 break;
             }
@@ -557,8 +553,8 @@ impl MoveGenerator {
     ///Returns the number of legal moves for a position
     pub fn count_legal_moves(&self, position: &mut Position) -> u64{
         let mut nodes = 0u64;
-        for move_ in self.get_pseudo_moves(position){
-            if !self.is_move_legal(&move_, position) {
+        for mv in self.get_pseudo_moves(position) {
+            if !self.is_move_legal(&mv, position) {
                 continue;
             }
             nodes += 1;
@@ -574,15 +570,15 @@ mod eval_test {
     use crate::move_generator::MoveGenerator;
 
     #[test]
-    fn capture_moves(){
+    fn capture_moves() {
         let mut pos = Position::from_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
         let movegen = MoveGenerator::new();
         println!("{}",pos.get_zobrist());
         println!("{}", movegen.in_check(&mut pos));
         println!("{}",pos.get_zobrist());
-        for move_ in movegen.get_capture_moves(&mut pos){
-            println!("{}", move_);
-            assert!(move_.get_is_capture());
+        for mv in movegen.get_capture_moves(&mut pos) {
+            println!("{}", mv);
+            assert!(mv.get_is_capture());
         }
     }
 }

@@ -37,7 +37,7 @@ impl Game {
         }
     }
 
-    pub fn set_bounds(&mut self, width: u8, height: u8, valid_squares:Vec<(u8,u8)>){
+    pub fn set_bounds(&mut self, width: u8, height: u8, valid_squares:Vec<(u8,u8)>) {
         let mut bounds = Bitboard::zero();
         for square in valid_squares {
             bounds.set_bit(to_index(square.0, square.1), true);
@@ -64,7 +64,7 @@ impl Game {
         true
     }
     pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
-                     valid_squares:Vec<(u8, u8)>, pieces: Vec<(u8, u8, u8, char)>){
+                     valid_squares:Vec<(u8, u8)>, pieces: Vec<(u8, u8, u8, char)>) {
         assert!(Game::each_owner_contains_k(&pieces));
         let mut width = 0;
         let mut height = 0;
@@ -110,12 +110,12 @@ impl Game {
         let to = bitboard::to_index(x2,y2) as u8;
 
         let moves = move_generator.get_pseudo_moves(&mut self.current_position);
-        for move_ in moves {
-            if !move_generator.is_move_legal(&move_, &mut self.current_position) {
+        for mv in moves {
+            if !move_generator.is_move_legal(&mv, &mut self.current_position) {
                 continue;
             }
-            if move_.get_from() == from && move_.get_to() == to {
-                self.current_position.make_move(move_);
+            if mv.get_from() == from && mv.get_to() == to {
+                self.current_position.make_move(mv);
                 return true
             }
         }
@@ -184,12 +184,12 @@ impl Engine {
         let to = bitboard::to_index(x2,y2) as u8;
 
         let moves = self.move_generator.get_pseudo_moves(&mut self.current_position);
-        for move_ in moves {
-            if !self.move_generator.is_move_legal(&move_, &mut self.current_position) {
+        for mv in moves {
+            if !self.move_generator.is_move_legal(&mv, &mut self.current_position) {
                 continue;
             }
-            if move_.get_from() == from && move_.get_to() == to {
-                self.current_position.make_move(move_);
+            if mv.get_from() == from && mv.get_to() == to {
+                self.current_position.make_move(mv);
                 return true
             }
         }
@@ -197,7 +197,7 @@ impl Engine {
     }
 
     /// Undoes the most recent move on the current board position
-    pub fn undo(&mut self){
+    pub fn undo(&mut self) {
         self.current_position.unmake_move();
     }
 
@@ -224,11 +224,11 @@ impl Engine {
         if depth == 1 {
             return self.move_generator.count_legal_moves(&mut self.current_position);
         }
-        for move_ in moves{
-            if !self.move_generator.is_move_legal(&move_, &mut self.current_position) {
+        for mv in moves{
+            if !self.move_generator.is_move_legal(&mv, &mut self.current_position) {
                 continue;
             }
-            self.current_position.make_move(move_);
+            self.current_position.make_move(mv);
             nodes += self.perft(depth - 1);
             self.current_position.unmake_move();
         }
@@ -244,14 +244,14 @@ impl Engine {
             return self.move_generator.count_legal_moves(&mut self.current_position);
         }
         let mut printing = Vec::new();
-        for move_ in moves{
-            if !self.move_generator.is_move_legal(&move_, &mut self.current_position) {
+        for mv in moves{
+            if !self.move_generator.is_move_legal(&mv, &mut self.current_position) {
                 continue;
             }
 
-            let (x,y) = bitboard::from_index(move_.get_from() as usize);
-            let (x2,y2) = bitboard::from_index(move_.get_to() as usize);
-            self.current_position.make_move(move_);
+            let (x,y) = bitboard::from_index(mv.get_from() as usize);
+            let (x2,y2) = bitboard::from_index(mv.get_to() as usize);
+            self.current_position.make_move(mv);
             let plus = self.perft(depth - 1);
             nodes += plus;
             self.current_position.unmake_move();
@@ -270,11 +270,11 @@ impl Engine {
         if let Some(best) = self.searcher.get_best_move(&mut self.current_position,
                                                         &mut self.evaluator,
                                                         &self.move_generator,
-                                                        depth){
+                                                        depth) {
             let (x1, y1) = from_index(best.get_from() as usize);
             let (x2, y2) = from_index(best.get_to() as usize);
             self.make_move(x1, y1, x2, y2)
-        }else{
+        } else {
             false
         }
     }
@@ -284,11 +284,11 @@ impl Engine {
         if let Some(best) = self.searcher.get_best_move(&mut self.current_position,
                                                         &mut self.evaluator,
                                                         &self.move_generator,
-                                                        depth){
+                                                        depth) {
             let (x1, y1) = from_index(best.get_from() as usize);
             let (x2, y2) = from_index(best.get_to() as usize);
             Some((x1, y1, x2, y2))
-        }else{
+        } else {
             None
         }
     }
@@ -298,11 +298,11 @@ impl Engine {
         if let Some((best, depth)) = self.searcher.get_best_move_timeout(&mut self.current_position,
                                                                          &mut self.evaluator,
                                                                          &self.move_generator,
-                                                                         max_sec){
+                                                                         max_sec) {
             let (x1, y1) = from_index(best.get_from() as usize);
             let (x2, y2) = from_index(best.get_to() as usize);
             (self.make_move(x1, y1, x2, y2), depth)
-        }else{
+        } else {
             (false, 0)
         }
     }
@@ -312,11 +312,11 @@ impl Engine {
         if let Some((best, depth)) = self.searcher.get_best_move_timeout(&mut self.current_position,
                                                                          &mut self.evaluator,
                                                                          &self.move_generator,
-                                                                         max_sec){
+                                                                         max_sec) {
             let (x1, y1) = from_index(best.get_from() as usize);
             let (x2, y2) = from_index(best.get_to() as usize);
             Some(((x1, y1, x2, y2), depth))
-        }else{
+        } else {
             None
         }
     }
@@ -325,7 +325,7 @@ impl Engine {
         let moves = self.move_generator.get_legal_moves_as_tuples(&mut self.current_position);
         let mut possible_moves = Vec::new();
         for (from, to) in moves{
-            if from == (x, y){
+            if from == (x, y) {
                 possible_moves.push(to);
             }
         }
@@ -337,7 +337,7 @@ impl Engine {
     }
 
     pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
-                     valid_squares:Vec<(u8, u8)>, pieces: Vec<(u8, u8, u8, char)>){
+                     valid_squares:Vec<(u8, u8)>, pieces: Vec<(u8, u8, u8, char)>) {
         assert!(Game::each_owner_contains_k(&pieces));
         let mut width = 0;
         let mut height = 0;

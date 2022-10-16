@@ -227,7 +227,7 @@ impl AttackTables {
             //Double push
             if y == 1 && !occ.bit(to_index(x, y+1)).unwrap() {
                 &self.north_pawn_double_push[loc_index as usize] & !occ
-            }else{
+            } else {
                 &self.north_pawn_single_push[loc_index as usize] & !occ
             }
         };
@@ -240,7 +240,7 @@ impl AttackTables {
             //Double push
             if y == 6 && !occ.bit(to_index(x, y-1)).unwrap() {
                 &self.south_pawn_double_push[loc_index as usize] & !occ
-            }else{
+            } else {
                 &self.south_pawn_single_push[loc_index as usize] & !occ
             }
         };
@@ -281,7 +281,7 @@ impl AttackTables {
             raw_attacks |= self.get_file_attack(loc_index, occ);
             if !north {
                 raw_attacks &= !self.masks.get_north(loc_index);
-            }else if !south {
+            } else if !south {
                 raw_attacks &= !self.masks.get_south(loc_index);
             }
         }
@@ -290,7 +290,7 @@ impl AttackTables {
             raw_attacks |= self.get_rank_attack(loc_index, occ);
             if !east {
                 raw_attacks &= !self.masks.get_east(loc_index);
-            }else if !west {
+            } else if !west {
                 raw_attacks &= !self.masks.get_west(loc_index);
             }
         }
@@ -299,7 +299,7 @@ impl AttackTables {
             raw_attacks |= self.get_diagonal_attack(loc_index, occ);
             if !northeast {
                 raw_attacks &= !self.masks.get_northeast(loc_index);
-            }else if !southwest {
+            } else if !southwest {
                 raw_attacks &= !self.masks.get_southwest(loc_index);
             }
         }
@@ -308,7 +308,7 @@ impl AttackTables {
             raw_attacks |= self.get_antidiagonal_attack(loc_index, occ);
             if !northwest {
                 raw_attacks &= !self.masks.get_northwest(loc_index);
-            }else if !southeast {
+            } else if !southeast {
                 raw_attacks &= !self.masks.get_southeast(loc_index);
             }
         }

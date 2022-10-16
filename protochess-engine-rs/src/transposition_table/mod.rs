@@ -15,7 +15,7 @@ pub struct Entry {
     pub key: u64,
     pub flag: EntryFlag,
     pub value: isize,
-    pub move_: Move,
+    pub mv: Move,
     pub depth: u8,
     pub ancient: bool
 }
@@ -25,7 +25,7 @@ impl Entry {
             key: 0,
             flag: EntryFlag::NULL,
             value: 0,
-            move_: Move::null(),
+            mv: Move::null(),
             depth: 0,
             ancient: true
         }
@@ -62,7 +62,7 @@ impl TranspositionTable {
     }
 
     /// Inserts a new Entry item into the transposition table
-    pub fn insert(&mut self, zobrist_key:u64, entry: Entry){
+    pub fn insert(&mut self, zobrist_key:u64, entry: Entry) {
         let cluster = &mut self.data[zobrist_key as usize % TABLE_SIZE];
         for i in 0..cluster.entries.len() {
             let tentry = cluster.entries[i];
@@ -95,7 +95,7 @@ impl TranspositionTable {
 
         if lowest_depth_and_ancient_indx != -1 {
             cluster.entries [lowest_depth_and_ancient_indx as usize] = entry;
-        }else{
+        } else {
             cluster.entries [lowest_depth_index] = entry;
         }
     }
