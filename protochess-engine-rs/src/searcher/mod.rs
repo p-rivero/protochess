@@ -4,7 +4,6 @@ use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 use crate::transposition_table::{TranspositionTable, Entry, EntryFlag};
 
-//An entry in the transposition table
 
 pub(crate) struct Searcher {
     transposition_table: TranspositionTable,
@@ -158,7 +157,7 @@ impl Searcher {
                     score = -self.alphabeta(position, eval, movegen,
                                             depth - 1, -alpha - 1, -alpha, true);
                     //Re-search if necessary
-                    if score > alpha  && score < beta {
+                    if score > alpha && score < beta {
                         score = -self.alphabeta(position, eval, movegen,
                                                 depth - 1, -beta, -alpha, true);
                     }
@@ -313,7 +312,7 @@ impl Searcher {
         }
         
         // Sort moves by decreasing score
-        moves_and_score.sort_by(|a, b| b.0.cmp(&a.0));
+        moves_and_score.sort_unstable_by(|a, b| b.0.cmp(&a.0));
         
         moves_and_score
     }

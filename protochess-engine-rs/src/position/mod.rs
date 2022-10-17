@@ -368,14 +368,18 @@ impl Position {
         let mut field = 0;
 
         let mut whos_turn = 0;
-        let _ep_sq = 0;
         let mut can_w_castle_k = false;
         let mut can_b_castle_k = false;
         let mut can_w_castle_q = false;
         let mut can_b_castle_q = false;
+        
+        let mut ep_x: i8 = -1;
+        let mut ep_y: i8 = -1;
+        
         for c in fen.chars() {
             if c == ' ' {
                 field += 1;
+                continue;
             }
             match field{
                 //position
@@ -427,11 +431,16 @@ impl Position {
                         _ => {}
                     }
                 }
-                //EP square
+                //En Passant square
                 3 => {
-                    //TODO
-
-
+                    // This field can be either '-' or a square in the form of a letter followed by a number
+                    if c == '-' {
+                        continue;
+                    } else if c.is_numeric() {
+                        ep_y = c.to_digit(10).expect("Not a digit!") as i8 - 1;
+                    } else {
+                        ep_x = c as i8 - 'a' as i8;
+                    }
                 }
                 _ => continue,
             }
@@ -466,6 +475,14 @@ impl Position {
         if !can_b_castle_q {
             properties.castling_rights.disable_queenside_castle(1);
             zobrist_key ^= zobrist_table.get_castling_zobrist(1, false);
+        }
+        
+        if ep_x != -1 {
+            if ep_y == -1 || (ep_y != 2 && ep_y != 5) {
+                panic!("Invalid en passant square: {}", fen);
+            }
+            properties.ep_square = Some(to_index(ep_x as u8, ep_y as u8) as u8);
+            zobrist_key ^= zobrist_table.get_ep_zobrist_file(ep_x as u8);
         }
 
 
