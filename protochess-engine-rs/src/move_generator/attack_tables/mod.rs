@@ -51,24 +51,24 @@ impl AttackTables {
                         north_pawn_double_push[index].set_bit_at(x as u8,(y + 2) as u8);
                     }
                     if x + 1 < 16 {
-                        north_pawn_attacks[index].set_bit_at((x + 1) as u8,(y + 1) as u8);
+                        north_pawn_attacks[index].set_bit_at((x + 1) as u8, (y + 1) as u8);
                     }
                     if x - 1 >= 0 {
-                        north_pawn_attacks[index].set_bit_at((x - 1) as u8,(y + 1) as u8);
+                        north_pawn_attacks[index].set_bit_at((x - 1) as u8, (y + 1) as u8);
                     }
                 }
 
                 if y != 0 {
-                    south_pawn_single_push[index].set_bit_at(x as u8,(y - 1) as u8);
-                    south_pawn_double_push[index].set_bit_at(x as u8,(y - 1) as u8);
+                    south_pawn_single_push[index].set_bit_at(x as u8, (y - 1) as u8);
+                    south_pawn_double_push[index].set_bit_at(x as u8, (y - 1) as u8);
                     if y - 2 >= 0 {
-                        south_pawn_double_push[index].set_bit_at(x as u8,(y - 2) as u8);
+                        south_pawn_double_push[index].set_bit_at(x as u8, (y - 2) as u8);
                     }
                     if x + 1 < 16 {
-                        south_pawn_attacks[index].set_bit_at((x + 1) as u8,(y - 1) as u8);
+                        south_pawn_attacks[index].set_bit_at((x + 1) as u8, (y - 1) as u8);
                     }
                     if x - 1 >= 0 {
-                        south_pawn_attacks[index].set_bit_at((x - 1) as u8,(y - 1) as u8);
+                        south_pawn_attacks[index].set_bit_at((x - 1) as u8, (y - 1) as u8);
                     }
                 }
 

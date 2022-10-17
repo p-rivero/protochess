@@ -3,7 +3,7 @@ extern crate lazy_static;
 extern crate impl_ops;
 use types::bitboard::BoardIndex;
 
-use crate::types::{Dimensions, bitboard};
+use crate::types::{Dimensions};
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGenerator;
 use crate::rankfile::to_rank_file;
@@ -28,7 +28,6 @@ pub use crate::position::movement_pattern::MovementPatternExternal;
 use crate::types::bitboard::Bitboard;
 
 
-/// Simple game without an AI engine
 pub struct Game {
     pub current_position: Position,
 }
@@ -83,11 +82,7 @@ impl Game {
                 .map(|(owner, x, y, pce_chr)|
                     (owner, to_index(x, y), PieceType::from_char(pce_chr)))
                 .collect();
-        self.current_position = Position::custom(Dimensions{width, height},
-                                                 bounds,
-                                                 movement_patterns, pieces
-        )
-
+        self.current_position = Position::custom(Dimensions{width, height}, bounds, movement_patterns, pieces)
     }
 
 
@@ -354,12 +349,9 @@ impl Engine {
         let pieces =
             pieces.into_iter()
                 .map(|(owner, x, y, pce_chr)|
-                    (owner, to_index(x, y) as u8, PieceType::from_char(pce_chr)))
+                    (owner, to_index(x, y), PieceType::from_char(pce_chr)))
                 .collect();
-        self.current_position = Position::custom(Dimensions{width, height},
-                                                 bounds,
-                                                 movement_patterns, pieces
-        )
+        self.current_position = Position::custom(Dimensions{width, height}, bounds, movement_patterns, pieces)
     }
 }
 

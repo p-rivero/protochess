@@ -235,7 +235,7 @@ impl Evaluator {
         let mut sum = 0;
         for i in 0..=255 {
             let (x, y) = from_index(i);
-            let num_moves = movegen.get_num_moves_on_empty_board(i as u8, position, piece, &position.bounds) as isize;
+            let num_moves = movegen.get_num_moves_on_empty_board(i, position, piece, &position.bounds) as isize;
             if position.xy_in_bounds(x, y) {
                 total_entries += 1;
                 sum += num_moves;

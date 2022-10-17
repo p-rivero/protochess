@@ -123,7 +123,7 @@ impl Position {
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x - 1, y) as u8;
+                let rook_to = to_index(x - 1, y);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_from);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_to);
                 self.move_piece(rook_from,rook_to);
@@ -132,7 +132,7 @@ impl Position {
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x + 1, y) as u8;
+                let rook_to = to_index(x + 1, y);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_from);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_to);
                 self.move_piece(rook_from,rook_to);
@@ -179,9 +179,9 @@ impl Position {
             && x1 == x2 {
             new_props.ep_square = Some(
                 if y2 > y1 {
-                    to_index(x1, y2 - 1) as u8
+                    to_index(x1, y2 - 1)
                 } else {
-                    to_index(x1, y2 + 1) as u8
+                    to_index(x1, y2 + 1)
                 }
             );
             new_props.zobrist_key ^= zobrist_table.get_ep_zobrist_file(x1);
@@ -261,13 +261,13 @@ impl Position {
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x - 1, y) as u8;
+                let rook_to = to_index(x - 1, y);
                 self.move_piece(rook_to,rook_from);
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x + 1, y) as u8;
+                let rook_to = to_index(x + 1, y);
                 self.move_piece(rook_to,rook_from);
             }
             _ => {}
@@ -485,7 +485,7 @@ impl Position {
             if ep_y == -1 || (ep_y != 2 && ep_y != 5) {
                 panic!("Invalid en passant square: {}", fen);
             }
-            properties.ep_square = Some(to_index(ep_x as u8, ep_y as u8) as u8);
+            properties.ep_square = Some(to_index(ep_x as u8, ep_y as u8));
             zobrist_key ^= zobrist_table.get_ep_zobrist_file(ep_x as u8);
         }
 
@@ -494,7 +494,7 @@ impl Position {
             let mut bb_copy = (&piece.bitboard).to_owned();
             while !bb_copy.is_zero() {
                 let indx = bb_copy.lowest_one().unwrap();
-                zobrist_key ^= zobrist_table.get_zobrist_sq(piece, indx as u8);
+                zobrist_key ^= zobrist_table.get_zobrist_sq(piece, indx);
                 bb_copy.clear_bit(indx);
             }
         }

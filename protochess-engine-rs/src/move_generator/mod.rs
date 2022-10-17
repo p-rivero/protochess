@@ -81,7 +81,7 @@ impl MoveGenerator {
         let mut extra_moves = Vec::new();
         let mut p_copy = (&my_pieces.pawn.bitboard).to_owned();
         while !p_copy.is_zero() {
-            let index = p_copy.lowest_one().unwrap() as u8;
+            let index = p_copy.lowest_one().unwrap();
             let mut raw_attacks = {
                 if position.whos_turn == 0 {
                     self.attack_tables.get_north_pawn_attack(index, &position.occupied, &enemies)
@@ -157,21 +157,21 @@ impl MoveGenerator {
                 }
             }
             if position.properties.castling_rights.can_player_castle_queenside(position.whos_turn) {
-                let rook_index = to_index(0 ,ky) as u8;
+                let rook_index = to_index(0 ,ky);
                 if let Some((owner, pt)) = position.piece_at(rook_index) {
                     if owner == whos_turn && pt.piece_type == PieceType::Rook {
-                        let west = self.attack_tables.masks.get_west(king_index as u8);
+                        let west = self.attack_tables.masks.get_west(king_index);
                         let mut occ = west & &position.occupied;
                         occ.clear_bit(rook_index);
 
                         if occ.is_zero() {
                             //See if we can move the king one step east without stepping into check
-                            let king_one_step_indx = to_index(kx - 1, ky) as u8;
+                            let king_one_step_indx = to_index(kx - 1, ky);
                             if self.is_move_legal(&Move::null(), position)
-                                && self.is_move_legal(&Move::new(king_index as u8, king_one_step_indx, None, MoveType::Quiet, None), position)
+                                && self.is_move_legal(&Move::new(king_index, king_one_step_indx, None, MoveType::Quiet, None), position)
                             {
-                                let to_index = to_index(kx - 2, ky) as u8;
-                                extra_moves.push(Move::new(king_index as u8, to_index, Some(rook_index), MoveType::QueensideCastle, None));
+                                let to_index = to_index(kx - 2, ky);
+                                extra_moves.push(Move::new(king_index, to_index, Some(rook_index), MoveType::QueensideCastle, None));
                             }
                         }
                     }
@@ -213,7 +213,7 @@ impl MoveGenerator {
             let bb = &p.bitboard;
             let mut bb_copy = bb.to_owned();
             while !bb_copy.is_zero() {
-                let index = bb_copy.lowest_one().unwrap() as u8;
+                let index = bb_copy.lowest_one().unwrap();
                 // Sliding moves along ranks or files
                 //Attacks!
                 let mut raw_attacks = self.attack_tables.get_sliding_moves_bb(
@@ -277,10 +277,10 @@ impl MoveGenerator {
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
                             for c in movement.promo_vals.as_ref().unwrap() {
-                                moves.push(Move::new(index, to as u8, None, MoveType::Promotion, Some(*c)));
+                                moves.push(Move::new(index, to, None, MoveType::Promotion, Some(*c)));
                             }
                         } else {
-                            moves.push(Move::new(index, to as u8, None, MoveType::Quiet, None));
+                            moves.push(Move::new(index, to, None, MoveType::Quiet, None));
                         }
                     }
                 }
@@ -297,10 +297,10 @@ impl MoveGenerator {
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
                             for c in movement.promo_vals.as_ref().unwrap() {
-                                moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::PromotionCapture, Some(*c)));
+                                moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
                             }
                         } else {
-                            moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::Capture, None));
+                            moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
                         }
                     }
                 }
@@ -323,10 +323,10 @@ impl MoveGenerator {
                             if movement.promotion_at(to) {
                                 //Add all the promotion moves
                                 for c in movement.promo_vals.as_ref().unwrap() {
-                                    moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::PromotionCapture, Some(*c)));
+                                    moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
                                 }
                             } else {
-                                moves.push(Move::new(index, to as u8, Some(to as u8), MoveType::Capture, None));
+                                moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
                             }
                             break;
                         }
@@ -353,10 +353,10 @@ impl MoveGenerator {
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
                             for c in movement.promo_vals.as_ref().unwrap() {
-                                moves.push(Move::new(index, to as u8, None, MoveType::Quiet, Some(*c)));
+                                moves.push(Move::new(index, to, None, MoveType::Quiet, Some(*c)));
                             }
                         } else {
-                            moves.push(Move::new(index, to as u8, None, MoveType::Quiet, None));
+                            moves.push(Move::new(index, to, None, MoveType::Quiet, None));
                         }
                     }
                 }
@@ -456,7 +456,7 @@ impl MoveGenerator {
         let enemy_rooks = &enemy_pieces.rook.bitboard;
         let enemy_kings = &enemy_pieces.king.bitboard;
 
-        let loc_index = my_pieces.king.bitboard.lowest_one().unwrap() as u8;
+        let loc_index = my_pieces.king.bitboard.lowest_one().unwrap();
 
         //Pawn
         let patt = {

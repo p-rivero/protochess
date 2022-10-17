@@ -4,7 +4,7 @@ pub fn to_index(x:u8, y:u8) -> BoardIndex{
 }
 
 pub fn from_index(index:BoardIndex) -> (u8, u8) {
-    (index as u8 % 16 , index as u8 / 16 )
+    (index % 16 , index / 16 )
 }
 
 pub type BoardIndex = u8; // 256 positions in 16x16 board
