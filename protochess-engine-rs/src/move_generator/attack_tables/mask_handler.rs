@@ -1,6 +1,5 @@
 use arrayvec::ArrayVec;
 use crate::types::bitboard::{Bitboard, to_index};
-use crate::types::bitboard;
 
 /// General bitboard masks for use with attack tables
 pub struct MaskHandler {
@@ -37,8 +36,8 @@ impl MaskHandler {
             new_right |= &cumulative_right;
 
             for j in 0..16 {
-                new_left.set_bit(bitboard::to_index(i,j),true);
-                new_right.set_bit(bitboard::to_index(16-i-1,j),true);
+                new_left.set_bit_at(i, j);
+                new_right.set_bit_at(16-i-1, j);
             }
 
             cumulative_left |= &new_left;
@@ -76,25 +75,25 @@ impl MaskHandler {
 
                 //NORTH LOOKUP TABLE
                 for j in y + 1..16 as i8 {
-                    north[index].set_bit(to_index(x as u8, j as u8), true);
+                    north[index].set_bit_at(x as u8, j as u8);
                 }
                 //SOUTH LOOKUP TABLE
                 for j in 0..y {
-                    south[index].set_bit(to_index(x as u8, j as u8), true);
+                    south[index].set_bit_at(x as u8, j as u8);
                 }
                 //EAST LOOKUP TABLE
                 for j in x + 1..16 as i8 {
-                    east[index].set_bit(to_index(j as u8, y as u8), true);
+                    east[index].set_bit_at(j as u8, y as u8);
                 }
                 //WEST LOOKUP TABLE
                 for j in 0..x {
-                    west[index].set_bit(to_index(j as u8, y as u8), true);
+                    west[index].set_bit_at(j as u8, y as u8);
                 }
                 //NORTHEAST LOOKUP TABLE
                 let mut x2:i8 = (x + 1) as i8;
                 let mut y2:i8 = (y + 1) as i8;
                 while x2 < 16 as i8 && y2 < 16 as i8 {
-                    northeast[index].set_bit(to_index(x2 as u8, y2 as u8), true);
+                    northeast[index].set_bit_at(x2 as u8, y2 as u8);
                     x2 +=1;
                     y2 +=1;
                 }
@@ -103,7 +102,7 @@ impl MaskHandler {
                 x2 = (x - 1) as i8;
                 y2 = (y + 1) as i8;
                 while x2 >= 0 && y2 < 16 as i8 {
-                    northwest[index].set_bit(to_index(x2 as u8, y2 as u8), true);
+                    northwest[index].set_bit_at(x2 as u8, y2 as u8);
                     x2 -= 1;
                     y2 += 1;
                 }
@@ -111,7 +110,7 @@ impl MaskHandler {
                 x2 = (x + 1) as i8;
                 y2 = (y - 1) as i8;
                 while x2 < 16 as i8 && y2 >= 0 {
-                    southeast[index].set_bit(to_index(x2 as u8, y2 as u8), true);
+                    southeast[index].set_bit_at(x2 as u8, y2 as u8);
                     x2 += 1;
                     y2 -= 1;
                 }
@@ -119,7 +118,7 @@ impl MaskHandler {
                 x2 = (x - 1) as i8;
                 y2 = (y - 1) as i8;
                 while x2 >= 0 && y2 >= 0 {
-                    southwest[index].set_bit(to_index(x2 as u8, y2 as u8), true);
+                    southwest[index].set_bit_at(x2 as u8, y2 as u8);
                     x2 -= 1;
                     y2 -= 1;
                 }
@@ -138,13 +137,13 @@ impl MaskHandler {
 
             let mut file = Bitboard::zero();
             for y in 0..16 {
-                file.set_bit(to_index(i, y), true);
+                file.set_bit_at(i, y);
             }
             files.push(file);
 
             let mut rank = Bitboard::zero();
             for x in 0..16 {
-                rank.set_bit(to_index(x, i), true);
+                rank.set_bit_at(x, i);
             }
 
             ranks.push(rank);

@@ -1,5 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
+extern crate impl_ops;
+use types::bitboard::BoardIndex;
+
 use crate::types::{Dimensions, bitboard};
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGenerator;
@@ -40,7 +43,7 @@ impl Game {
     pub fn set_bounds(&mut self, width: u8, height: u8, valid_squares:Vec<(u8,u8)>) {
         let mut bounds = Bitboard::zero();
         for square in valid_squares {
-            bounds.set_bit(to_index(square.0, square.1), true);
+            bounds.set_bit_at(square.0, square.1);
         }
         self.current_position.set_bounds(Dimensions{ width, height }, bounds);
     }
@@ -72,13 +75,13 @@ impl Game {
         for sq in valid_squares {
             if sq.0 >= width { width = sq.0 + 1; }
             if sq.1 >= height { height = sq.1 + 1; }
-            bounds.set_bit(to_index(sq.0, sq.1), true);
+            bounds.set_bit_at(sq.0, sq.1);
         }
 
         let pieces =
             pieces.into_iter()
                 .map(|(owner, x, y, pce_chr)|
-                    (owner, to_index(x, y) as u8, PieceType::from_char(pce_chr)))
+                    (owner, to_index(x, y), PieceType::from_char(pce_chr)))
                 .collect();
         self.current_position = Position::custom(Dimensions{width, height},
                                                  bounds,
@@ -106,8 +109,8 @@ impl Game {
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
     pub fn make_move(&mut self, move_generator:&MoveGenerator, x1:u8, y1:u8, x2:u8, y2: u8) -> bool {
-        let from = bitboard::to_index(x1,y1) as u8;
-        let to = bitboard::to_index(x2,y2) as u8;
+        let from = to_index(x1,y1);
+        let to = to_index(x2,y2);
 
         let moves = move_generator.get_pseudo_moves(&mut self.current_position);
         for mv in moves {
@@ -169,19 +172,19 @@ impl Engine {
     }
 
     /// Adds a new piece on the board
-    pub fn add_piece(&mut self, _owner:usize, _piece_type:PieceType, x: u8, y:u8) {
-        self.current_position.add_piece(0, PieceType::Custom('a'), to_index(x,y) as u8);
+    pub fn add_piece(&mut self, _owner:usize, _piece_type: PieceType, x: u8, y: u8) {
+        self.current_position.add_piece(0, PieceType::Custom('a'), to_index(x,y));
     }
 
     /// Removes a piece on the board, if it exists
-    pub fn remove_piece(&mut self, index:u8) {
+    pub fn remove_piece(&mut self, index: BoardIndex) {
         self.current_position.remove_piece(index);
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn make_move(&mut self, x1:u8, y1:u8, x2:u8, y2: u8) -> bool{
-        let from = bitboard::to_index(x1,y1) as u8;
-        let to = bitboard::to_index(x2,y2) as u8;
+    pub fn make_move(&mut self, x1: u8, y1: u8, x2: u8, y2: u8) -> bool {
+        let from = to_index(x1, y1);
+        let to = to_index(x2, y2);
 
         let moves = self.move_generator.get_pseudo_moves(&mut self.current_position);
         for mv in moves {
@@ -249,8 +252,8 @@ impl Engine {
                 continue;
             }
 
-            let (x,y) = bitboard::from_index(mv.get_from() as usize);
-            let (x2,y2) = bitboard::from_index(mv.get_to() as usize);
+            let (x,y) = from_index(mv.get_from());
+            let (x2,y2) = from_index(mv.get_to());
             self.current_position.make_move(mv);
             let plus = self.perft(depth - 1);
             nodes += plus;
@@ -271,8 +274,8 @@ impl Engine {
                                                         &mut self.evaluator,
                                                         &self.move_generator,
                                                         depth) {
-            let (x1, y1) = from_index(best.get_from() as usize);
-            let (x2, y2) = from_index(best.get_to() as usize);
+            let (x1, y1) = from_index(best.get_from());
+            let (x2, y2) = from_index(best.get_to());
             self.make_move(x1, y1, x2, y2)
         } else {
             false
@@ -285,8 +288,8 @@ impl Engine {
                                                         &mut self.evaluator,
                                                         &self.move_generator,
                                                         depth) {
-            let (x1, y1) = from_index(best.get_from() as usize);
-            let (x2, y2) = from_index(best.get_to() as usize);
+            let (x1, y1) = from_index(best.get_from());
+            let (x2, y2) = from_index(best.get_to());
             Some((x1, y1, x2, y2))
         } else {
             None
@@ -299,8 +302,8 @@ impl Engine {
                                                                          &mut self.evaluator,
                                                                          &self.move_generator,
                                                                          max_sec) {
-            let (x1, y1) = from_index(best.get_from() as usize);
-            let (x2, y2) = from_index(best.get_to() as usize);
+            let (x1, y1) = from_index(best.get_from());
+            let (x2, y2) = from_index(best.get_to());
             (self.make_move(x1, y1, x2, y2), depth)
         } else {
             (false, 0)
@@ -313,8 +316,8 @@ impl Engine {
                                                                          &mut self.evaluator,
                                                                          &self.move_generator,
                                                                          max_sec) {
-            let (x1, y1) = from_index(best.get_from() as usize);
-            let (x2, y2) = from_index(best.get_to() as usize);
+            let (x1, y1) = from_index(best.get_from());
+            let (x2, y2) = from_index(best.get_to());
             Some(((x1, y1, x2, y2), depth))
         } else {
             None
@@ -345,7 +348,7 @@ impl Engine {
         for sq in valid_squares {
             if sq.0 >= width { width = sq.0 + 1; }
             if sq.1 >= height { height = sq.1 + 1; }
-            bounds.set_bit(to_index(sq.0, sq.1), true);
+            bounds.set_bit_at(sq.0, sq.1);
         }
 
         let pieces =

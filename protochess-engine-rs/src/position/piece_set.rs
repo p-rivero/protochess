@@ -1,5 +1,5 @@
 //Pieces that a player has
-use crate::types::bitboard::Bitboard;
+use crate::types::bitboard::{Bitboard, BoardIndex};
 use crate::position::piece::Piece;
 
 /// Represents a set of pieces for a player
@@ -31,22 +31,22 @@ impl PieceSet {
         }
     }
 
-    pub fn piece_at(&mut self, index:usize) -> Option<&mut Piece> {
-        if self.king.bitboard.bit(index).unwrap() {
+    pub fn piece_at(&mut self, index: BoardIndex) -> Option<&mut Piece> {
+        if self.king.bitboard.get_bit(index) {
             Some(&mut self.king)
-        } else if self.queen.bitboard.bit(index).unwrap() {
+        } else if self.queen.bitboard.get_bit(index)  {
             Some(&mut self.queen)
-        } else if self.bishop.bitboard.bit(index).unwrap() {
+        } else if self.bishop.bitboard.get_bit(index)  {
             Some(&mut self.bishop)
-        } else if self.knight.bitboard.bit(index).unwrap() {
+        } else if self.knight.bitboard.get_bit(index)  {
             Some(&mut self.knight)
-        } else if self.rook.bitboard.bit(index).unwrap() {
+        } else if self.rook.bitboard.get_bit(index)  {
             Some(&mut self.rook)
-        } else if self.pawn.bitboard.bit(index).unwrap() {
+        } else if self.pawn.bitboard.get_bit(index)  {
             Some(&mut self.pawn)
         } else {
             for p in self.custom.iter_mut() {
-                if p.bitboard.bit(index).unwrap() {
+                if p.bitboard.get_bit(index)  {
                     return Some(p);
                 }
             }

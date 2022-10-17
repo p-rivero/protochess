@@ -117,8 +117,8 @@ impl Evaluator {
                 history_moves[mv.get_from() as usize][mv.get_to() as usize] as usize
             }
         }
-        let attacker:PieceType = (&position.piece_at(mv.get_from() as usize).unwrap().1.piece_type).to_owned();
-        let victim:PieceType = (&position.piece_at(mv.get_target() as usize).unwrap().1.piece_type).to_owned();
+        let attacker:PieceType = (&position.piece_at(mv.get_from()).unwrap().1.piece_type).to_owned();
+        let victim:PieceType = (&position.piece_at(mv.get_target()).unwrap().1.piece_type).to_owned();
 
         let attack_score = self.get_material_score(attacker, position);
         let victim_score = self.get_material_score(victim, position);
@@ -213,15 +213,15 @@ impl Evaluator {
                 //If it is the king then limit moves (encourage moving away from the center)
                 if  p.piece_type == PieceType::King {
                     if !is_endgame {
-                        score += -score_table[index] * PST_MULTIPLIER;
+                        score += -score_table[index as usize] * PST_MULTIPLIER;
                     } else {
-                        score += score_table[index] * PST_MULTIPLIER;
+                        score += score_table[index as usize] * PST_MULTIPLIER;
                     }
                 } else {
-                    score += score_table[index] * PST_MULTIPLIER;
+                    score += score_table[index as usize] * PST_MULTIPLIER;
                 }
 
-                bb_copy.set_bit(index, false);
+                bb_copy.clear_bit(index);
             }
         }
         score

@@ -2,6 +2,8 @@ use std::fmt;
 use crate::rankfile::to_rank_file;
 use crate::types::bitboard::from_index;
 
+use crate::types::bitboard::BoardIndex;
+
 #[derive(PartialEq)]
 pub enum MoveType {
     Quiet,
@@ -27,7 +29,7 @@ pub enum MoveType {
 pub struct Move(u32, Option<char>);
 
 impl Move {
-    pub fn new(from:u8, to:u8, target_loc: Option<u8>, move_type:MoveType, promo:Option<char>) -> Move{
+    pub fn new(from:BoardIndex, to:BoardIndex, target_loc: Option<BoardIndex>, move_type:MoveType, promo:Option<char>) -> Move{
         Move(
             (from as u32)
                 | (to as u32) << 8u32
@@ -57,12 +59,12 @@ impl Move {
         Move::new(0,0,None,MoveType::Null, None)
     }
 
-    pub fn get_from(&self) -> u8{
-        (self.0 & 255u32) as u8
+    pub fn get_from(&self) -> BoardIndex{
+        (self.0 & 255u32) as BoardIndex
     }
 
-    pub fn get_to(&self) -> u8{
-        ((self.0 >> 8) & 255u32) as u8
+    pub fn get_to(&self) -> BoardIndex{
+        ((self.0 >> 8) & 255u32) as BoardIndex
     }
 
     pub fn get_is_capture(&self) -> bool{
@@ -93,8 +95,8 @@ impl Move {
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (x1, y1) = from_index(self.get_from() as usize);
-        let (x2, y2) = from_index(self.get_to() as usize);
+        let (x1, y1) = from_index(self.get_from());
+        let (x2, y2) = from_index(self.get_to());
         write!(f, "(from: {}, to:{})", to_rank_file(x1, y1),to_rank_file(x2, y2))
     }
 }

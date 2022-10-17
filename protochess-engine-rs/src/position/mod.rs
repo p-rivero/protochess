@@ -2,7 +2,7 @@ use arrayvec::ArrayVec;
 use crate::types::*;
 use crate::constants::{fen, DEFAULT_WIDTH, DEFAULT_HEIGHT};
 use crate::position::piece_set::PieceSet;
-use crate::types::bitboard::{Bitboard, to_index, from_index};
+use crate::types::bitboard::{Bitboard, to_index, from_index, BoardIndex};
 use std::sync::Arc;
 
 use position_properties::PositionProperties;
@@ -113,7 +113,7 @@ impl Position {
         match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt_index = mv.get_target();
-                let (owner, captd) = self.piece_at(capt_index as usize).unwrap();
+                let (owner, captd) = self.piece_at(capt_index).unwrap();
                 let captd_piece_type = (&captd.piece_type).to_owned();
                 let captd_owner = captd.player_num;
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&captd_piece_type,captd_owner , capt_index);
@@ -122,7 +122,7 @@ impl Position {
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to() as usize);
+                let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x - 1, y) as u8;
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_from);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_to);
@@ -131,7 +131,7 @@ impl Position {
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to() as usize);
+                let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x + 1, y) as u8;
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_from);
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&PieceType::Rook, my_player_num, rook_to);
@@ -143,7 +143,7 @@ impl Position {
 
         let from= mv.get_from();
         let to = mv.get_to();
-        let from_piece = self.piece_at(from as usize).unwrap().1;
+        let from_piece = self.piece_at(from).unwrap().1;
         let from_piece_type = from_piece.piece_type.to_owned();
         new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&from_piece_type, my_player_num, from);
         new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&from_piece_type, my_player_num, to);
@@ -165,12 +165,12 @@ impl Position {
 
         //Pawn en-passant
         //Check for a pawn double push to set ep square
-        let (x1, y1) = from_index(from as usize);
-        let (x2, y2) = from_index(to as usize);
+        let (x1, y1) = from_index(from);
+        let (x2, y2) = from_index(to);
 
         if let Some(sq) = self.properties.ep_square {
             //If the last prop had some ep square then we want to clear zob by xoring again
-            let (epx, _epy) = from_index(sq as usize);
+            let (epx, _epy) = from_index(sq);
             new_props.zobrist_key ^= zobrist_table.get_ep_zobrist_file(epx);
         }
 
@@ -260,13 +260,13 @@ impl Position {
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to() as usize);
+                let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x - 1, y) as u8;
                 self.move_piece(rook_to,rook_from);
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to() as usize);
+                let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x + 1, y) as u8;
                 self.move_piece(rook_to,rook_from);
             }
@@ -315,9 +315,9 @@ impl Position {
                 let mut bb_copy = (&piece.bitboard).to_owned();
                 while !bb_copy.is_zero() {
                     let indx = bb_copy.lowest_one().unwrap();
-                    let (x, y) = from_index(indx);
+                    let (x, y) = from_index(indx as BoardIndex);
                     tuples.push((i as u8, x, y, piece.char_rep));
-                    bb_copy.set_bit(indx, false);
+                    bb_copy.clear_bit(indx);
                 }
             }
         }
@@ -409,8 +409,12 @@ impl Position {
                         _ => continue,
                     };
 
-                    bitboard.set_bit(index, true);
-                    if c.is_uppercase() {w_pieces.occupied.set_bit(index,true)} else {b_pieces.occupied.set_bit(index, true)};
+                    bitboard.set_bit(index);
+                    if c.is_uppercase() {
+                        w_pieces.occupied.set_bit(index)
+                    } else {
+                        b_pieces.occupied.set_bit(index)
+                    };
                     x += 1;
                 }
                 //next to move
@@ -491,7 +495,7 @@ impl Position {
             while !bb_copy.is_zero() {
                 let indx = bb_copy.lowest_one().unwrap();
                 zobrist_key ^= zobrist_table.get_zobrist_sq(piece, indx as u8);
-                bb_copy.set_bit(indx, false);
+                bb_copy.clear_bit(indx);
             }
         }
 
@@ -501,9 +505,9 @@ impl Position {
         wb_pieces.push(b_pieces);
 
         let mut bounds = Bitboard::zero();
-        for x in 0..8{
-            for y in 0..8{
-                bounds.set_bit(to_index(x,y),true);
+        for x in 0..8 {
+            for y in 0..8 {
+                bounds.set_bit_at(x,y);
             }
         }
 
@@ -526,7 +530,7 @@ impl Position {
     }
 
     /// Returns tuple (player_num, Piece)
-    pub fn piece_at(&mut self, index:usize) -> Option<(u8, &mut Piece)> {
+    pub fn piece_at(&mut self, index: BoardIndex) -> Option<(u8, &mut Piece)> {
         for (i, ps) in self.pieces.iter_mut().enumerate() {
             if let Some(c) = ps.piece_at(index) {
                 return Some((i as u8, c));
@@ -536,7 +540,7 @@ impl Position {
     }
 
     /// Returns bitoard of piece at index
-    pub fn piece_bb_at(&mut self,index:usize) -> Option<&mut Bitboard> {
+    pub fn piece_bb_at(&mut self,index: BoardIndex) -> Option<&mut Bitboard> {
         if let Some((_num, piece)) = self.piece_at(index) {
             return Some(&mut piece.bitboard)
         }
@@ -546,43 +550,43 @@ impl Position {
     /// Returns if the point is in bounds
     pub fn xy_in_bounds(&self, x:u8, y:u8) -> bool {
         if x < self.dimensions.width && y < self.dimensions.height {
-            return self.bounds.bit(to_index(x, y)).unwrap()
+            return self.bounds.get_bit_at(x, y)
         }
         false
     }
 
     pub fn move_piece(&mut self, from:u8, to:u8) {
-        if let Some(source_bb) = self.piece_bb_at(from as usize) {
-            source_bb.set_bit(from as usize, false);
-            source_bb.set_bit(to as usize, true);
+        if let Some(source_bb) = self.piece_bb_at(from) {
+            source_bb.clear_bit(from);
+            source_bb.set_bit(to);
         } else {
             println!("nothing to move??");
-            println!("from {} {}", from_index(from as usize).0, from_index(from as usize).1);
-            println!("to {} {}", from_index(to as usize).0, from_index(to as usize).1);
+            println!("from {} {}", from_index(from).0, from_index(from).1);
+            println!("to {} {}", from_index(to).0, from_index(to).1);
             println!("==");
         }
     }
 
     /// Removes a piece from the position, assuming the piece is there
-    fn _remove_piece(&mut self, index:u8) {
-        let capd_bb:&mut Bitboard = self.piece_bb_at(index as usize).unwrap();
-        capd_bb.set_bit(index as usize, false);
+    fn _remove_piece(&mut self, index: BoardIndex) {
+        let capd_bb:&mut Bitboard = self.piece_bb_at(index).unwrap();
+        capd_bb.clear_bit(index);
     }
 
     /// Adds a piece to the position, assuming the piecetype already exists
     /// Does nothing if a custom piece isn't registered yet
-    fn _add_piece(&mut self, owner:u8, pt: PieceType, index:u8) {
+    fn _add_piece(&mut self, owner:u8, pt: PieceType, index: BoardIndex) {
         match pt {
-            PieceType::King => {self.pieces[owner as usize].king.bitboard.set_bit(index as usize, true);},
-            PieceType::Queen => {self.pieces[owner as usize].queen.bitboard.set_bit(index as usize, true);},
-            PieceType::Rook => {self.pieces[owner as usize].rook.bitboard.set_bit(index as usize, true);},
-            PieceType::Bishop => {self.pieces[owner as usize].bishop.bitboard.set_bit(index as usize, true);},
-            PieceType::Knight => {self.pieces[owner as usize].knight.bitboard.set_bit(index as usize, true);},
-            PieceType::Pawn => {self.pieces[owner as usize].pawn.bitboard.set_bit(index as usize, true);},
+            PieceType::King => {self.pieces[owner as usize].king.bitboard.set_bit(index);},
+            PieceType::Queen => {self.pieces[owner as usize].queen.bitboard.set_bit(index);},
+            PieceType::Rook => {self.pieces[owner as usize].rook.bitboard.set_bit(index);},
+            PieceType::Bishop => {self.pieces[owner as usize].bishop.bitboard.set_bit(index);},
+            PieceType::Knight => {self.pieces[owner as usize].knight.bitboard.set_bit(index);},
+            PieceType::Pawn => {self.pieces[owner as usize].pawn.bitboard.set_bit(index);},
             PieceType::Custom(ptc) => {
                 for c in self.pieces[owner as usize].custom.iter_mut() {
                     if ptc == c.char_rep {
-                        c.bitboard.set_bit(index as usize,true);
+                        c.bitboard.set_bit(index);
                         break;
                     }
                 }
@@ -611,7 +615,7 @@ impl Position {
         self.properties = Arc::new(new_props);
     }
 
-    pub fn remove_piece(&mut self, index:u8) {
+    pub fn remove_piece(&mut self, index: BoardIndex) {
         self._remove_piece(index);
         self.update_occupied();
     }

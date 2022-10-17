@@ -1,4 +1,4 @@
-use crate::types::bitboard::{Bitboard, to_index, from_index};
+use crate::types::bitboard::{Bitboard, from_index, BoardIndex};
 /// External variant of MovementPattern for public
 #[derive(Clone, Debug )]
 pub struct MovementPatternExternal {
@@ -64,9 +64,9 @@ pub struct MovementPattern {
 }
 
 impl MovementPattern {
-    pub fn promotion_at(&self, index:usize) -> bool {
+    pub fn promotion_at(&self, index: BoardIndex) -> bool {
         if let Some(bb) = &self.promotion_squares {
-            return bb.bit(index).unwrap()
+            return bb.get_bit(index)
         }
         false
     }
@@ -77,7 +77,7 @@ pub fn external_mp_to_internal(mpe: MovementPatternExternal) -> MovementPattern{
         if let Some(vec) = mpe.promotion_squares{
             let mut bb = Bitboard::zero();
             for (x, y) in vec {
-                bb.set_bit(to_index(x, y), true);
+                bb.set_bit_at(x, y);
             }
             Some(bb)
         } else {
@@ -116,8 +116,8 @@ pub fn internal_mp_to_external(mp: MovementPattern) -> MovementPatternExternal {
         if let Some(mut bb) = mp.promotion_squares {
             while bb.is_zero() {
                 let index = bb.lowest_one().unwrap();
-                sq.push(from_index(index));
-                bb.set_bit(index, false);
+                sq.push(from_index(index as BoardIndex));
+                bb.clear_bit(index);
             }
             if sq.len() != 0 {
                 Some(sq)

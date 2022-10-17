@@ -1,11 +1,11 @@
-use crate::types::bitboard::{Bitboard};
+use crate::types::bitboard::{Bitboard, BoardIndex};
 use crate::types::chess_move::{Move, MoveType};
 
 /// Iterator that converts a Bitboard of move possibilities to Moves
 pub struct BitboardMoves {
     pub(crate) enemies: Bitboard,     //Enemies
     pub(crate) moves:Bitboard,        //moveset for source piece
-    pub(crate) source_index: u8,       //Source piece index
+    pub(crate) source_index: BoardIndex, //Source piece index
     pub(crate) promotion_squares: Option<Bitboard>, //Optional promotion squares for this piece
     pub(crate) promo_vals: Option<Vec<char>>,   //Optional promotable values for this piece
     current_promo_vals: Option<Vec<char>>, //Internal; used as a copy of promovals for each sq
@@ -14,7 +14,7 @@ pub struct BitboardMoves {
 impl BitboardMoves {
     pub fn new(enemies:Bitboard,
                moves:Bitboard,
-               source_index:u8,
+               source_index:BoardIndex,
                promotion_squares:Option<Bitboard>,
                promo_vals:Option<Vec<char>>) -> BitboardMoves{
         BitboardMoves{
@@ -35,12 +35,12 @@ impl Iterator for BitboardMoves {
         if let Some(to) = self.moves.lowest_one() {
             let promo_here = {
                 if let Some(promo_sqs) = &self.promotion_squares {
-                    promo_sqs.bit(to).unwrap()
+                    promo_sqs.get_bit(to)
                 } else {
                     false
                 }
             };
-            let capture_here = { self.enemies.bit(to).unwrap() };
+            let capture_here = { self.enemies.get_bit(to) };
             let move_type = {
                 match (capture_here, promo_here) {
                     (true, true) => { MoveType::PromotionCapture },
@@ -67,17 +67,17 @@ impl Iterator for BitboardMoves {
                     if promo_options.len() == 0 {
                         //Reset current_promo_vals for the next time
                         self.current_promo_vals = None;
-                        self.moves.set_bit(to, false);
+                        self.moves.clear_bit(to);
                     }
                     //Unwrap intentionally here; want to panic if this goes wrong
                     Some(next_char)
                 } else {
                     //No promotion chars left, go to next after this
-                    self.moves.set_bit(to, false);
+                    self.moves.clear_bit(to);
                     None
                 }
             };
-            Some(Move::new(self.source_index as u8, to as u8, Some(target as u8), move_type, promo_char))
+            Some(Move::new(self.source_index, to, Some(target), move_type, promo_char))
         } else {
             None
         }

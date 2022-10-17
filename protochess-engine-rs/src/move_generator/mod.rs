@@ -1,6 +1,6 @@
 use crate::types::{PieceType};
 
-use crate::types::bitboard::{Bitboard, from_index, to_index};
+use crate::types::bitboard::{Bitboard, from_index, to_index, BoardIndex};
 use crate::position::Position;
 use crate::position::piece_set::PieceSet;
 use crate::move_generator::attack_tables::AttackTables;
@@ -26,8 +26,7 @@ impl MoveGenerator {
             if !self.is_move_legal(&mv, position) {
                 continue;
             }
-            legal_tuples.push((from_index(mv.get_from() as usize),
-                               from_index(mv.get_to() as usize)));
+            legal_tuples.push((from_index(mv.get_from()), from_index(mv.get_to())));
         }
         legal_tuples
     }
@@ -56,8 +55,8 @@ impl MoveGenerator {
 
         let mut apply_to_each = |mut pieceset:Bitboard, func: fn(&AttackTables, u8, &Bitboard, &Bitboard)-> Bitboard| {
             while !pieceset.is_zero() {
-                let index = pieceset.lowest_one().unwrap() as u8;
-                let mut raw_attacks = func(&self.attack_tables,index, &occ_or_not_in_bounds, &enemies);
+                let index = pieceset.lowest_one().unwrap();
+                let mut raw_attacks = func(&self.attack_tables, index, &occ_or_not_in_bounds, &enemies);
                 //Do not attack ourselves
                 raw_attacks &= !&my_pieces.occupied;
                 //Keep only in bounds
@@ -69,7 +68,7 @@ impl MoveGenerator {
                     None,
                     None,
                 ));
-                pieceset.set_bit(index as usize, false);
+                pieceset.clear_bit(index);
             }
         };
 
@@ -118,44 +117,40 @@ impl MoveGenerator {
                         self.attack_tables.get_south_pawn_attack_raw(index) & !(&my_pieces.occupied)
                     }
                 };
-                if attack_only.bit(ep_sq as usize).unwrap() {
-                    let (cap_x, mut cap_y) = from_index(ep_sq as usize);
+                if attack_only.get_bit(ep_sq) {
+                    let (cap_x, mut cap_y) = from_index(ep_sq);
 
                     if position.whos_turn == 0 {
                         cap_y -= 1;
                     } else {
                         cap_y += 1;
                     }
-                    let mv = Move::new(index, ep_sq,  Some(to_index(cap_x,cap_y) as u8), MoveType::Capture, None);
+                    let mv = Move::new(index, ep_sq,  Some(to_index(cap_x,cap_y)), MoveType::Capture, None);
                     extra_moves.push(mv);
                 }
             }
-            p_copy.set_bit(index as usize, false);
+            p_copy.clear_bit(index);
         }
         //Castling
         if let Some(king_index) = my_pieces.king.bitboard.lowest_one() {
             let (kx, ky) = from_index(king_index);
             let whos_turn = position.whos_turn;
             if position.properties.castling_rights.can_player_castle_kingside(position.whos_turn) {
-                let rook_index = to_index(position.dimensions.width - 1,ky) as u8;
-                if let Some((owner, pt )) = position.piece_at(rook_index as usize) {
+                let rook_index = to_index(position.dimensions.width - 1, ky);
+                if let Some((owner, pt)) = position.piece_at(rook_index) {
                     if owner == whos_turn && pt.piece_type == PieceType::Rook {
                         //See if the space between is clear
-                        let east = self.attack_tables.masks.get_east(king_index as u8);
+                        let east = self.attack_tables.masks.get_east(king_index);
                         let mut occ = east & &position.occupied;
-                        occ.set_bit(rook_index as usize, false);
+                        occ.clear_bit(rook_index);
                         if occ.is_zero() {
                             //See if we can move the king one step east without stepping into check
-                            let king_one_step_indx = to_index(kx + 1, ky) as u8;
+                            let king_one_step_indx = to_index(kx + 1, ky);
                             if self.is_move_legal(&Move::null(), position)
-                                && self.is_move_legal(&Move::new(king_index as u8, king_one_step_indx, None, MoveType::Quiet, None), position)
+                                && self.is_move_legal(&Move::new(king_index, king_one_step_indx, None, MoveType::Quiet, None), position)
                             {
-                                let to_index = to_index(kx + 2, ky) as u8;
-                                extra_moves.push(Move::new(king_index as u8,
-                                                           to_index,
-                                                           Some(rook_index),
-                                                           MoveType::KingsideCastle,
-                                                           None));
+                                let to_index = to_index(kx + 2, ky);
+                                extra_moves.push(Move::new(king_index, to_index, Some(rook_index), MoveType::KingsideCastle, None));
                             }
                         }
                     }
@@ -163,11 +158,11 @@ impl MoveGenerator {
             }
             if position.properties.castling_rights.can_player_castle_queenside(position.whos_turn) {
                 let rook_index = to_index(0 ,ky) as u8;
-                if let Some((owner, pt)) = position.piece_at(rook_index as usize) {
+                if let Some((owner, pt)) = position.piece_at(rook_index) {
                     if owner == whos_turn && pt.piece_type == PieceType::Rook {
                         let west = self.attack_tables.masks.get_west(king_index as u8);
                         let mut occ = west & &position.occupied;
-                        occ.set_bit(rook_index as usize, false);
+                        occ.clear_bit(rook_index);
 
                         if occ.is_zero() {
                             //See if we can move the king one step east without stepping into check
@@ -176,11 +171,7 @@ impl MoveGenerator {
                                 && self.is_move_legal(&Move::new(king_index as u8, king_one_step_indx, None, MoveType::Quiet, None), position)
                             {
                                 let to_index = to_index(kx - 2, ky) as u8;
-                                extra_moves.push(Move::new(king_index as u8,
-                                                           to_index,
-                                                           Some(rook_index),
-                                                           MoveType::QueensideCastle,
-                                                           None));
+                                extra_moves.push(Move::new(king_index as u8, to_index, Some(rook_index), MoveType::QueensideCastle, None));
                             }
                         }
                     }
@@ -274,14 +265,14 @@ impl MoveGenerator {
 
 
                 // Delta based moves (sliding, non sliding)
-                let (x, y) = from_index(index as usize);
+                let (x, y) = from_index(index);
                 for (dx, dy) in &movement.translate_jump_deltas {
                     let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
                     if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
                         continue;
                     }
                     let to = to_index(x2 as u8, y2 as u8);
-                    if position.xy_in_bounds(x2 as u8, y2 as u8) && !position.occupied.bit(to).unwrap() {
+                    if position.xy_in_bounds(x2 as u8, y2 as u8) && !position.occupied.get_bit(to) {
                         //Promotion here?
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
@@ -301,7 +292,7 @@ impl MoveGenerator {
                         continue;
                     }
                     let to = to_index(x2 as u8, y2 as u8);
-                    if enemies.bit(to).unwrap() {
+                    if enemies.get_bit(to) {
                         //Promotion here?
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
@@ -328,7 +319,7 @@ impl MoveGenerator {
                             break;
                         }
                         //If there is an enemy here, we can add an attack move
-                        if enemies.bit(to).unwrap() {
+                        if enemies.get_bit(to) {
                             if movement.promotion_at(to) {
                                 //Add all the promotion moves
                                 for c in movement.promo_vals.as_ref().unwrap() {
@@ -340,7 +331,7 @@ impl MoveGenerator {
                             break;
                         }
                         //Occupied by own team
-                        if position.occupied.bit(to).unwrap() {
+                        if position.occupied.get_bit(to) {
                             break;
                         }
                     }
@@ -356,7 +347,7 @@ impl MoveGenerator {
                         let to = to_index(x2 as u8, y2 as u8);
                         //If the point is out of bounds or there is another piece here, we cannot go any
                         //farther
-                        if !position.xy_in_bounds(x2 as u8, y2 as u8) || position.occupied.bit(to).unwrap() {
+                        if !position.xy_in_bounds(x2 as u8, y2 as u8) || position.occupied.get_bit(to) {
                             break;
                         }
                         if movement.promotion_at(to) {
@@ -370,7 +361,7 @@ impl MoveGenerator {
                     }
                 }
 
-                bb_copy.set_bit(index as usize, false);
+                bb_copy.clear_bit(index);
             }
         }
         iters.into_iter().flatten().chain(moves.into_iter())
@@ -378,8 +369,8 @@ impl MoveGenerator {
 
     /// Returns the number of moves of a piecetype on an otherwise empty board
     /// Useful for evaluation
-    pub fn get_num_moves_on_empty_board(&self, index:u8, position:&Position, piece:&Piece, bounds: &Bitboard) -> u32 {
-        let (x, y) = from_index(index as usize);
+    pub fn get_num_moves_on_empty_board(&self, index: BoardIndex, position: &Position, piece: &Piece, bounds: &Bitboard) -> u32 {
+        let (x, y) = from_index(index);
         if !position.xy_in_bounds(x, y) {
            return 0;
         }
@@ -415,7 +406,7 @@ impl MoveGenerator {
                 );
 
                 // Delta based moves (sliding, non sliding)
-                let (x, y) = from_index(index as usize);
+                let (x, y) = from_index(index);
                 for (dx, dy) in mp.translate_jump_deltas.iter().chain(mp.attack_jump_deltas.iter()) {
                     let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
                     if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
@@ -423,8 +414,8 @@ impl MoveGenerator {
                     }
 
                     let to = to_index(x2 as u8, y2 as u8);
-                    if bounds.bit(to).unwrap() {
-                        slides.set_bit(to, true);
+                    if bounds.get_bit(to) {
+                        slides.set_bit(to);
                     }
                 }
                 for run in mp.attack_sliding_deltas.iter().chain(mp.translate_sliding_deltas.iter()) {
@@ -435,10 +426,10 @@ impl MoveGenerator {
                         }
                         let to = to_index(x2 as u8, y2 as u8);
                         //Out of bounds, next sliding moves can be ignored
-                        if !bounds.bit(to).unwrap() {
+                        if !bounds.get_bit(to) {
                             break;
                         }
-                        slides.set_bit(to, true);
+                        slides.set_bit(to);
                     }
                 }
                 slides
@@ -515,7 +506,7 @@ impl MoveGenerator {
         }
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
-            if mv.get_is_capture() && position.piece_at(mv.get_target() as usize).unwrap().1.piece_type == PieceType::King {
+            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.piece_type == PieceType::King {
                 in_check = true;
                 break;
             }
@@ -528,7 +519,7 @@ impl MoveGenerator {
     pub fn is_move_legal(&self, mv:&Move, position:&mut Position) -> bool{
         //You cannot capture kings
         if mv.get_move_type() == MoveType::PromotionCapture || mv.get_move_type() == MoveType::Capture {
-            if position.piece_at(mv.get_target() as usize).unwrap().1.piece_type == PieceType::King {
+            if position.piece_at(mv.get_target()).unwrap().1.piece_type == PieceType::King {
                 return false;
             }
         }
@@ -540,7 +531,7 @@ impl MoveGenerator {
         }
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
-            if mv.get_is_capture() && position.piece_at(mv.get_target() as usize).unwrap().1.piece_type == PieceType::King {
+            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.piece_type == PieceType::King {
                 legality = false;
                 break;
             }
