@@ -195,7 +195,7 @@ impl Searcher {
         }
 
         if num_legal_moves == 0 {
-            return if movegen.in_check(position) {
+            return if in_check {
                 //Checkmate
                 -99999
             } else {
