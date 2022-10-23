@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CastleRights(u8, u8, u8);
 
 /// Castling rights for up to 8 players

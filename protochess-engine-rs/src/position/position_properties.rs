@@ -5,7 +5,7 @@ use crate::position::castle_rights::CastleRights;
 use crate::types::chess_move::Move;
 
 /// Properties that are hard to recover from a Move
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PositionProperties {
     pub zobrist_key: u64,
     pub move_played: Option<Move>,

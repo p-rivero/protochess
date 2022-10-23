@@ -1,12 +1,15 @@
+use std::thread;
+
 use crate::types::chess_move::{Move, MoveType};
 use crate::position::Position;
 use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 use crate::transposition_table::{TranspositionTable, Entry, EntryFlag};
 
+static mut TRANSPOSITION_TABLE: Option<TranspositionTable> = None;
+static NUM_THREADS: usize = 4;
 
 pub(crate) struct Searcher {
-    transposition_table: TranspositionTable,
     //We store two killer moves per ply,
     //indexed by killer_moves[depth][0] or killer_moves[depth][0]
     killer_moves: [[Move;2];64],
@@ -15,29 +18,77 @@ pub(crate) struct Searcher {
 }
 
 impl Searcher {
-    pub fn new() -> Searcher {
+    pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: u8) -> Option<(Move, u8)> {
+        Searcher::get_best_move_impl(position, eval, movegen, depth, u64::MAX)
+    }
+
+    pub fn get_best_move_timeout(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Option<(Move, u8)> {
+        Searcher::get_best_move_impl(position, eval, movegen, u8::MAX, time_sec)
+    }
+    
+    fn new() -> Searcher {
         Searcher{
-            transposition_table: TranspositionTable::new(),
             killer_moves: [[Move::null(); 2];64],
             history_moves: [[0;256];256],
         }
     }
-
-
-    pub fn get_best_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8) -> Option<(Move, u8)> {
-        self.get_best_move_impl(position, eval, movegen, depth, u64::MAX)
-    }
-
-    pub fn get_best_move_timeout(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Option<(Move, u8)> {
-        self.get_best_move_impl(position, eval, movegen, u8::MAX, time_sec)
+    
+    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: u8, time_sec: u64) -> Option<(Move, u8)> {
+        // Initialize the transposition table
+        unsafe {
+            if TRANSPOSITION_TABLE.is_none() {
+                TRANSPOSITION_TABLE = Some(TranspositionTable::new());
+            } else {
+                transposition_table().set_ancient();
+            }
+        }
+        // Store thread handles
+        let mut handles = Vec::with_capacity(NUM_THREADS);
+        for _ in 0..NUM_THREADS {
+            let mut pos_copy = position.clone();
+            let mut eval_copy = eval.clone();
+            let movegen_copy = (*movegen).clone();
+            // TODO: use threadpool
+            let h = thread::spawn(move || {
+                let mut searcher = Searcher::new();
+                searcher.search_thread(&mut pos_copy, &mut eval_copy, &movegen_copy, depth, time_sec)
+            });
+            handles.push(h);
+        }
+        // Wait for threads to finish
+        let mut best_move = None;
+        let mut best_score = 0;
+        let mut best_depth = 0;
+        for h in handles {
+            let result = h.join().unwrap();
+            
+            match result {
+                Some((mv, score, depth)) => {
+                    if depth > best_depth || (depth == best_depth && score > best_score) {
+                        best_move = Some(mv);
+                        best_score = score;
+                        best_depth = depth;
+                    }
+                },
+                None => {}
+            }
+        }
+        match best_move {
+            Some(mv) => { Some((mv, best_depth)) },
+            None => { None }
+        }
     }
     
-    fn get_best_move_impl(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, time_sec: u64) -> Option<(Move, u8)> {
+    // Run for some time, then return the best move, its score, and the depth
+    fn search_thread(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, time_sec: u64) -> Option<(Move, isize, u8)> {
         //Iterative deepening
-        self.clear_heuristics();
-        self.transposition_table.set_ancient();
+        // self.clear_heuristics(); No need to clear heuristics, we are using a new searcher for each thread
         let start = instant::Instant::now();
         let max_time = instant::Duration::from_secs(time_sec);
+        
+        let mut best_move: Option<Move> = None;
+        let mut best_score = 0;
+        let mut best_depth = 0;
         
         for d in 1..=depth {
             if start.elapsed() >= max_time {
@@ -45,14 +96,16 @@ impl Searcher {
             }
             let alpha = -isize::MAX;
             let beta = isize::MAX;
-            let best_score = self.alphabeta(position, eval, movegen, d,alpha, beta, true);
+            best_score = self.alphabeta(position, eval, movegen, d,alpha, beta, true);
+            best_move = Some(transposition_table().retrieve(position.get_zobrist()).unwrap().mv);
+            best_depth = d;
 
             //Print PV info
             println!("score:{} depth: {}", best_score, d);
         }
 
-        match self.transposition_table.retrieve(position.get_zobrist()) {
-            Some(entry) => {Some(((&entry.mv).to_owned(), entry.depth))},
+        match best_move {
+            Some(mv) => {Some((mv.to_owned(), best_score, best_depth))},
             None => None
         }
     }
@@ -64,7 +117,7 @@ impl Searcher {
         }
 
         let is_pv = alpha != beta - 1;
-        if let Some(entry) = self.transposition_table.retrieve(position.get_zobrist()) {
+        if let Some(entry) = transposition_table().retrieve(position.get_zobrist()) {
             if entry.depth >= depth {
                 match entry.flag {
                     EntryFlag::EXACT => {
@@ -162,7 +215,7 @@ impl Searcher {
                         //Record new killer moves
                         self.update_killers(depth, (&mv).to_owned());
                         //Beta cutoff, store in transpositon table
-                        self.transposition_table.insert(position.get_zobrist(), Entry{
+                        transposition_table().insert(position.get_zobrist(), Entry{
                             key: position.get_zobrist(),
                             flag: EntryFlag::BETA,
                             value: beta,
@@ -192,7 +245,7 @@ impl Searcher {
 
         if alpha != old_alpha {
             //Alpha improvement, record PV
-            self.transposition_table.insert(position.get_zobrist(), Entry{
+            transposition_table().insert(position.get_zobrist(), Entry{
                 key: position.get_zobrist(),
                 flag: EntryFlag::EXACT,
                 value: best_score,
@@ -201,7 +254,7 @@ impl Searcher {
                 ancient: false
             })
         } else {
-            self.transposition_table.insert(position.get_zobrist(), Entry{
+            transposition_table().insert(position.get_zobrist(), Entry{
                 key: position.get_zobrist(),
                 flag: EntryFlag::ALPHA,
                 value: alpha,
@@ -287,7 +340,7 @@ impl Searcher {
         }).collect();
 
         //Assign PV/hash moves to usize::MAX
-        if let Some(entry) = self.transposition_table.retrieve(position.get_zobrist()) {
+        if let Some(entry) = transposition_table().retrieve(position.get_zobrist()) {
             let best_move = &entry.mv;
             for i in 0..moves_and_score.len() {
                 if moves_and_score[i].1 == *best_move {
@@ -317,4 +370,14 @@ impl Searcher {
         None
     }
 
+}
+
+#[inline]
+fn transposition_table() -> &'static mut TranspositionTable {
+    unsafe {
+        if TRANSPOSITION_TABLE.is_none() {
+            TRANSPOSITION_TABLE = Some(TranspositionTable::new());
+        }
+        TRANSPOSITION_TABLE.as_mut().unwrap()
+    }
 }

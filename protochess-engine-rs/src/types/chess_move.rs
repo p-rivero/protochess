@@ -25,7 +25,7 @@ pub enum MoveType {
 /// 010 = castle
 /// 011 = promotion
 /// 100 = promotion-capture
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub struct Move(u32, Option<char>);
 
 impl Move {

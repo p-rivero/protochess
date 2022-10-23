@@ -22,6 +22,7 @@ const CASTLING_BONUS:isize = 400;
 const PST_MULTIPLIER:isize = 5;
 
 /// Assigns a score to a given position
+#[derive(Clone, Debug)]
 pub(crate) struct Evaluator {
     //Piece values for pieces,
     //Hard coded for builtin pieces,

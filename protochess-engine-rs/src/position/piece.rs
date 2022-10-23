@@ -1,6 +1,7 @@
 use crate::types::PieceType;
 use crate::types::bitboard::Bitboard;
 
+#[derive(Clone, Debug)]
 pub struct Piece {
     pub char_rep: char,
     //Player num for the owner of this piece

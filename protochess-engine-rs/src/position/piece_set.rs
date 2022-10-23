@@ -4,6 +4,7 @@ use crate::position::piece::Piece;
 
 /// Represents a set of pieces for a player
 /// custom is a vec of custom piece
+#[derive(Clone, Debug)]
 pub struct PieceSet {
     pub occupied: Bitboard,
     pub king: Piece,

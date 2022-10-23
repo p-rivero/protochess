@@ -34,6 +34,7 @@ lazy_static! {
 
 
 /// Represents a single position in chess
+#[derive(Clone, Debug)]
 pub struct Position {
     pub dimensions: Dimensions,
     pub bounds: Bitboard, //Bitboard representing the boundaries

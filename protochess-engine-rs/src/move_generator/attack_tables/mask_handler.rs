@@ -2,6 +2,7 @@ use arrayvec::ArrayVec;
 use crate::types::bitboard::{Bitboard, to_index};
 
 /// General bitboard masks for use with attack tables
+#[derive(Clone, Debug)]
 pub struct MaskHandler {
     north: ArrayVec<[Bitboard;256]>,
     east: ArrayVec<[Bitboard;256]>,

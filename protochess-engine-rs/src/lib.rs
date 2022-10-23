@@ -137,7 +137,6 @@ pub struct Engine {
     pub current_position: Position,
     pub move_generator: MoveGenerator,
     pub(crate) evaluator: Evaluator,
-    pub(crate) searcher: Searcher,
 }
 
 impl Engine {
@@ -147,7 +146,6 @@ impl Engine {
             move_generator: MoveGenerator::new(),
             current_position: Position::default(),
             evaluator: Evaluator::new(),
-            searcher: Searcher::new(),
         }
     }
 
@@ -207,7 +205,6 @@ impl Engine {
         Engine{
             move_generator: MoveGenerator::new(),
             evaluator: Evaluator::new(),
-            searcher: Searcher::new(),
             current_position: Position::from_fen(fen),
         }
     }
@@ -265,7 +262,7 @@ impl Engine {
 
     ///Calculates and plays the best move found up to a given depth
     pub fn play_best_move(&mut self, depth:u8) -> bool {
-        if let Some((best, depth_)) = self.searcher.get_best_move(&mut self.current_position,
+        if let Some((best, depth_)) = Searcher::get_best_move(&mut self.current_position,
                                                         &mut self.evaluator,
                                                         &self.move_generator,
                                                         depth){
@@ -280,7 +277,7 @@ impl Engine {
 
     ///Returns (fromx,fromy,tox,toy)
     pub fn get_best_move(&mut self, depth:u8) -> Option<(u8, u8, u8, u8)> {
-        if let Some((best, depth_)) = self.searcher.get_best_move(&mut self.current_position,
+        if let Some((best, depth_)) = Searcher::get_best_move(&mut self.current_position,
                                                         &mut self.evaluator,
                                                         &self.move_generator,
                                                         depth) {
@@ -295,7 +292,7 @@ impl Engine {
 
     ///Calculates and plays the best move found
     pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, u8) {
-        if let Some((best, depth)) = self.searcher.get_best_move_timeout(&mut self.current_position,
+        if let Some((best, depth)) = Searcher::get_best_move_timeout(&mut self.current_position,
                                                                          &mut self.evaluator,
                                                                          &self.move_generator,
                                                                          max_sec) {
@@ -309,7 +306,7 @@ impl Engine {
 
     ///Returns ((fromX,fromY,toX,toY), depth)
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((u8, u8, u8, u8), u8)> {
-        if let Some((best, depth)) = self.searcher.get_best_move_timeout(&mut self.current_position,
+        if let Some((best, depth)) = Searcher::get_best_move_timeout(&mut self.current_position,
                                                                          &mut self.evaluator,
                                                                          &self.move_generator,
                                                                          max_sec) {

@@ -6,6 +6,7 @@ use crate::move_generator::attack_tables::mask_handler::MaskHandler;
 
 /// Holds pre-calculated attack tables for the pieces, assuming a 16x16 size board
 /// Only for classical set of pieces
+#[derive(Clone, Debug)]
 pub struct AttackTables {
     slider_attacks: Vec<Vec<u16>>,
     knight_attacks: ArrayVec<[Bitboard;256]>,
