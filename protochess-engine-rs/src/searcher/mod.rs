@@ -298,22 +298,6 @@ impl Searcher {
         alpha
     }
 
-
-    //Resets heuristics
-    fn clear_heuristics(&mut self) {
-        for i in 0..self.killer_moves.len() {
-            for j in 0..self.killer_moves[i].len() {
-                self.killer_moves[i][j] = Move::null();
-            }
-        }
-        for i in 0..self.history_moves.len() {
-            for j in 0..self.history_moves[i].len() {
-                    self.history_moves[i][j] = 0;
-            }
-        }
-    }
-
-
     #[inline]
     fn update_killers(&mut self, depth: u8, mv: Move) {
         if !mv.get_is_capture() {
@@ -375,9 +359,7 @@ impl Searcher {
 #[inline]
 fn transposition_table() -> &'static mut TranspositionTable {
     unsafe {
-        if TRANSPOSITION_TABLE.is_none() {
-            TRANSPOSITION_TABLE = Some(TranspositionTable::new());
-        }
+        // All threads can access the transposition table. Each row is protected by a lock.
         TRANSPOSITION_TABLE.as_mut().unwrap()
     }
 }
