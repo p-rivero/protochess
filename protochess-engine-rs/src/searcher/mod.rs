@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicU8, AtomicU64, Ordering::Relaxed};
 use std::thread;
 
 use crate::types::chess_move::{Move, MoveType};
@@ -6,7 +7,11 @@ use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 use crate::transposition_table::{TranspositionTable, Entry, EntryFlag};
 
+// Global structures, shared between threads
 static mut TRANSPOSITION_TABLE: Option<TranspositionTable> = None;
+static mut GLOBAL_DEPTH: AtomicU8 = AtomicU8::new(0);
+static mut THREAD_ID: AtomicU8 = AtomicU8::new(1);
+static mut SEARCH_ID: AtomicU64 = AtomicU64::new(1);
 static NUM_THREADS: usize = 4;
 
 pub(crate) struct Searcher {
@@ -33,44 +38,43 @@ impl Searcher {
         }
     }
     
-    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: u8, time_sec: u64) -> Option<(Move, u8)> {
-        // Initialize the transposition table
+    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> Option<(Move, u8)> {
+        
+        // Initialize the global structures
         unsafe {
             if TRANSPOSITION_TABLE.is_none() {
                 TRANSPOSITION_TABLE = Some(TranspositionTable::new());
             } else {
                 transposition_table().set_ancient();
             }
+            GLOBAL_DEPTH.store(0, Relaxed);
+            THREAD_ID.store(1, Relaxed);
+            SEARCH_ID.store(1, Relaxed);
         }
-        // Store thread handles
+        
+        // Init threads, store handles
         let mut handles = Vec::with_capacity(NUM_THREADS);
         for _ in 0..NUM_THREADS {
             let mut pos_copy = position.clone();
             let mut eval_copy = eval.clone();
             let movegen_copy = (*movegen).clone();
-            // TODO: use threadpool
             let h = thread::spawn(move || {
                 let mut searcher = Searcher::new();
-                searcher.search_thread(&mut pos_copy, &mut eval_copy, &movegen_copy, depth, time_sec)
+                searcher.search_thread(&mut pos_copy, &mut eval_copy, &movegen_copy, max_depth, time_sec)
             });
             handles.push(h);
         }
+        
         // Wait for threads to finish
         let mut best_move = None;
         let mut best_score = 0;
         let mut best_depth = 0;
         for h in handles {
-            let result = h.join().unwrap();
-            
-            match result {
-                Some((mv, score, depth)) => {
-                    if depth > best_depth || (depth == best_depth && score > best_score) {
-                        best_move = Some(mv);
-                        best_score = score;
-                        best_depth = depth;
-                    }
-                },
-                None => {}
+            let (mv, score, depth) = h.join().unwrap();
+            if depth > best_depth || (depth == best_depth && score > best_score) {
+                best_move = Some(mv);
+                best_score = score;
+                best_depth = depth;
             }
         }
         match best_move {
@@ -80,34 +84,48 @@ impl Searcher {
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, time_sec: u64) -> Option<(Move, isize, u8)> {
-        //Iterative deepening
-        // self.clear_heuristics(); No need to clear heuristics, we are using a new searcher for each thread
+    fn search_thread(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> (Move, isize, u8) {
         let start = instant::Instant::now();
         let max_time = instant::Duration::from_secs(time_sec);
         
-        let mut best_move: Option<Move> = None;
-        let mut best_score = 0;
-        let mut best_depth = 0;
+        let mut best_move: Move;
+        let mut best_score: isize;
+        let mut best_depth: u8;
         
-        for d in 1..=depth {
-            if start.elapsed() >= max_time {
-                break;
-            }
-            let alpha = -isize::MAX;
-            let beta = isize::MAX;
-            best_score = self.alphabeta(position, eval, movegen, d,alpha, beta, true);
-            best_move = Some(transposition_table().retrieve(position.get_zobrist()).unwrap().mv);
-            best_depth = d;
+        let thread_id = unsafe { THREAD_ID.fetch_add(1, Relaxed) };
+        // At the start, each thread should search a different depth (between 1 and max_depth, inclusive)
+        let mut local_depth = (thread_id % max_depth) + 1;
+        // 1/2 threads search 1 ply deeper, 1/4 threads search 2 ply deeper, etc.
+        let depth_increment = 1 + thread_id.trailing_zeros() as u8;
+        println!("Thread {} starting at depth {} with increment {}", thread_id, local_depth, depth_increment);
+        
+        //Iterative deepening
+        loop {
+            best_score = self.alphabeta(position, eval, movegen, local_depth, -isize::MAX, isize::MAX, true);
+            best_move = transposition_table().retrieve(position.get_zobrist()).unwrap().mv;
+            best_depth = local_depth;
 
             //Print PV info
-            println!("score:{} depth: {}", best_score, d);
+            println!("thread {}, score:{} depth: {}", thread_id, best_score, best_depth);
+            
+            // Set the global depth to max(local_depth, global_depth)
+            // GLOBAL_DEPTH contains the maximum depth searched by any thread
+            let old_global_depth = unsafe { GLOBAL_DEPTH.fetch_max(local_depth, Relaxed) };
+            
+            // If time is up or any thread has searched to max_depth, return
+            if start.elapsed() >= max_time || local_depth == max_depth || old_global_depth == max_depth {
+                // Signal to other threads that they can stop
+                unsafe { GLOBAL_DEPTH.store(max_depth, Relaxed); }
+                break;
+            }
+                        
+            // Update local_depth: set to GLOBAL_DEPTH + offset
+            local_depth = unsafe { GLOBAL_DEPTH.load(Relaxed) } + depth_increment;
+            // Limit local_depth to max_depth
+            local_depth = std::cmp::min(local_depth, max_depth);
         }
 
-        match best_move {
-            Some(mv) => {Some((mv.to_owned(), best_score, best_depth))},
-            None => None
-        }
+        (best_move.to_owned(), best_score, best_depth)
     }
 
     fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, mut alpha: isize, beta: isize, do_null: bool) -> isize {
