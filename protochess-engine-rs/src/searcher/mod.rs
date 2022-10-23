@@ -1,16 +1,20 @@
+mod timeout_error;
+
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering::Relaxed};
 use std::thread;
+use instant::{Instant, Duration};
 
 use crate::types::chess_move::{Move, MoveType};
 use crate::position::Position;
 use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 use crate::transposition_table::{TranspositionTable, Entry, EntryFlag};
+use timeout_error::TimeoutError;
 
 // Global structures, shared between threads
 static mut TRANSPOSITION_TABLE: Option<TranspositionTable> = None;
 static mut GLOBAL_DEPTH: AtomicU8 = AtomicU8::new(0);
-static mut THREAD_ID: AtomicU8 = AtomicU8::new(1);
+static mut THREAD_ID: AtomicU8 = AtomicU8::new(0);
 static mut SEARCH_ID: AtomicU64 = AtomicU64::new(1);
 static NUM_THREADS: usize = 4;
 
@@ -20,11 +24,14 @@ pub(crate) struct Searcher {
     killer_moves: [[Move;2];64],
     //Indexed by history_moves[side2move][from][to]
     history_moves: [[u16;256];256],
+    // Stats
+    nodes_searched: u64,
 }
 
 impl Searcher {
     pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: u8) -> Option<(Move, u8)> {
-        Searcher::get_best_move_impl(position, eval, movegen, depth, u64::MAX)
+        // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
+        Searcher::get_best_move_impl(position, eval, movegen, depth, 1_000_000)
     }
 
     pub fn get_best_move_timeout(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Option<(Move, u8)> {
@@ -35,6 +42,7 @@ impl Searcher {
         Searcher{
             killer_moves: [[Move::null(); 2];64],
             history_moves: [[0;256];256],
+            nodes_searched: 0
         }
     }
     
@@ -48,7 +56,7 @@ impl Searcher {
                 transposition_table().set_ancient();
             }
             GLOBAL_DEPTH.store(0, Relaxed);
-            THREAD_ID.store(1, Relaxed);
+            THREAD_ID.store(0, Relaxed);
             SEARCH_ID.store(1, Relaxed);
         }
         
@@ -85,42 +93,53 @@ impl Searcher {
     
     // Run for some time, then return the best move, its score, and the depth
     fn search_thread(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> (Move, isize, u8) {
-        let start = instant::Instant::now();
-        let max_time = instant::Duration::from_secs(time_sec);
+        let end_time = Instant::now() + Duration::from_secs(time_sec);
         
-        let mut best_move: Move;
-        let mut best_score: isize;
-        let mut best_depth: u8;
+        let mut best_move: Move = Move::null();
+        let mut best_score: isize = 0;
+        let mut best_depth: u8 = 0;
         
         let thread_id = unsafe { THREAD_ID.fetch_add(1, Relaxed) };
         // At the start, each thread should search a different depth (between 1 and max_depth, inclusive)
         let mut local_depth = (thread_id % max_depth) + 1;
-        // 1/2 threads search 1 ply deeper, 1/4 threads search 2 ply deeper, etc.
-        let depth_increment = 1 + thread_id.trailing_zeros() as u8;
-        println!("Thread {} starting at depth {} with increment {}", thread_id, local_depth, depth_increment);
         
-        //Iterative deepening
         loop {
-            best_score = self.alphabeta(position, eval, movegen, local_depth, -isize::MAX, isize::MAX, true);
-            best_move = transposition_table().retrieve(position.get_zobrist()).unwrap().mv;
-            best_depth = local_depth;
-
+            self.nodes_searched = 0;
+            match self.alphabeta(position, eval, movegen, local_depth, -isize::MAX, isize::MAX, true, &end_time) {
+                Ok(score) => {
+                    best_score = score;
+                    best_move = transposition_table().retrieve(position.get_zobrist()).unwrap().mv;
+                    best_depth = local_depth;
+                },
+                Err(TimeoutError) => {
+                    // Thread timed out, return the best move found so far
+                    break;
+                }
+            }
             //Print PV info
-            println!("thread {}, score:{} depth: {}", thread_id, best_score, best_depth);
+            println!("Thread {} score: {}, depth: {}, nodes: {}", thread_id, best_score, best_depth, self.nodes_searched);
             
             // Set the global depth to max(local_depth, global_depth)
             // GLOBAL_DEPTH contains the maximum depth searched by any thread
             let old_global_depth = unsafe { GLOBAL_DEPTH.fetch_max(local_depth, Relaxed) };
             
             // If time is up or any thread has searched to max_depth, return
-            if start.elapsed() >= max_time || local_depth == max_depth || old_global_depth == max_depth {
+            if Instant::now() >= end_time || local_depth == max_depth || old_global_depth == max_depth {
                 // Signal to other threads that they can stop
                 unsafe { GLOBAL_DEPTH.store(max_depth, Relaxed); }
                 break;
             }
                         
-            // Update local_depth: set to GLOBAL_DEPTH + offset
-            local_depth = unsafe { GLOBAL_DEPTH.load(Relaxed) } + depth_increment;
+            if NUM_THREADS == 1 {
+                // Iterative deepening
+                local_depth += 1;
+            } else {
+                // Update local_depth: set to GLOBAL_DEPTH + increment
+                let search_id = unsafe { SEARCH_ID.fetch_add(1, Relaxed) };
+                // 1/2 threads search 1 ply deeper, 1/4 threads search 2 ply deeper, etc.
+                let increment = 1 + search_id.trailing_zeros() as u8;
+                local_depth = unsafe { GLOBAL_DEPTH.load(Relaxed) } + increment;
+            }
             // Limit local_depth to max_depth
             local_depth = std::cmp::min(local_depth, max_depth);
         }
@@ -128,10 +147,18 @@ impl Searcher {
         (best_move.to_owned(), best_score, best_depth)
     }
 
-    fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, mut alpha: isize, beta: isize, do_null: bool) -> isize {
+    fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, mut alpha: isize, beta: isize, do_null: bool, end_time: &Instant) -> Result<isize, TimeoutError> {
 
         if depth <= 0 {
             return self.quiesce(position, eval, movegen, 0, alpha, beta);
+        }
+        
+        self.nodes_searched += 1;
+        if self.nodes_searched & 0x7FFFF == 0 {
+            // Check for timeout periodically (~500k nodes)
+            if Instant::now() >= *end_time {
+                return Err(TimeoutError::new());
+            }
         }
 
         let is_pv = alpha != beta - 1;
@@ -140,21 +167,21 @@ impl Searcher {
                 match entry.flag {
                     EntryFlag::EXACT => {
                         if entry.value < alpha {
-                            return alpha;
+                            return Ok(alpha);
                         }
                         if entry.value >= beta{
-                            return beta;
+                            return Ok(beta);
                         }
-                        return entry.value;
+                        return Ok(entry.value);
                     }
                     EntryFlag::BETA => {
                         if !is_pv && beta <= entry.value {
-                            return beta;
+                            return Ok(beta);
                         }
                     }
                     EntryFlag::ALPHA => {
                         if !is_pv && alpha >= entry.value {
-                            return alpha;
+                            return Ok(alpha);
                         }
                     }
                     EntryFlag::NULL => {}
@@ -164,8 +191,8 @@ impl Searcher {
 
         //Null move pruning
         if !is_pv && do_null {
-            if let Some(beta) = self.try_null_move(position, eval, movegen, depth, alpha, beta) {
-                return beta;
+            if let Some(beta) = self.try_null_move(position, eval, movegen, depth, alpha, beta, end_time)? {
+                return Ok(beta);
             }
         }
 
@@ -186,10 +213,8 @@ impl Searcher {
             position.make_move((&mv).to_owned());
             let mut score: isize;
             if num_legal_moves == 1 {
-                score = -self.alphabeta(position, eval, movegen,
-                                        depth - 1, -beta, -alpha, true);
+                score = -self.alphabeta(position, eval, movegen, depth - 1, -beta, -alpha, true, end_time)?;
             } else {
-
                 //Try late move reduction
                 if num_legal_moves > 4
                     && mv.get_move_type() == MoveType::Quiet
@@ -201,8 +226,7 @@ impl Searcher {
                     if num_legal_moves > 10 {
                         reduced_depth = depth - 3;
                     }
-                    score = -self.alphabeta(position, eval, movegen,
-                                            reduced_depth, -alpha - 1, -alpha, true);
+                    score = -self.alphabeta(position, eval, movegen, reduced_depth, -alpha - 1, -alpha, true, end_time)?;
                 } else {
                     //Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
@@ -211,12 +235,10 @@ impl Searcher {
                 if score > alpha {
                     //PVS
                     //Null window search
-                    score = -self.alphabeta(position, eval, movegen,
-                                            depth - 1, -alpha - 1, -alpha, true);
+                    score = -self.alphabeta(position, eval, movegen, depth - 1, -alpha - 1, -alpha, true, end_time)?;
                     //Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta(position, eval, movegen,
-                                                depth - 1, -beta, -alpha, true);
+                        score = -self.alphabeta(position, eval, movegen, depth - 1, -beta, -alpha, true, end_time)?;
                     }
                 }
 
@@ -241,7 +263,7 @@ impl Searcher {
                             depth,
                             ancient: false
                         });
-                        return beta;
+                        return Ok(beta);
                     }
                     alpha = score;
 
@@ -254,10 +276,10 @@ impl Searcher {
         if num_legal_moves == 0 {
             return if in_check {
                 //Checkmate
-                -99999
+                Ok(-99999)
             } else {
                 //Stalemate
-                0
+                Ok(0)
             };
         }
 
@@ -281,14 +303,14 @@ impl Searcher {
                 ancient: false
             })
         }
-        alpha
+        Ok(alpha)
     }
 
 
-    fn quiesce(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth:u8, mut alpha: isize, beta: isize) -> isize {
+    fn quiesce(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth:u8, mut alpha: isize, beta: isize) -> Result<isize, TimeoutError> {
         let score = eval.evaluate(position, movegen);
         if score >= beta{
-            return beta;
+            return Ok(beta);
         }
         if score > alpha {
             alpha = score;
@@ -301,19 +323,18 @@ impl Searcher {
             }
 
             position.make_move((&mv).to_owned());
-            let score = -self.quiesce(position, eval, movegen, depth, -beta, -alpha);
+            let score = -self.quiesce(position, eval, movegen, depth, -beta, -alpha)?;
             position.unmake_move();
 
             if score >= beta {
-                return beta;
+                return Ok(beta);
             }
             if score > alpha {
                 alpha = score;
                 // best_move = mv;
             }
         }
-
-        alpha
+        Ok(alpha)
     }
 
     #[inline]
@@ -359,17 +380,17 @@ impl Searcher {
     }
 
     #[inline]
-    fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, _alpha: isize, beta: isize) -> Option<isize> {
+    fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, _alpha: isize, beta: isize, end_time: &Instant) -> Result<Option<isize>, TimeoutError> {
         
         if depth > 3 && eval.can_do_null_move(position) && !movegen.in_check(position) {
             position.make_move(Move::null());
-            let nscore = -self.alphabeta(position,eval, movegen, depth - 3, -beta, -beta + 1, false);
+            let nscore = -self.alphabeta(position,eval, movegen, depth - 3, -beta, -beta + 1, false, end_time)?;
             position.unmake_move();
             if nscore >= beta {
-                return Some(beta);
+                return Ok(Some(beta));
             }
         }
-        None
+        Ok(None)
     }
 
 }
