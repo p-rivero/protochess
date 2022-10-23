@@ -24,49 +24,35 @@ impl Searcher {
     }
 
 
-    pub fn get_best_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8) -> Option<Move> {
-        //Iterative deepening
-        self.clear_heuristics();
-        self.transposition_table.set_ancient();
-        for d in 1..=depth {
-            let alpha = -isize::MAX;
-            let beta = isize::MAX;
-            let best_score = self.alphabeta(position, eval, movegen, d,alpha, beta, true);
-
-            //Print PV info
-            println!("score:{} depth: {}", best_score, d);
-        }
-
-        match self.transposition_table.retrieve(position.get_zobrist()) {
-            Some(entry) => {Some((&entry.mv).to_owned())}
-            None => None
-        }
+    pub fn get_best_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8) -> Option<(Move, u8)> {
+        self.get_best_move_impl(position, eval, movegen, depth, u64::MAX)
     }
 
     pub fn get_best_move_timeout(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Option<(Move, u8)> {
+        self.get_best_move_impl(position, eval, movegen, u8::MAX, time_sec)
+    }
+    
+    fn get_best_move_impl(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, time_sec: u64) -> Option<(Move, u8)> {
         //Iterative deepening
         self.clear_heuristics();
         self.transposition_table.set_ancient();
-        let mut d = 1;
         let start = instant::Instant::now();
         let max_time = instant::Duration::from_secs(time_sec);
-        loop {
+        
+        for d in 1..=depth {
             if start.elapsed() >= max_time {
                 break;
             }
-
             let alpha = -isize::MAX;
             let beta = isize::MAX;
             let best_score = self.alphabeta(position, eval, movegen, d,alpha, beta, true);
 
             //Print PV info
             println!("score:{} depth: {}", best_score, d);
-
-            d += 1;
         }
 
         match self.transposition_table.retrieve(position.get_zobrist()) {
-            Some(entry) => {Some(((&entry.mv).to_owned(), d))}
+            Some(entry) => {Some(((&entry.mv).to_owned(), entry.depth))},
             None => None
         }
     }

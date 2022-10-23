@@ -265,10 +265,11 @@ impl Engine {
 
     ///Calculates and plays the best move found up to a given depth
     pub fn play_best_move(&mut self, depth:u8) -> bool {
-        if let Some(best) = self.searcher.get_best_move(&mut self.current_position,
+        if let Some((best, depth_)) = self.searcher.get_best_move(&mut self.current_position,
                                                         &mut self.evaluator,
                                                         &self.move_generator,
-                                                        depth) {
+                                                        depth){
+            assert!(depth == depth_);
             let (x1, y1) = from_index(best.get_from());
             let (x2, y2) = from_index(best.get_to());
             self.make_move(x1, y1, x2, y2)
@@ -279,10 +280,11 @@ impl Engine {
 
     ///Returns (fromx,fromy,tox,toy)
     pub fn get_best_move(&mut self, depth:u8) -> Option<(u8, u8, u8, u8)> {
-        if let Some(best) = self.searcher.get_best_move(&mut self.current_position,
+        if let Some((best, depth_)) = self.searcher.get_best_move(&mut self.current_position,
                                                         &mut self.evaluator,
                                                         &self.move_generator,
                                                         depth) {
+            assert!(depth == depth_);
             let (x1, y1) = from_index(best.get_from());
             let (x2, y2) = from_index(best.get_to());
             Some((x1, y1, x2, y2))
