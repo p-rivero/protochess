@@ -23,7 +23,7 @@ use crate::evaluator::Evaluator;
 use crate::position::movement_pattern::MovementPattern;
 pub use crate::types::PieceType;
 pub use crate::types::chess_move::Move;
-use crate::searcher::Searcher;
+use crate::searcher::{Searcher, GameResult};
 pub use crate::position::movement_pattern::MovementPatternExternal;
 use crate::types::bitboard::Bitboard;
 
@@ -262,59 +262,60 @@ impl Engine {
 
     ///Calculates and plays the best move found up to a given depth
     pub fn play_best_move(&mut self, depth:u8) -> bool {
-        if let Some((best, depth_)) = Searcher::get_best_move(&mut self.current_position,
-                                                        &mut self.evaluator,
-                                                        &self.move_generator,
-                                                        depth){
-            assert!(depth == depth_);
-            let (x1, y1) = from_index(best.get_from());
-            let (x2, y2) = from_index(best.get_to());
-            self.make_move(x1, y1, x2, y2)
-        } else {
-            false
+        let best_move = Searcher::get_best_move(&mut self.current_position, &mut self.evaluator, &self.move_generator, depth);
+        match self.process_move(&best_move) {
+            Some((x1, y1, x2, y2, _)) => self.make_move(x1, y1, x2, y2),
+            None => false
         }
     }
 
     ///Returns (fromx,fromy,tox,toy)
     pub fn get_best_move(&mut self, depth:u8) -> Option<(u8, u8, u8, u8)> {
-        if let Some((best, depth_)) = Searcher::get_best_move(&mut self.current_position,
-                                                        &mut self.evaluator,
-                                                        &self.move_generator,
-                                                        depth) {
-            assert!(depth == depth_);
-            let (x1, y1) = from_index(best.get_from());
-            let (x2, y2) = from_index(best.get_to());
-            Some((x1, y1, x2, y2))
-        } else {
-            None
+        let best_move = Searcher::get_best_move(&mut self.current_position, &mut self.evaluator, &self.move_generator, depth);
+        match self.process_move(&best_move) {
+            Some((x1, y1, x2, y2, _)) => Some((x1, y1, x2, y2)),
+            None => None
         }
     }
 
     ///Calculates and plays the best move found
     pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, u8) {
-        if let Some((best, depth)) = Searcher::get_best_move_timeout(&mut self.current_position,
-                                                                         &mut self.evaluator,
-                                                                         &self.move_generator,
-                                                                         max_sec) {
-            let (x1, y1) = from_index(best.get_from());
-            let (x2, y2) = from_index(best.get_to());
-            (self.make_move(x1, y1, x2, y2), depth)
-        } else {
-            (false, 0)
+        let best_move = Searcher::get_best_move_timeout(&self.current_position, &self.evaluator, &self.move_generator, max_sec);
+        match self.process_move(&best_move) {
+            Some((x1, y1, x2, y2, depth)) => (self.make_move(x1, y1, x2, y2), depth),
+            None => return (false, 0)
         }
     }
 
     ///Returns ((fromX,fromY,toX,toY), depth)
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((u8, u8, u8, u8), u8)> {
-        if let Some((best, depth)) = Searcher::get_best_move_timeout(&mut self.current_position,
-                                                                         &mut self.evaluator,
-                                                                         &self.move_generator,
-                                                                         max_sec) {
-            let (x1, y1) = from_index(best.get_from());
-            let (x2, y2) = from_index(best.get_to());
-            Some(((x1, y1, x2, y2), depth))
-        } else {
-            None
+        let best_move = Searcher::get_best_move_timeout(&mut self.current_position, &mut self.evaluator, &self.move_generator, max_sec);
+        match self.process_move(&best_move) {
+            Some((x1, y1, x2, y2, depth)) => Some(((x1, y1, x2, y2), depth)),
+            None => None
+        }
+    }
+    
+    fn process_move(&self, mv: &Result<(Move, u8), GameResult>) -> Option<(u8, u8, u8, u8, u8)> {
+        match mv {
+            Ok((best, depth)) => {
+                let (x1, y1) = from_index(best.get_from());
+                let (x2, y2) = from_index(best.get_to());
+                Some((x1, y1, x2, y2, *depth))
+            },
+            Err(GameResult::Checkmate) => {
+                let loser = self.current_position.whos_turn;
+                if loser == 0 {
+                    println!("CHECKMATE! Black wins!");
+                } else {
+                    println!("CHECKMATE! White wins!");
+                } 
+                None
+            }
+            Err(GameResult::Stalemate) => {
+                println!("STALEMATE!");
+                None
+            }
         }
     }
 

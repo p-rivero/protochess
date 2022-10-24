@@ -1,5 +1,3 @@
-mod timeout_error;
-
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering::Relaxed};
 use std::thread;
 use instant::{Instant, Duration};
@@ -9,14 +7,23 @@ use crate::position::Position;
 use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 use crate::transposition_table::{TranspositionTable, Entry, EntryFlag};
-use timeout_error::TimeoutError;
 
 // Global structures, shared between threads
 static mut TRANSPOSITION_TABLE: Option<TranspositionTable> = None;
 static mut GLOBAL_DEPTH: AtomicU8 = AtomicU8::new(0);
-static mut THREAD_ID: AtomicU8 = AtomicU8::new(0);
 static mut SEARCH_ID: AtomicU64 = AtomicU64::new(1);
-static NUM_THREADS: usize = 4;
+
+static NUM_THREADS: u8 = 4;
+
+enum SearcherError {
+    Timeout,
+    Checkmate,
+    Stalemate,
+}
+pub enum GameResult {
+    Checkmate,
+    Stalemate,
+}
 
 pub(crate) struct Searcher {
     //We store two killer moves per ply,
@@ -26,15 +33,16 @@ pub(crate) struct Searcher {
     history_moves: [[u16;256];256],
     // Stats
     nodes_searched: u64,
+    current_searching_depth: u8,
 }
 
 impl Searcher {
-    pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: u8) -> Option<(Move, u8)> {
+    pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: u8) -> Result<(Move, u8), GameResult> {
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
         Searcher::get_best_move_impl(position, eval, movegen, depth, 1_000_000)
     }
 
-    pub fn get_best_move_timeout(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Option<(Move, u8)> {
+    pub fn get_best_move_timeout(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Result<(Move, u8), GameResult> {
         Searcher::get_best_move_impl(position, eval, movegen, u8::MAX, time_sec)
     }
     
@@ -42,11 +50,12 @@ impl Searcher {
         Searcher{
             killer_moves: [[Move::null(); 2];64],
             history_moves: [[0;256];256],
-            nodes_searched: 0
+            nodes_searched: 0,
+            current_searching_depth: 0,
         }
     }
     
-    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> Option<(Move, u8)> {
+    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> Result<(Move, u8), GameResult> {
         
         // Initialize the global structures
         unsafe {
@@ -56,64 +65,74 @@ impl Searcher {
                 transposition_table().set_ancient();
             }
             GLOBAL_DEPTH.store(0, Relaxed);
-            THREAD_ID.store(0, Relaxed);
             SEARCH_ID.store(1, Relaxed);
         }
         
         // Init threads, store handles
-        let mut handles = Vec::with_capacity(NUM_THREADS);
-        for _ in 0..NUM_THREADS {
+        let mut handles = Vec::with_capacity(NUM_THREADS as usize);
+        for thread_id in 0..NUM_THREADS {
+            // For each thread, create a local copy of the heuristics
             let mut pos_copy = position.clone();
             let mut eval_copy = eval.clone();
             let movegen_copy = (*movegen).clone();
             let h = thread::spawn(move || {
                 let mut searcher = Searcher::new();
-                searcher.search_thread(&mut pos_copy, &mut eval_copy, &movegen_copy, max_depth, time_sec)
+                searcher.search_thread(thread_id, &mut pos_copy, &mut eval_copy, &movegen_copy, max_depth, time_sec)
             });
             handles.push(h);
         }
         
         // Wait for threads to finish
-        let mut best_move = None;
-        let mut best_score = 0;
+        let mut best_move = Move::null();
+        let mut best_score = isize::MIN;
         let mut best_depth = 0;
         for h in handles {
-            let (mv, score, depth) = h.join().unwrap();
+            // If any thread returns a GameResult, drop the other threads and return the result
+            let (mv, score, depth) = h.join().unwrap()?;
+            // If any thread reaches the target depth, drop the other threads and return the move
+            if depth == max_depth {
+                return Ok((mv, depth));
+            }
             if depth > best_depth || (depth == best_depth && score > best_score) {
-                best_move = Some(mv);
+                best_move = mv;
                 best_score = score;
                 best_depth = depth;
             }
         }
-        match best_move {
-            Some(mv) => { Some((mv, best_depth)) },
-            None => { None }
-        }
+        Ok((best_move, best_depth))
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> (Move, isize, u8) {
+    fn search_thread(&mut self, thread_id: u8, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> Result<(Move, isize, u8), GameResult> {
         let end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut best_move: Move = Move::null();
         let mut best_score: isize = 0;
         let mut best_depth: u8 = 0;
         
-        let thread_id = unsafe { THREAD_ID.fetch_add(1, Relaxed) };
         // At the start, each thread should search a different depth (between 1 and max_depth, inclusive)
         let mut local_depth = (thread_id % max_depth) + 1;
         
         loop {
             self.nodes_searched = 0;
+            self.current_searching_depth = local_depth;
             match self.alphabeta(position, eval, movegen, local_depth, -isize::MAX, isize::MAX, true, &end_time) {
                 Ok(score) => {
                     best_score = score;
                     best_move = transposition_table().retrieve(position.get_zobrist()).unwrap().mv;
                     best_depth = local_depth;
                 },
-                Err(TimeoutError) => {
+                Err(SearcherError::Timeout) => {
                     // Thread timed out, return the best move found so far
                     break;
+                },
+                Err(SearcherError::Checkmate) => {
+                    assert!(best_depth == 0);
+                    return Err(GameResult::Checkmate);
+                },
+                Err(SearcherError::Stalemate) => {
+                    assert!(best_depth == 0);
+                    return Err(GameResult::Stalemate);
                 }
             }
             //Print PV info
@@ -144,10 +163,10 @@ impl Searcher {
             local_depth = std::cmp::min(local_depth, max_depth);
         }
 
-        (best_move.to_owned(), best_score, best_depth)
+        Ok((best_move.to_owned(), best_score, best_depth))
     }
 
-    fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, mut alpha: isize, beta: isize, do_null: bool, end_time: &Instant) -> Result<isize, TimeoutError> {
+    fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, mut alpha: isize, beta: isize, do_null: bool, end_time: &Instant) -> Result<isize, SearcherError> {
 
         if depth <= 0 {
             return self.quiesce(position, eval, movegen, 0, alpha, beta);
@@ -157,7 +176,7 @@ impl Searcher {
         if self.nodes_searched & 0x7FFFF == 0 {
             // Check for timeout periodically (~500k nodes)
             if Instant::now() >= *end_time {
-                return Err(TimeoutError::new());
+                return Err(SearcherError::Timeout);
             }
         }
 
@@ -275,11 +294,25 @@ impl Searcher {
 
         if num_legal_moves == 0 {
             return if in_check {
-                //Checkmate
-                Ok(-99999)
+                // No legal moves and in check: Checkmate
+                if self.nodes_searched == 1 {
+                    // We are at the root: the game is over
+                    Err(SearcherError::Checkmate)
+                } else {
+                    // Keep playing until checkmate
+                    // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
+                    let current_depth = self.current_searching_depth - depth;
+                    Ok(-99999 + current_depth as isize)
+                }
             } else {
-                //Stalemate
-                Ok(0)
+                // No legal moves but also not in check: Stalemate
+                if self.nodes_searched == 1 {
+                    // We are at the root: it's a draw
+                    Err(SearcherError::Stalemate)
+                } else {
+                    // Keep playing until stalemate
+                    Ok(0)
+                }
             };
         }
 
@@ -307,7 +340,7 @@ impl Searcher {
     }
 
 
-    fn quiesce(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth:u8, mut alpha: isize, beta: isize) -> Result<isize, TimeoutError> {
+    fn quiesce(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth:u8, mut alpha: isize, beta: isize) -> Result<isize, SearcherError> {
         let score = eval.evaluate(position, movegen);
         if score >= beta{
             return Ok(beta);
@@ -380,7 +413,7 @@ impl Searcher {
     }
 
     #[inline]
-    fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, _alpha: isize, beta: isize, end_time: &Instant) -> Result<Option<isize>, TimeoutError> {
+    fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, _alpha: isize, beta: isize, end_time: &Instant) -> Result<Option<isize>, SearcherError> {
         
         if depth > 3 && eval.can_do_null_move(position) && !movegen.in_check(position) {
             position.make_move(Move::null());

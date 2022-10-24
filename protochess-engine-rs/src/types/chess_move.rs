@@ -58,6 +58,10 @@ impl Move {
     pub fn null() -> Move {
         Move::new(0,0,None,MoveType::Null, None)
     }
+    
+    pub fn is_null(&self) -> bool {
+        self.get_move_type() == MoveType::Null
+    }
 
     pub fn get_from(&self) -> BoardIndex{
         (self.0 & 255u32) as BoardIndex

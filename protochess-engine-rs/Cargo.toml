@@ -8,6 +8,11 @@ edition = "2018"
 [profile.dev]
 opt-level = 3
 
+[profile.dev-opt0]
+inherits = "dev"
+opt-level = 0
+debug = true
+
 [profile.test]
 opt-level = 3
 
