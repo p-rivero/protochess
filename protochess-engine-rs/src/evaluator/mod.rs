@@ -7,7 +7,7 @@ use crate::move_generator::MoveGenerator;
 use crate::types::PieceType;
 use crate::position::piece::Piece;
 use crate::MovementPattern;
-use crate::types::bitboard::from_index;
+use crate::types::bitboard::{from_index, BIndex};
 use crate::types::chess_move::Move;
 
 // Scores are in centipawns
@@ -234,7 +234,7 @@ impl Evaluator {
         let mut return_vec = Vec::with_capacity(256);
         let mut total_entries = 0;
         let mut sum = 0;
-        for i in 0..=255 {
+        for i in 0..=BIndex::MAX {
             let (x, y) = from_index(i);
             let num_moves = movegen.get_num_moves_on_empty_board(i, position, piece, &position.bounds) as isize;
             if position.xy_in_bounds(x, y) {
@@ -247,8 +247,8 @@ impl Evaluator {
         let mean = sum / total_entries;
         //Center the dataset to give a bonus towards squares with higher moves
         //And a penalty for squares with fewer moves
-        for i in 0..=255 {
-            return_vec[i] -= mean;
+        for i in 0..=BIndex::MAX {
+            return_vec[i as usize] -= mean;
         }
 
         return_vec

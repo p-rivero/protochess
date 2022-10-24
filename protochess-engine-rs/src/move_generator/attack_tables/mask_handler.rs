@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use crate::types::bitboard::{Bitboard, to_index};
+use crate::types::bitboard::{Bitboard, to_index, BIndex, BCoord};
 
 /// General bitboard masks for use with attack tables
 #[derive(Clone, Debug)]
@@ -72,29 +72,29 @@ impl MaskHandler {
 
         for x in 0..16 as i8 {
             for y in 0..16 as i8 {
-                let index:usize = to_index(x as u8, y as u8) as usize;
+                let index:usize = to_index(x as BCoord, y as BCoord) as usize;
 
                 //NORTH LOOKUP TABLE
                 for j in y + 1..16 as i8 {
-                    north[index].set_bit_at(x as u8, j as u8);
+                    north[index].set_bit_at(x as BCoord, j as BCoord);
                 }
                 //SOUTH LOOKUP TABLE
                 for j in 0..y {
-                    south[index].set_bit_at(x as u8, j as u8);
+                    south[index].set_bit_at(x as BCoord, j as BCoord);
                 }
                 //EAST LOOKUP TABLE
                 for j in x + 1..16 as i8 {
-                    east[index].set_bit_at(j as u8, y as u8);
+                    east[index].set_bit_at(j as BCoord, y as BCoord);
                 }
                 //WEST LOOKUP TABLE
                 for j in 0..x {
-                    west[index].set_bit_at(j as u8, y as u8);
+                    west[index].set_bit_at(j as BCoord, y as BCoord);
                 }
                 //NORTHEAST LOOKUP TABLE
                 let mut x2:i8 = (x + 1) as i8;
                 let mut y2:i8 = (y + 1) as i8;
                 while x2 < 16 as i8 && y2 < 16 as i8 {
-                    northeast[index].set_bit_at(x2 as u8, y2 as u8);
+                    northeast[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 +=1;
                     y2 +=1;
                 }
@@ -103,7 +103,7 @@ impl MaskHandler {
                 x2 = (x - 1) as i8;
                 y2 = (y + 1) as i8;
                 while x2 >= 0 && y2 < 16 as i8 {
-                    northwest[index].set_bit_at(x2 as u8, y2 as u8);
+                    northwest[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 -= 1;
                     y2 += 1;
                 }
@@ -111,7 +111,7 @@ impl MaskHandler {
                 x2 = (x + 1) as i8;
                 y2 = (y - 1) as i8;
                 while x2 < 16 as i8 && y2 >= 0 {
-                    southeast[index].set_bit_at(x2 as u8, y2 as u8);
+                    southeast[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 += 1;
                     y2 -= 1;
                 }
@@ -119,7 +119,7 @@ impl MaskHandler {
                 x2 = (x - 1) as i8;
                 y2 = (y - 1) as i8;
                 while x2 >= 0 && y2 >= 0 {
-                    southwest[index].set_bit_at(x2 as u8, y2 as u8);
+                    southwest[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 -= 1;
                     y2 -= 1;
                 }
@@ -188,68 +188,68 @@ impl MaskHandler {
         &self.main_diagonal
     }
 
-    pub fn get_diagonal(&self, index:u8) -> &Bitboard{
+    pub fn get_diagonal(&self, index: BIndex) -> &Bitboard{
         &self.diagonals[index as usize]
     }
 
-    pub fn get_north(&self, index:u8) -> &Bitboard{
+    pub fn get_north(&self, index: BIndex) -> &Bitboard{
         &self.north[index as usize]
     }
 
-    pub fn get_south(&self, index:u8) -> &Bitboard{
+    pub fn get_south(&self, index: BIndex) -> &Bitboard{
         &self.south[index as usize]
     }
 
-    pub fn get_east(&self, index:u8) -> &Bitboard{
+    pub fn get_east(&self, index: BIndex) -> &Bitboard{
         &self.east[index as usize]
     }
 
-    pub fn get_west(&self, index:u8) -> &Bitboard{
+    pub fn get_west(&self, index: BIndex) -> &Bitboard{
         &self.west[index as usize]
     }
 
-    pub fn get_northwest(&self, index:u8) -> &Bitboard{
+    pub fn get_northwest(&self, index: BIndex) -> &Bitboard{
         &self.northwest[index as usize]
     }
 
-    pub fn get_northeast(&self, index:u8) -> &Bitboard{
+    pub fn get_northeast(&self, index: BIndex) -> &Bitboard{
         &self.northeast[index as usize]
     }
 
-    pub fn get_southeast(&self, index:u8) -> &Bitboard{
+    pub fn get_southeast(&self, index: BIndex) -> &Bitboard{
         &self.southeast[index as usize]
     }
 
-    pub fn get_southwest(&self, index:u8) -> &Bitboard{
+    pub fn get_southwest(&self, index: BIndex) -> &Bitboard{
         &self.southwest[index as usize]
     }
 
-    pub fn get_antidiagonal(&self, index:u8) -> &Bitboard{
+    pub fn get_antidiagonal(&self, index: BIndex) -> &Bitboard{
         &self.antidiagonals[index as usize]
     }
 
-    pub fn get_file(&self, n:u8) -> &Bitboard {
+    pub fn get_file(&self, n: BCoord) -> &Bitboard {
         &self.files[n as usize]
     }
 
-    pub fn get_rank(&self, n:u8) -> &Bitboard {
+    pub fn get_rank(&self, n: BCoord) -> &Bitboard {
         &self.ranks[n as usize]
     }
 
     //bitboard must be same dimensions
-    pub fn shift_north(&self, amt:u8, bitboard: &Bitboard) -> Bitboard {
+    pub fn shift_north(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
         bitboard << (amt * 16)
     }
 
-    pub fn shift_south(&self, amt:u8, bitboard: &Bitboard) -> Bitboard {
+    pub fn shift_south(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
         bitboard >> (amt * 16)
     }
 
-    pub fn shift_east(&self, amt:u8, bitboard: &Bitboard) -> Bitboard {
+    pub fn shift_east(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
         (bitboard << amt) & (!self.get_left_mask(amt as usize))
     }
 
-    pub fn shift_west(&self, amt:u8, bitboard: &Bitboard) -> Bitboard {
+    pub fn shift_west(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
         (bitboard >> amt) & (!self.get_right_mask(amt as usize))
     }
 

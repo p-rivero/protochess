@@ -1,3 +1,5 @@
+pub mod types;
+
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering::Relaxed};
 use std::thread;
 use instant::{Instant, Duration};
@@ -8,22 +10,15 @@ use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 use crate::transposition_table::{TranspositionTable, Entry, EntryFlag};
 
+use self::types::*;
+
 // Global structures, shared between threads
 static mut TRANSPOSITION_TABLE: Option<TranspositionTable> = None;
 static mut GLOBAL_DEPTH: AtomicU8 = AtomicU8::new(0);
 static mut SEARCH_ID: AtomicU64 = AtomicU64::new(1);
 
-static NUM_THREADS: u8 = 4;
+static NUM_THREADS: u32 = 4;
 
-enum SearcherError {
-    Timeout,
-    Checkmate,
-    Stalemate,
-}
-pub enum GameResult {
-    Checkmate,
-    Stalemate,
-}
 
 pub(crate) struct Searcher {
     //We store two killer moves per ply,
@@ -33,17 +28,17 @@ pub(crate) struct Searcher {
     history_moves: [[u16;256];256],
     // Stats
     nodes_searched: u64,
-    current_searching_depth: u8,
+    current_searching_depth: Depth,
 }
 
 impl Searcher {
-    pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: u8) -> Result<(Move, u8), GameResult> {
+    pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: Depth) -> Result<(Move, Depth), GameResult> {
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
         Searcher::get_best_move_impl(position, eval, movegen, depth, 1_000_000)
     }
 
-    pub fn get_best_move_timeout(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Result<(Move, u8), GameResult> {
-        Searcher::get_best_move_impl(position, eval, movegen, u8::MAX, time_sec)
+    pub fn get_best_move_timeout(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Result<(Move, Depth), GameResult> {
+        Searcher::get_best_move_impl(position, eval, movegen, Depth::MAX, time_sec)
     }
     
     fn new() -> Searcher {
@@ -55,7 +50,7 @@ impl Searcher {
         }
     }
     
-    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> Result<(Move, u8), GameResult> {
+    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, max_depth: Depth, time_sec: u64) -> Result<(Move, Depth), GameResult> {
         
         // Initialize the global structures
         unsafe {
@@ -103,15 +98,15 @@ impl Searcher {
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, thread_id: u8, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: u8, time_sec: u64) -> Result<(Move, isize, u8), GameResult> {
+    fn search_thread(&mut self, thread_id: u32, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: Depth, time_sec: u64) -> Result<(Move, isize, Depth), GameResult> {
         let end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut best_move: Move = Move::null();
         let mut best_score: isize = 0;
-        let mut best_depth: u8 = 0;
+        let mut best_depth: Depth = 0;
         
         // At the start, each thread should search a different depth (between 1 and max_depth, inclusive)
-        let mut local_depth = (thread_id % max_depth) + 1;
+        let mut local_depth = (thread_id as Depth % max_depth) + 1;
         
         loop {
             self.nodes_searched = 0;
@@ -156,7 +151,7 @@ impl Searcher {
                 // Update local_depth: set to GLOBAL_DEPTH + increment
                 let search_id = unsafe { SEARCH_ID.fetch_add(1, Relaxed) };
                 // 1/2 threads search 1 ply deeper, 1/4 threads search 2 ply deeper, etc.
-                let increment = 1 + search_id.trailing_zeros() as u8;
+                let increment = 1 + search_id.trailing_zeros() as Depth;
                 local_depth = unsafe { GLOBAL_DEPTH.load(Relaxed) } + increment;
             }
             // Limit local_depth to max_depth
@@ -166,7 +161,7 @@ impl Searcher {
         Ok((best_move.to_owned(), best_score, best_depth))
     }
 
-    fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, mut alpha: isize, beta: isize, do_null: bool, end_time: &Instant) -> Result<isize, SearcherError> {
+    fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, mut alpha: isize, beta: isize, do_null: bool, end_time: &Instant) -> Result<isize, SearcherError> {
 
         if depth <= 0 {
             return self.quiesce(position, eval, movegen, 0, alpha, beta);
@@ -340,7 +335,7 @@ impl Searcher {
     }
 
 
-    fn quiesce(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth:u8, mut alpha: isize, beta: isize) -> Result<isize, SearcherError> {
+    fn quiesce(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, mut alpha: isize, beta: isize) -> Result<isize, SearcherError> {
         let score = eval.evaluate(position, movegen);
         if score >= beta{
             return Ok(beta);
@@ -371,7 +366,7 @@ impl Searcher {
     }
 
     #[inline]
-    fn update_killers(&mut self, depth: u8, mv: Move) {
+    fn update_killers(&mut self, depth: Depth, mv: Move) {
         if !mv.get_is_capture() {
             if mv != self.killer_moves[depth as usize][0] && mv != self.killer_moves[depth as usize][1] {
                 self.killer_moves[depth as usize][1] = self.killer_moves[depth as usize][0];
@@ -381,7 +376,7 @@ impl Searcher {
     }
 
     #[inline]
-    fn update_history_heuristic(&mut self, depth: u8, mv:&Move) {
+    fn update_history_heuristic(&mut self, depth: Depth, mv:&Move) {
         if !mv.get_is_capture() {
             self.history_moves
                 [mv.get_from() as usize]
@@ -390,7 +385,7 @@ impl Searcher {
     }
 
     #[inline]
-    fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, eval: &mut Evaluator, moves: I, position: &mut Position, depth: u8) -> Vec<(usize, Move)> {
+    fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, eval: &mut Evaluator, moves: I, position: &mut Position, depth: Depth) -> Vec<(usize, Move)> {
         let mut moves_and_score:Vec<(usize, Move)> = moves.map(|mv| {
             (eval.score_move(&self.history_moves, &self.killer_moves[depth as usize], position, &mv), mv)
         }).collect();
@@ -413,7 +408,7 @@ impl Searcher {
     }
 
     #[inline]
-    fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: u8, _alpha: isize, beta: isize, end_time: &Instant) -> Result<Option<isize>, SearcherError> {
+    fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, _alpha: isize, beta: isize, end_time: &Instant) -> Result<Option<isize>, SearcherError> {
         
         if depth > 3 && eval.can_do_null_move(position) && !movegen.in_check(position) {
             position.make_move(Move::null());

@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use crate::searcher::types::Player;
+use crate::types::bitboard::BIndex;
 use crate::types::{PieceType};
 
 use crate::position::castle_rights::CastleRights;
@@ -13,9 +15,9 @@ pub struct PositionProperties {
     pub promote_from: Option<PieceType>,
     pub castling_rights: CastleRights,
     //EP square (square behind a double pawn push)
-    pub ep_square: Option<u8>,
+    pub ep_square: Option<BIndex>,
     //Tuple (owner, PieceType) of the last piece captured, if any
-    pub captured_piece: Option<(u8, PieceType)>,
+    pub captured_piece: Option<(Player, PieceType)>,
     pub prev_properties: Option<Arc<PositionProperties>>,
 }
 

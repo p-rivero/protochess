@@ -2,7 +2,7 @@ use std::fmt;
 use crate::rankfile::to_rank_file;
 use crate::types::bitboard::from_index;
 
-use crate::types::bitboard::BoardIndex;
+use crate::types::bitboard::BIndex;
 
 #[derive(PartialEq)]
 pub enum MoveType {
@@ -29,7 +29,7 @@ pub enum MoveType {
 pub struct Move(u32, Option<char>);
 
 impl Move {
-    pub fn new(from:BoardIndex, to:BoardIndex, target_loc: Option<BoardIndex>, move_type:MoveType, promo:Option<char>) -> Move{
+    pub fn new(from: BIndex, to: BIndex, target_loc: Option<BIndex>, move_type:MoveType, promo:Option<char>) -> Move{
         Move(
             (from as u32)
                 | (to as u32) << 8u32
@@ -63,16 +63,16 @@ impl Move {
         self.get_move_type() == MoveType::Null
     }
 
-    pub fn get_from(&self) -> BoardIndex{
-        (self.0 & 255u32) as BoardIndex
+    pub fn get_from(&self) -> BIndex{
+        (self.0 & (BIndex::MAX as u32)) as BIndex
     }
 
-    pub fn get_to(&self) -> BoardIndex{
-        ((self.0 >> 8) & 255u32) as BoardIndex
+    pub fn get_to(&self) -> BIndex{
+        ((self.0 >> 8) & (BIndex::MAX as u32)) as BIndex
     }
 
     pub fn get_is_capture(&self) -> bool{
-        ((self.0 >> 24) & 1u32) != 0u32
+        ((self.0 >> 24) & 1) != 0u32
     }
 
     pub fn get_move_type(&self) -> MoveType {
@@ -92,8 +92,8 @@ impl Move {
         self.1
     }
 
-    pub fn get_target(&self) -> u8 {
-        ((self.0 >> 16) & 255u32) as u8
+    pub fn get_target(&self) -> BIndex {
+        ((self.0 >> 16) & (BIndex::MAX as u32)) as BIndex
     }
 }
 

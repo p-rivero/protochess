@@ -1,5 +1,6 @@
+use crate::searcher::types::Player;
 //Pieces that a player has
-use crate::types::bitboard::{Bitboard, BoardIndex};
+use crate::types::bitboard::{Bitboard, BIndex};
 use crate::position::piece::Piece;
 
 /// Represents a set of pieces for a player
@@ -14,11 +15,11 @@ pub struct PieceSet {
     pub rook: Piece,
     pub pawn: Piece,
     pub custom: Vec<Piece>,
-    pub player_num: u8
+    pub player_num: Player
 }
 
 impl PieceSet {
-    pub fn new(player_num:u8) -> PieceSet {
+    pub fn new(player_num: Player) -> PieceSet {
         PieceSet {
             occupied: Bitboard::zero(),
             king: Piece::blank_king(player_num),
@@ -32,7 +33,7 @@ impl PieceSet {
         }
     }
 
-    pub fn piece_at(&mut self, index: BoardIndex) -> Option<&mut Piece> {
+    pub fn piece_at(&mut self, index: BIndex) -> Option<&mut Piece> {
         if self.king.bitboard.get_bit(index) {
             Some(&mut self.king)
         } else if self.queen.bitboard.get_bit(index)  {

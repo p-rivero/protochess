@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use crate::types::chess_move::Move;
+use crate::{types::chess_move::Move, searcher::types::Depth};
 
 const TABLE_SIZE:usize = 1_500_000;
 const ENTRIES_PER_CLUSTER:usize = 4;
@@ -18,7 +18,7 @@ pub struct Entry {
     pub flag: EntryFlag,
     pub value: isize,
     pub mv: Move,
-    pub depth: u8,
+    pub depth: Depth,
     pub ancient: bool
 }
 impl Entry {
@@ -89,10 +89,10 @@ impl TranspositionTable {
 
         // No exact match found, we need to replace an entry for a different position
         // Replace the ancient entry with the lowest depth. If there are no ancient entries, replace the entry with the lowest depth
-        let mut lowest_depth_and_ancient = u8::MAX;
+        let mut lowest_depth_and_ancient = Depth::MAX;
         let mut lowest_depth_and_ancient_indx:i32 = -1;
 
-        let mut lowest_depth = u8::MAX;
+        let mut lowest_depth = Depth::MAX;
         let mut lowest_depth_index = 0;
         for i in 0..ENTRIES_PER_CLUSTER {
             if cluster.entries[i].ancient

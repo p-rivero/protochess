@@ -1,6 +1,7 @@
+use crate::searcher::types::Player;
 use crate::types::{PieceType};
 
-use crate::types::bitboard::{Bitboard, from_index, to_index, BoardIndex};
+use crate::types::bitboard::{Bitboard, from_index, to_index, BIndex, BCoord};
 use crate::position::Position;
 use crate::position::piece_set::PieceSet;
 use crate::move_generator::attack_tables::AttackTables;
@@ -21,7 +22,7 @@ impl MoveGenerator {
             attack_tables: AttackTables::new(),
         }
     }
-    pub fn get_legal_moves_as_tuples(&self, position: &mut Position) -> Vec<((u8,u8), (u8,u8))> {
+    pub fn get_legal_moves_as_tuples(&self, position: &mut Position) -> Vec<((BCoord,BCoord), (BCoord,BCoord))> {
         let mut legal_tuples = Vec::new();
         for mv in self.get_pseudo_moves(position) {
             if !self.is_move_legal(&mv, position) {
@@ -54,7 +55,7 @@ impl MoveGenerator {
         let mut iters:Vec<BitboardMoves> = Vec::with_capacity(6);
         let occ_or_not_in_bounds = &position.occupied | !&position.bounds;
 
-        let mut apply_to_each = |mut pieceset:Bitboard, func: fn(&AttackTables, u8, &Bitboard, &Bitboard)-> Bitboard| {
+        let mut apply_to_each = |mut pieceset:Bitboard, func: fn(&AttackTables, BIndex, &Bitboard, &Bitboard)-> Bitboard| {
             while !pieceset.is_zero() {
                 let index = pieceset.lowest_one().unwrap();
                 let mut raw_attacks = func(&self.attack_tables, index, &occ_or_not_in_bounds, &enemies);
@@ -272,8 +273,8 @@ impl MoveGenerator {
                     if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
                         continue;
                     }
-                    let to = to_index(x2 as u8, y2 as u8);
-                    if position.xy_in_bounds(x2 as u8, y2 as u8) && !position.occupied.get_bit(to) {
+                    let to = to_index(x2 as BCoord, y2 as BCoord);
+                    if position.xy_in_bounds(x2 as BCoord, y2 as BCoord) && !position.occupied.get_bit(to) {
                         //Promotion here?
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
@@ -292,7 +293,7 @@ impl MoveGenerator {
                     if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
                         continue;
                     }
-                    let to = to_index(x2 as u8, y2 as u8);
+                    let to = to_index(x2 as BCoord, y2 as BCoord);
                     if enemies.get_bit(to) {
                         //Promotion here?
                         if movement.promotion_at(to) {
@@ -314,9 +315,9 @@ impl MoveGenerator {
                             break;
                         }
 
-                        let to = to_index(x2 as u8, y2 as u8);
+                        let to = to_index(x2 as BCoord, y2 as BCoord);
                         //Out of bounds, next sliding moves can be ignored
-                        if !position.xy_in_bounds(x2 as u8, y2 as u8) {
+                        if !position.xy_in_bounds(x2 as BCoord, y2 as BCoord) {
                             break;
                         }
                         //If there is an enemy here, we can add an attack move
@@ -345,10 +346,10 @@ impl MoveGenerator {
                         if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
                             break;
                         }
-                        let to = to_index(x2 as u8, y2 as u8);
+                        let to = to_index(x2 as BCoord, y2 as BCoord);
                         //If the point is out of bounds or there is another piece here, we cannot go any
                         //farther
-                        if !position.xy_in_bounds(x2 as u8, y2 as u8) || position.occupied.get_bit(to) {
+                        if !position.xy_in_bounds(x2 as BCoord, y2 as BCoord) || position.occupied.get_bit(to) {
                             break;
                         }
                         if movement.promotion_at(to) {
@@ -370,7 +371,7 @@ impl MoveGenerator {
 
     /// Returns the number of moves of a piecetype on an otherwise empty board
     /// Useful for evaluation
-    pub fn get_num_moves_on_empty_board(&self, index: BoardIndex, position: &Position, piece: &Piece, bounds: &Bitboard) -> u32 {
+    pub fn get_num_moves_on_empty_board(&self, index: BIndex, position: &Position, piece: &Piece, bounds: &Bitboard) -> u32 {
         let (x, y) = from_index(index);
         if !position.xy_in_bounds(x, y) {
            return 0;
@@ -414,7 +415,7 @@ impl MoveGenerator {
                         continue;
                     }
 
-                    let to = to_index(x2 as u8, y2 as u8);
+                    let to = to_index(x2 as BCoord, y2 as BCoord);
                     if bounds.get_bit(to) {
                         slides.set_bit(to);
                     }
@@ -425,7 +426,7 @@ impl MoveGenerator {
                         if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
                             break;
                         }
-                        let to = to_index(x2 as u8, y2 as u8);
+                        let to = to_index(x2 as BCoord, y2 as BCoord);
                         //Out of bounds, next sliding moves can be ignored
                         if !bounds.get_bit(to) {
                             break;
@@ -442,7 +443,7 @@ impl MoveGenerator {
     }
 
     /// Returns whether or not a player is in check for a given position
-    fn is_in_check_from_king(&self, position: &Position, my_player_num: u8) -> bool {
+    fn is_in_check_from_king(&self, position: &Position, my_player_num: Player) -> bool {
         let my_pieces: &PieceSet = &position.pieces[my_player_num as usize];
         let enemies = &position.occupied & !&my_pieces.occupied;
         let occ_or_not_in_bounds = &position.occupied | !&position.bounds;

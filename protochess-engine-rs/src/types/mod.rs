@@ -25,8 +25,3 @@ impl PieceType {
         }
     }
 }
-#[derive(Clone, Debug)]
-pub struct Dimensions {
-    pub width:u8,
-    pub height:u8,
-}

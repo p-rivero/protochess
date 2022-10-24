@@ -1,3 +1,4 @@
+use crate::searcher::types::Player;
 use crate::types::PieceType;
 use crate::types::bitboard::Bitboard;
 
@@ -5,22 +6,22 @@ use crate::types::bitboard::Bitboard;
 pub struct Piece {
     pub char_rep: char,
     //Player num for the owner of this piece
-    pub player_num: u8,
+    pub player_num: Player,
     pub piece_type: PieceType,
     pub bitboard: Bitboard
 }
 
 impl Piece {
-    pub fn blank_custom(player_num:u8, char_rep: char) -> Piece {
-       Piece {
-           player_num,
-           char_rep,
-           piece_type: PieceType::Custom(char_rep),
-           bitboard: Bitboard::zero()
-       }
+    pub fn blank_custom(player_num: Player, char_rep: char) -> Piece {
+        Piece {
+            player_num,
+            char_rep,
+            piece_type: PieceType::Custom(char_rep),
+            bitboard: Bitboard::zero()
+        }
     }
 
-    pub fn blank_pawn(player_num:u8) -> Piece{
+    pub fn blank_pawn(player_num: Player) -> Piece{
         Piece {
             player_num,
             char_rep: 'p',
@@ -29,7 +30,7 @@ impl Piece {
         }
     }
 
-    pub fn blank_knight(player_num:u8) -> Piece{
+    pub fn blank_knight(player_num: Player) -> Piece{
         Piece {
             player_num,
             char_rep: 'n',
@@ -38,7 +39,7 @@ impl Piece {
         }
     }
 
-    pub fn blank_king(player_num:u8) -> Piece{
+    pub fn blank_king(player_num: Player) -> Piece{
         Piece {
             player_num,
             char_rep: 'k',
@@ -47,7 +48,7 @@ impl Piece {
         }
     }
 
-    pub fn blank_rook(player_num:u8) -> Piece{
+    pub fn blank_rook(player_num: Player) -> Piece{
         Piece {
             player_num,
             char_rep: 'r',
@@ -56,7 +57,7 @@ impl Piece {
         }
     }
 
-    pub fn blank_bishop(player_num:u8) -> Piece{
+    pub fn blank_bishop(player_num: Player) -> Piece{
         Piece {
             player_num,
             char_rep: 'b',
@@ -65,7 +66,7 @@ impl Piece {
         }
     }
 
-    pub fn blank_queen(player_num:u8) -> Piece{
+    pub fn blank_queen(player_num: Player) -> Piece{
         Piece {
             player_num,
             char_rep: 'q',

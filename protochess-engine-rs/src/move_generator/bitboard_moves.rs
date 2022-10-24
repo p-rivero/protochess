@@ -1,11 +1,11 @@
-use crate::types::bitboard::{Bitboard, BoardIndex};
+use crate::types::bitboard::{Bitboard, BIndex};
 use crate::types::chess_move::{Move, MoveType};
 
 /// Iterator that converts a Bitboard of move possibilities to Moves
 pub struct BitboardMoves {
     pub(crate) enemies: Bitboard,     //Enemies
     pub(crate) moves:Bitboard,        //moveset for source piece
-    pub(crate) source_index: BoardIndex, //Source piece index
+    pub(crate) source_index: BIndex, //Source piece index
     pub(crate) promotion_squares: Option<Bitboard>, //Optional promotion squares for this piece
     pub(crate) promo_vals: Option<Vec<char>>,   //Optional promotable values for this piece
     current_promo_vals: Option<Vec<char>>, //Internal; used as a copy of promovals for each sq
@@ -14,7 +14,7 @@ pub struct BitboardMoves {
 impl BitboardMoves {
     pub fn new(enemies:Bitboard,
                moves:Bitboard,
-               source_index:BoardIndex,
+               source_index:BIndex,
                promotion_squares:Option<Bitboard>,
                promo_vals:Option<Vec<char>>) -> BitboardMoves{
         BitboardMoves{

@@ -1,9 +1,9 @@
-use crate::types::bitboard::{Bitboard, from_index, BoardIndex};
+use crate::types::bitboard::{Bitboard, from_index, BIndex, BCoord};
 /// External variant of MovementPattern for public
 #[derive(Clone, Debug )]
 pub struct MovementPatternExternal {
     // Places where this piece can promote, as well as char codes for the promotion pieces
-    pub promotion_squares: Option<Vec<(u8, u8)>>,
+    pub promotion_squares: Option<Vec<(BCoord, BCoord)>>,
     pub promo_vals: Option<Vec<char>>,
 
     // Ways the piece can capture (but not move without capturing)
@@ -64,7 +64,7 @@ pub struct MovementPattern {
 }
 
 impl MovementPattern {
-    pub fn promotion_at(&self, index: BoardIndex) -> bool {
+    pub fn promotion_at(&self, index: BIndex) -> bool {
         if let Some(bb) = &self.promotion_squares {
             return bb.get_bit(index)
         }
@@ -74,7 +74,7 @@ impl MovementPattern {
 
 pub fn external_mp_to_internal(mpe: MovementPatternExternal) -> MovementPattern{
     let promotion_squares = {
-        if let Some(vec) = mpe.promotion_squares{
+        if let Some(vec) = mpe.promotion_squares {
             let mut bb = Bitboard::zero();
             for (x, y) in vec {
                 bb.set_bit_at(x, y);
@@ -116,7 +116,7 @@ pub fn internal_mp_to_external(mp: MovementPattern) -> MovementPatternExternal {
         if let Some(mut bb) = mp.promotion_squares {
             while bb.is_zero() {
                 let index = bb.lowest_one().unwrap();
-                sq.push(from_index(index as BoardIndex));
+                sq.push(from_index(index as BIndex));
                 bb.clear_bit(index);
             }
             if sq.len() != 0 {

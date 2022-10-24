@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate impl_ops;
-use types::bitboard::BoardIndex;
+use searcher::types::{Depth, Player};
+use types::bitboard::{BIndex, BDimensions, BCoord};
 
-use crate::types::{Dimensions};
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGenerator;
 use crate::rankfile::to_rank_file;
@@ -23,7 +23,8 @@ use crate::evaluator::Evaluator;
 use crate::position::movement_pattern::MovementPattern;
 pub use crate::types::PieceType;
 pub use crate::types::chess_move::Move;
-use crate::searcher::{Searcher, GameResult};
+use crate::searcher::{Searcher};
+use crate::searcher::types::GameResult;
 pub use crate::position::movement_pattern::MovementPatternExternal;
 use crate::types::bitboard::Bitboard;
 
@@ -39,16 +40,16 @@ impl Game {
         }
     }
 
-    pub fn set_bounds(&mut self, width: u8, height: u8, valid_squares:Vec<(u8,u8)>) {
+    pub fn set_bounds(&mut self, width: BCoord, height: BCoord, valid_squares:Vec<(BCoord, BCoord)>) {
         let mut bounds = Bitboard::zero();
         for square in valid_squares {
             bounds.set_bit_at(square.0, square.1);
         }
-        self.current_position.set_bounds(Dimensions{ width, height }, bounds);
+        self.current_position.set_bounds(BDimensions{ width, height }, bounds);
     }
 
-    fn each_owner_contains_k(vec: &Vec<(u8,u8,u8,char)>) -> bool{
-        let mut num_players:u8 = 0;
+    fn each_owner_contains_k(vec: &Vec<(Player, BCoord, BCoord, char)>) -> bool{
+        let mut num_players = 0;
         for (owner, _x, _y, _pce) in vec {
             if *owner >= num_players {
                 num_players = owner + 1;
@@ -66,7 +67,7 @@ impl Game {
         true
     }
     pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
-                     valid_squares:Vec<(u8, u8)>, pieces: Vec<(u8, u8, u8, char)>) {
+                     valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, char)>) {
         assert!(Game::each_owner_contains_k(&pieces));
         let mut width = 0;
         let mut height = 0;
@@ -80,17 +81,17 @@ impl Game {
         let pieces =
             pieces.into_iter()
                 .map(|(owner, x, y, pce_chr)|
-                    (owner, to_index(x, y), PieceType::from_char(pce_chr)))
+                    (*owner, to_index(*x, *y), PieceType::from_char(*pce_chr)))
                 .collect();
-        self.current_position = Position::custom(Dimensions{width, height}, bounds, movement_patterns, pieces)
+        self.current_position = Position::custom(BDimensions{width, height}, bounds, movement_patterns, pieces)
     }
 
 
-    pub fn get_width(&self) -> u8 {
+    pub fn get_width(&self) -> BCoord {
         self.current_position.dimensions.width
     }
 
-    pub fn get_height(&self) -> u8 {
+    pub fn get_height(&self) -> BCoord {
         self.current_position.dimensions.height
     }
 
@@ -103,9 +104,9 @@ impl Game {
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn make_move(&mut self, move_generator:&MoveGenerator, x1:u8, y1:u8, x2:u8, y2: u8) -> bool {
-        let from = to_index(x1,y1);
-        let to = to_index(x2,y2);
+    pub fn make_move(&mut self, move_generator: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
+        let from = to_index(x1, y1);
+        let to = to_index(x2, y2);
 
         let moves = move_generator.get_pseudo_moves(&mut self.current_position);
         for mv in moves {
@@ -125,7 +126,7 @@ impl Game {
         self.current_position.unmake_move();
     }
 
-    pub fn get_whos_turn(&self) -> u8 {
+    pub fn get_whos_turn(&self) -> Player {
         self.current_position.whos_turn
     }
 
@@ -165,17 +166,17 @@ impl Engine {
     }
 
     /// Adds a new piece on the board
-    pub fn add_piece(&mut self, _owner:usize, _piece_type: PieceType, x: u8, y: u8) {
+    pub fn add_piece(&mut self, _owner:usize, _piece_type: PieceType, x: BCoord, y: BCoord) {
         self.current_position.add_piece(0, PieceType::Custom('a'), to_index(x,y));
     }
 
     /// Removes a piece on the board, if it exists
-    pub fn remove_piece(&mut self, index: BoardIndex) {
+    pub fn remove_piece(&mut self, index: BIndex) {
         self.current_position.remove_piece(index);
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn make_move(&mut self, x1: u8, y1: u8, x2: u8, y2: u8) -> bool {
+    pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
         let from = to_index(x1, y1);
         let to = to_index(x2, y2);
 
@@ -211,7 +212,7 @@ impl Engine {
 
     /// Returns the number of possible moves from a board position up to a given depth
     /// See https://www.chessprogramming.org/Perft
-    pub fn perft(&mut self,depth:u8) -> u64 {
+    pub fn perft(&mut self, depth: Depth) -> u64 {
         let mut nodes = 0u64;
 
         let moves = self.move_generator.get_pseudo_moves(&mut self.current_position);
@@ -231,7 +232,7 @@ impl Engine {
     }
 
     /// Like perft, but prints the moves at the first ply
-    pub fn perft_divide(&mut self,depth:u8) -> u64 {
+    pub fn perft_divide(&mut self, depth: Depth) -> u64 {
         let mut nodes = 0u64;
 
         let moves = self.move_generator.get_pseudo_moves(&mut self.current_position);
@@ -261,7 +262,7 @@ impl Engine {
     }
 
     ///Calculates and plays the best move found up to a given depth
-    pub fn play_best_move(&mut self, depth:u8) -> bool {
+    pub fn play_best_move(&mut self, depth: Depth) -> bool {
         let best_move = Searcher::get_best_move(&mut self.current_position, &mut self.evaluator, &self.move_generator, depth);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, _)) => self.make_move(x1, y1, x2, y2),
@@ -270,7 +271,7 @@ impl Engine {
     }
 
     ///Returns (fromx,fromy,tox,toy)
-    pub fn get_best_move(&mut self, depth:u8) -> Option<(u8, u8, u8, u8)> {
+    pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord)> {
         let best_move = Searcher::get_best_move(&mut self.current_position, &mut self.evaluator, &self.move_generator, depth);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, _)) => Some((x1, y1, x2, y2)),
@@ -279,7 +280,7 @@ impl Engine {
     }
 
     ///Calculates and plays the best move found
-    pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, u8) {
+    pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, Depth) {
         let best_move = Searcher::get_best_move_timeout(&self.current_position, &self.evaluator, &self.move_generator, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, depth)) => (self.make_move(x1, y1, x2, y2), depth),
@@ -288,7 +289,7 @@ impl Engine {
     }
 
     ///Returns ((fromX,fromY,toX,toY), depth)
-    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((u8, u8, u8, u8), u8)> {
+    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord), Depth)> {
         let best_move = Searcher::get_best_move_timeout(&mut self.current_position, &mut self.evaluator, &self.move_generator, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, depth)) => Some(((x1, y1, x2, y2), depth)),
@@ -296,7 +297,7 @@ impl Engine {
         }
     }
     
-    fn process_move(&self, mv: &Result<(Move, u8), GameResult>) -> Option<(u8, u8, u8, u8, u8)> {
+    fn process_move(&self, mv: &Result<(Move, Depth), GameResult>) -> Option<(BCoord, BCoord, BCoord, BCoord, Depth)> {
         match mv {
             Ok((best, depth)) => {
                 let (x1, y1) = from_index(best.get_from());
@@ -319,10 +320,10 @@ impl Engine {
         }
     }
 
-    pub fn moves_from(&mut self, x:u8, y:u8) -> Vec<(u8, u8)>{
+    pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<(BCoord, BCoord)>{
         let moves = self.move_generator.get_legal_moves_as_tuples(&mut self.current_position);
         let mut possible_moves = Vec::new();
-        for (from, to) in moves{
+        for (from, to) in moves {
             if from == (x, y) {
                 possible_moves.push(to);
             }
@@ -335,7 +336,7 @@ impl Engine {
     }
 
     pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
-                     valid_squares:Vec<(u8, u8)>, pieces: Vec<(u8, u8, u8, char)>) {
+                     valid_squares:Vec<(BCoord, BCoord)>, pieces: Vec<(Player, BCoord, BCoord, char)>) {
         assert!(Game::each_owner_contains_k(&pieces));
         let mut width = 0;
         let mut height = 0;
@@ -351,7 +352,7 @@ impl Engine {
                 .map(|(owner, x, y, pce_chr)|
                     (owner, to_index(x, y), PieceType::from_char(pce_chr)))
                 .collect();
-        self.current_position = Position::custom(Dimensions{width, height}, bounds, movement_patterns, pieces)
+        self.current_position = Position::custom(BDimensions{width, height}, bounds, movement_patterns, pieces)
     }
 }
 
