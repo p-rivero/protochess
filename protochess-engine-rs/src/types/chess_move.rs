@@ -1,6 +1,5 @@
 use std::fmt;
-use crate::rankfile::to_rank_file;
-use crate::types::bitboard::from_index;
+use crate::utils::{to_rank_file, from_index};
 
 use crate::types::bitboard::BIndex;
 

@@ -1,4 +1,6 @@
-use crate::types::bitboard::{Bitboard, from_index, BIndex, BCoord};
+use crate::types::{Bitboard, BIndex, BCoord};
+use crate::utils::from_index;
+
 /// External variant of MovementPattern for public
 #[derive(Clone, Debug )]
 pub struct MovementPatternExternal {
@@ -30,6 +32,7 @@ pub struct MovementPatternExternal {
     pub translate_southeast: bool,
     pub translate_southwest: bool,
 }
+
 /// MovementPattern describes how a custom piece can move
 /// Each sliding field expects a vec of vec, with the inner vec represnting a new "run"
 #[derive(Clone, Debug )]

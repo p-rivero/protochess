@@ -1,38 +1,15 @@
 use std::sync::Mutex;
 
-use crate::{types::chess_move::Move, searcher::types::Depth};
+use crate::types::Depth;
 
-const TABLE_SIZE:usize = 1_500_000;
-const ENTRIES_PER_CLUSTER:usize = 4;
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum EntryFlag{
-    ALPHA,
-    EXACT,
-    BETA,
-    NULL,
-}
+pub mod entry;
+pub use self::entry::Entry;
+pub use self::entry::EntryFlag;
 
-#[derive(Clone, Copy, PartialEq)]
-pub struct Entry {
-    pub key: u64,
-    pub flag: EntryFlag,
-    pub value: isize,
-    pub mv: Move,
-    pub depth: Depth,
-    pub ancient: bool
-}
-impl Entry {
-    pub fn null() -> Entry {
-        Entry {
-            key: 0,
-            flag: EntryFlag::NULL,
-            value: 0,
-            mv: Move::null(),
-            depth: 0,
-            ancient: true
-        }
-    }
-}
+
+const TABLE_SIZE: usize = 1_500_000;
+const ENTRIES_PER_CLUSTER: usize = 4;
+
 
 pub struct Cluster {
     // Use a separate mutex (instead of wrapping the cluster in a mutex) so that we can implement

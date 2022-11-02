@@ -1,5 +1,4 @@
-use crate::types::bitboard::{Bitboard, BIndex};
-use crate::types::chess_move::{Move, MoveType};
+use crate::types::{Bitboard, BIndex, Move, MoveType};
 
 /// Iterator that converts a Bitboard of move possibilities to Moves
 pub struct BitboardMoves {

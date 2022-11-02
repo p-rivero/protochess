@@ -1,14 +1,10 @@
-use crate::searcher::types::Player;
-use crate::types::{PieceType};
-
-use crate::types::bitboard::{Bitboard, from_index, to_index, BIndex, BCoord};
+use crate::types::*;
 use crate::position::Position;
 use crate::position::piece_set::PieceSet;
+use crate::position::piece::Piece;
 use crate::move_generator::attack_tables::AttackTables;
 use crate::move_generator::bitboard_moves::BitboardMoves;
-
-use crate::types::chess_move::{Move, MoveType};
-use crate::position::piece::Piece;
+use crate::utils::{from_index, to_index};
 
 mod attack_tables;
 mod bitboard_moves;

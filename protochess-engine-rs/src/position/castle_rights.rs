@@ -1,4 +1,4 @@
-use crate::searcher::types::Player;
+use crate::types::Player;
 
 #[derive(Clone, Debug)]
 pub struct CastleRights(u8, u8, u8);

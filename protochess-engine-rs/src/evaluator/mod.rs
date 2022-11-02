@@ -1,25 +1,13 @@
-use crate::position::Position;
 use std::collections::HashMap;
 
 use crate::position::piece_set::PieceSet;
-
+use crate::position::Position;
 use crate::move_generator::MoveGenerator;
-use crate::types::PieceType;
 use crate::position::piece::Piece;
 use crate::MovementPattern;
-use crate::types::bitboard::{from_index, BIndex};
-use crate::types::chess_move::Move;
-
-// Scores are in centipawns
-const KING_SCORE:isize = 9999;
-const QUEEN_SCORE:isize = 900;
-const ROOK_SCORE:isize = 500;
-const BISHOP_SCORE:isize = 350;
-const KNIGHT_SCORE:isize = 300;
-const PAWN_SCORE:isize = 100;
-const CASTLING_BONUS:isize = 400;
-//Multiplier for the piece square table
-const PST_MULTIPLIER:isize = 5;
+use crate::types::{BIndex, Move, PieceType, Centipawns};
+use crate::utils::from_index;
+use crate::constants::piece_scores::*;
 
 /// Assigns a score to a given position
 #[derive(Clone, Debug)]
@@ -27,10 +15,10 @@ pub(crate) struct Evaluator {
     //Piece values for pieces,
     //Hard coded for builtin pieces,
     //generated dynamically based on the piece's movement pattern
-    custom_piece_value_table: HashMap<PieceType, isize, ahash::RandomState>,
+    custom_piece_value_table: HashMap<PieceType, Centipawns, ahash::RandomState>,
     //Piece-square values for all pieces, done as a function of movement possibilities
     //Generated dynamically for all pieces
-    piece_square_table: HashMap<PieceType, Vec<isize>, ahash::RandomState>
+    piece_square_table: HashMap<PieceType, Vec<Centipawns>, ahash::RandomState>
 }
 
 impl Evaluator {
@@ -41,7 +29,7 @@ impl Evaluator {
         }
     }
     /// Retrieves the score for the player to move (position.whos_turn)
-    pub fn evaluate(&mut self, position: &mut Position, movegen: &MoveGenerator) -> isize {
+    pub fn evaluate(&mut self, position: &mut Position, movegen: &MoveGenerator) -> Centipawns {
         let mut score = 0;
         let player_num = position.whos_turn;
         
@@ -78,19 +66,19 @@ impl Evaluator {
         score
     }
 
-    fn get_material_score_for_pieceset(&mut self, position:&Position, piece_set:&PieceSet) -> isize{
+    fn get_material_score_for_pieceset(&mut self, position: &Position, piece_set: &PieceSet) -> Centipawns {
         let mut material_score = 0;
-        material_score += piece_set.king.bitboard.count_ones() as isize * KING_SCORE;
-        material_score += piece_set.queen.bitboard.count_ones() as isize * QUEEN_SCORE;
-        material_score += piece_set.rook.bitboard.count_ones() as isize * ROOK_SCORE;
-        material_score += piece_set.knight.bitboard.count_ones() as isize * KNIGHT_SCORE;
-        material_score += piece_set.bishop.bitboard.count_ones() as isize * BISHOP_SCORE;
-        material_score += piece_set.pawn.bitboard.count_ones() as isize * PAWN_SCORE;
+        material_score += piece_set.king.bitboard.count_ones() as Centipawns * KING_SCORE;
+        material_score += piece_set.queen.bitboard.count_ones() as Centipawns * QUEEN_SCORE;
+        material_score += piece_set.rook.bitboard.count_ones() as Centipawns * ROOK_SCORE;
+        material_score += piece_set.knight.bitboard.count_ones() as Centipawns * KNIGHT_SCORE;
+        material_score += piece_set.bishop.bitboard.count_ones() as Centipawns * BISHOP_SCORE;
+        material_score += piece_set.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
 
         for custom in &piece_set.custom {
             if self.custom_piece_value_table.contains_key(&custom.piece_type) {
                 let score = *self.custom_piece_value_table.get(&custom.piece_type).unwrap();
-                material_score += custom.bitboard.count_ones() as isize * score;
+                material_score += custom.bitboard.count_ones() as Centipawns * score;
             }
             else {
                 let option_mp = position.get_movement_pattern(&custom.piece_type);
@@ -102,7 +90,7 @@ impl Evaluator {
                     }
                 };
                 self.custom_piece_value_table.insert(custom.piece_type.to_owned(), score);
-                material_score += custom.bitboard.count_ones() as isize * score;
+                material_score += custom.bitboard.count_ones() as Centipawns * score;
             }
         }
         material_score
@@ -110,12 +98,12 @@ impl Evaluator {
 
     /// Scores a move on a position
     /// This is used for move ordering in order to search the moves with the most potential first
-    pub fn score_move(&mut self, history_moves: &[[u16;256];256], killer_moves: &[Move;2], position: &mut Position, mv:&Move) -> usize {
+    pub fn score_move(&mut self, history_moves: &[[u16;256];256], killer_moves: &[Move;2], position: &mut Position, mv: &Move) -> Centipawns {
         if !mv.get_is_capture() {
             return if mv == &killer_moves[0] || mv == &killer_moves[1] {
                 9000
             } else {
-                history_moves[mv.get_from() as usize][mv.get_to() as usize] as usize
+                history_moves[mv.get_from() as usize][mv.get_to() as usize] as Centipawns
             }
         }
         let attacker:PieceType = (&position.piece_at(mv.get_from()).unwrap().1.piece_type).to_owned();
@@ -124,11 +112,11 @@ impl Evaluator {
         let attack_score = self.get_material_score(attacker, position);
         let victim_score = self.get_material_score(victim, position);
 
-        (KING_SCORE + (victim_score - attack_score)) as usize
+        (KING_SCORE + (victim_score - attack_score)) as Centipawns
     }
 
     /// Returns the current material score for a given Position
-    pub fn get_material_score(&mut self, piece_type:PieceType, position:&Position) -> isize {
+    pub fn get_material_score(&mut self, piece_type:PieceType, position:&Position) -> Centipawns {
         match piece_type {
             PieceType::Pawn => { PAWN_SCORE }
             PieceType::Knight => { KNIGHT_SCORE }
@@ -162,10 +150,10 @@ impl Evaluator {
     }
 
     /// Returns a score value for a movement pattern
-    fn score_movement_pattern(mp:&MovementPattern) -> isize{
-        let mut score:isize = 0;
-        //With all cardinal directions for attacking and translating, score = 960, which is
-        //a little greater than a queen (900)
+    fn score_movement_pattern(mp:&MovementPattern) -> Centipawns {
+        let mut score: Centipawns = 0;
+        // With all cardinal directions for attacking and translating, score = 960, which is
+        // a little greater than a queen (900)
         if mp.attack_north {score += 60};
         if mp.translate_north {score += 60};
         if mp.attack_east {score += 60};
@@ -183,18 +171,17 @@ impl Evaluator {
         if mp.attack_southwest {score += 60};
         if mp.translate_southwest {score += 60};
 
-        score += (mp.translate_jump_deltas.len() * 18) as isize;
-        score += (mp.attack_jump_deltas.len() * 18) as isize;
+        score += (mp.translate_jump_deltas.len() * 18) as Centipawns;
+        score += (mp.attack_jump_deltas.len() * 18) as Centipawns;
         for d in mp.translate_sliding_deltas.iter().chain(mp.attack_sliding_deltas.iter()) {
-            score += (d.len() * 18) as isize;
+            score += (d.len() * 18) as Centipawns;
         }
 
         score
     }
 
-    fn get_positional_score(&mut self, is_endgame: bool, position: &Position, piece_set:&PieceSet, movegen: &MoveGenerator) -> isize {
+    fn get_positional_score(&mut self, is_endgame: bool, position: &Position, piece_set: &PieceSet, movegen: &MoveGenerator) -> Centipawns {
         let mut score = 0;
-
 
         for p in piece_set.get_piece_refs() {
 
@@ -203,8 +190,7 @@ impl Evaluator {
                 //New entry
                 let score_vec = Evaluator::get_positional_score_vec(position, p, movegen);
 
-                self.piece_square_table.insert((&p.piece_type).to_owned(),
-                                               score_vec);
+                self.piece_square_table.insert((&p.piece_type).to_owned(), score_vec);
             }
             //Calculate score for these pieces
             let mut bb_copy = (&p.bitboard).to_owned();
@@ -230,13 +216,13 @@ impl Evaluator {
 
     /// Returns Vec of size 256, each with an integer representing # of moves possible at that
     /// location
-    fn get_positional_score_vec(position: &Position, piece:&Piece, movegen: &MoveGenerator) -> Vec<isize> {
+    fn get_positional_score_vec(position: &Position, piece:&Piece, movegen: &MoveGenerator) -> Vec<Centipawns> {
         let mut return_vec = Vec::with_capacity(256);
         let mut total_entries = 0;
         let mut sum = 0;
         for i in 0..=BIndex::MAX {
             let (x, y) = from_index(i);
-            let num_moves = movegen.get_num_moves_on_empty_board(i, position, piece, &position.bounds) as isize;
+            let num_moves = movegen.get_num_moves_on_empty_board(i, position, piece, &position.bounds) as Centipawns;
             if position.xy_in_bounds(x, y) {
                 total_entries += 1;
                 sum += num_moves;

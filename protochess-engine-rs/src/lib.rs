@@ -1,13 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate impl_ops;
-use searcher::types::{Depth, Player};
-use types::bitboard::{BIndex, BDimensions, BCoord};
 
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGenerator;
-use crate::rankfile::to_rank_file;
-use crate::types::bitboard::{to_index, from_index};
+use crate::utils::{to_rank_file, to_index, from_index};
 
 //Private modules
 mod constants;
@@ -16,17 +13,15 @@ mod types;
 mod position;
 mod evaluator;
 mod searcher;
-mod rankfile;
+mod utils;
 mod transposition_table;
 use std::collections::HashMap;
 use crate::evaluator::Evaluator;
 use crate::position::movement_pattern::MovementPattern;
+use crate::types::*;
 pub use crate::types::PieceType;
-pub use crate::types::chess_move::Move;
-use crate::searcher::{Searcher};
-use crate::searcher::types::GameResult;
+use crate::searcher::Searcher;
 pub use crate::position::movement_pattern::MovementPatternExternal;
-use crate::types::bitboard::Bitboard;
 
 
 pub struct Game {
@@ -156,7 +151,7 @@ impl Engine {
     }
 
     /// Returns the score of the current position for the side to move
-    pub fn get_score(&mut self) -> isize{
+    pub fn get_score(&mut self) -> Centipawns {
         self.evaluator.evaluate(&mut self.current_position, &self.move_generator)
     }
 

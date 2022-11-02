@@ -1,10 +1,7 @@
 use std::sync::Arc;
-use crate::searcher::types::Player;
-use crate::types::bitboard::BIndex;
-use crate::types::{PieceType};
 
 use crate::position::castle_rights::CastleRights;
-use crate::types::chess_move::Move;
+use crate::types::{Player, BIndex, Move, PieceType};
 
 /// Properties that are hard to recover from a Move
 #[derive(Clone, Debug)]

@@ -1,5 +1,6 @@
 use arrayvec::ArrayVec;
-use crate::types::bitboard::{Bitboard, to_index, BIndex, BCoord};
+use crate::types::{Bitboard, BIndex, BCoord};
+use crate::utils::to_index;
 
 /// General bitboard masks for use with attack tables
 #[derive(Clone, Debug)]
@@ -72,7 +73,7 @@ impl MaskHandler {
 
         for x in 0..16 as i8 {
             for y in 0..16 as i8 {
-                let index:usize = to_index(x as BCoord, y as BCoord) as usize;
+                let index: usize = to_index(x as BCoord, y as BCoord) as usize;
 
                 //NORTH LOOKUP TABLE
                 for j in y + 1..16 as i8 {

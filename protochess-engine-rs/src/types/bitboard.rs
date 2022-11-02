@@ -1,3 +1,8 @@
+use std::ops;
+use impl_ops::*;
+
+use crate::utils::to_index;
+
 
 pub type BIndex = u8; // 256 positions in 16x16 board
 pub type BCoord = u8; // Coordinate the board: [0..15]
@@ -6,16 +11,6 @@ pub type BCoord = u8; // Coordinate the board: [0..15]
 pub struct BDimensions {
     pub width: BCoord,
     pub height: BCoord,
-}
-
-
-
-pub fn to_index(x: BCoord, y: BCoord) -> BIndex{
-    (16 * y + x) as BIndex
-}
-
-pub fn from_index(index:BIndex) -> (BCoord, BCoord) {
-    ((index % 16) as BCoord , (index / 16) as BCoord)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,9 +74,6 @@ impl Bitboard {
         return_str
     }
 }
-
-use std::ops;
-use impl_ops::*;
 
 impl_op_ex!(+ |a: &Bitboard, b: &Bitboard| -> Bitboard { Bitboard{board_internal: &a.board_internal + &b.board_internal} });
 impl_op_ex!(- |a: &Bitboard, b: &Bitboard| -> Bitboard { Bitboard{board_internal: &a.board_internal - &b.board_internal} });

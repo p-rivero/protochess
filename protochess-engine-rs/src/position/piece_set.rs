@@ -1,6 +1,5 @@
-use crate::searcher::types::Player;
 //Pieces that a player has
-use crate::types::bitboard::{Bitboard, BIndex};
+use crate::types::{Bitboard, BIndex, Player};
 use crate::position::piece::Piece;
 
 /// Represents a set of pieces for a player

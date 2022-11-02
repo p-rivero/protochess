@@ -1,6 +1,4 @@
-use crate::searcher::types::Player;
-use crate::types::PieceType;
-use crate::types::bitboard::Bitboard;
+use crate::types::{Player, PieceType, Bitboard};
 
 #[derive(Clone, Debug)]
 pub struct Piece {

@@ -1,8 +1,9 @@
 mod mask_handler;
 
 use arrayvec::ArrayVec;
-use crate::types::bitboard::{Bitboard, to_index, from_index, BIndex, BCoord};
+use crate::types::{Bitboard, BIndex, BCoord};
 use crate::move_generator::attack_tables::mask_handler::MaskHandler;
+use crate::utils::{to_index, from_index};
 
 /// Holds pre-calculated attack tables for the pieces, assuming a 16x16 size board
 /// Only for classical set of pieces
@@ -337,7 +338,7 @@ impl AttackTables {
 #[cfg(test)]
 mod tests {
     use crate::move_generator::attack_tables::AttackTables;
-    use crate::types::bitboard::Bitboard;
+    use crate::types::Bitboard;
     //use crate::types::bitboard::to_string;
 
 

@@ -1,6 +1,5 @@
 use crate::PieceType;
-use crate::searcher::types::Player;
-use crate::types::bitboard::{BIndex, BCoord};
+use crate::types::{BIndex, BCoord, Player};
 use std::collections::HashMap;
 use rand::rngs::StdRng;
 use rand::{SeedableRng, Rng};

@@ -1,18 +1,16 @@
 use arrayvec::ArrayVec;
-use crate::searcher::types::Player;
-use crate::types::*;
-use crate::constants::{fen, DEFAULT_WIDTH, DEFAULT_HEIGHT};
-use crate::position::piece_set::PieceSet;
-use crate::types::bitboard::{Bitboard, to_index, from_index, BIndex, BCoord, BDimensions};
 use std::sync::Arc;
 
+use crate::types::*;
+use crate::constants::fen;
+use crate::position::piece_set::PieceSet;
+use crate::utils::{from_index, to_index};
+
 use position_properties::PositionProperties;
-use crate::types::chess_move::{Move, MoveType};
 use crate::position::movement_pattern::{MovementPattern, MovementPatternExternal, external_mp_to_internal, internal_mp_to_external};
 use crate::position::piece::Piece;
 use std::collections::HashMap;
 use crate::position::zobrist_table::ZobristTable;
-use crate::constants::fen::EMPTY;
 
 mod position_properties;
 mod castle_rights;
@@ -288,7 +286,7 @@ impl Position {
         for y in (0..self.dimensions.height).rev() {
             return_str = format!("{} {} ", return_str, y);
             for x in 0..self.dimensions.width {
-                if let Some((player_num, piece)) = self.piece_at(bitboard::to_index(x,y)) {
+                if let Some((player_num, piece)) = self.piece_at(to_index(x,y)) {
                     if player_num == 0 {
                         return_str.push(piece.char_rep.to_ascii_uppercase());
                     } else {
@@ -346,7 +344,7 @@ impl Position {
                   movement_patterns: HashMap<char, MovementPatternExternal>,
                   pieces: Vec<(Player, BIndex, PieceType)>) -> Position
     {
-        let mut pos = Position::from_fen(String::from(EMPTY));
+        let mut pos = Position::from_fen(String::from(fen::EMPTY));
         pos.dimensions = dims;
         pos.bounds = bounds;
         for (chr, mpe) in movement_patterns {
@@ -360,7 +358,7 @@ impl Position {
     }
 
     pub fn from_fen(fen: String) -> Position {
-        let dims = BDimensions{width:DEFAULT_WIDTH, height:DEFAULT_HEIGHT};
+        let dims = BDimensions{ width: fen::BOARD_WIDTH, height: fen::BOARD_HEIGHT };
 
         let mut wb_pieces = ArrayVec::<[_;4]>::new();
         let mut w_pieces = PieceSet::new(0);
@@ -396,7 +394,7 @@ impl Position {
                         continue;
                     }
 
-                    let index = bitboard::to_index(x, y);
+                    let index = to_index(x, y);
                     let pieces = if c.is_ascii_uppercase() {
                         &mut w_pieces
                     } else {
@@ -628,7 +626,7 @@ impl Position {
 mod pos_test {
     use crate::position::Position;
     use crate::move_generator::MoveGenerator;
-    use crate::types::chess_move::Move;
+    use crate::types::Move;
 
     #[test]
     fn print_pieces() {
