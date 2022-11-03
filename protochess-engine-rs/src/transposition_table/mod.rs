@@ -51,14 +51,16 @@ impl TranspositionTable {
     /// Inserts a new Entry item into the transposition table
     pub fn insert(&mut self, zobrist_key:u64, entry: Entry) {
         let cluster = &mut self.data[zobrist_key as usize % TABLE_SIZE];
-        // Prevent multiple threads from writing to the same cluster at the same time
+        // Prevent multiple threads from writing to the same cluster at the same time (don't protect reads)
         let _guard = cluster.mutex.lock();
-        // As a first option, the first exact match for this key that has lower depth
+        // As a first option, replace the first exact match for this key that has lower depth
         for i in 0..ENTRIES_PER_CLUSTER {
             let tentry = cluster.entries[i];
-            if tentry.depth <= entry.depth && tentry.key == zobrist_key && tentry.flag != EntryFlag::NULL {
-                //Replace existing
-                cluster.entries[i] = entry;
+            if tentry.key == zobrist_key && tentry.flag != EntryFlag::NULL {
+                // Exact match, replace it only if the new entry is better
+                if entry.equal_or_better_than(&tentry) {
+                    cluster.entries[i] = entry;
+                }
                 // Drop _guard and return
                 return;
             }
@@ -67,7 +69,7 @@ impl TranspositionTable {
         // No exact match found, we need to replace an entry for a different position
         // Replace the ancient entry with the lowest depth. If there are no ancient entries, replace the entry with the lowest depth
         let mut lowest_depth_and_ancient = Depth::MAX;
-        let mut lowest_depth_and_ancient_indx:i32 = -1;
+        let mut lowest_depth_and_ancient_indx: i32 = -1;
 
         let mut lowest_depth = Depth::MAX;
         let mut lowest_depth_index = 0;
@@ -86,8 +88,9 @@ impl TranspositionTable {
 
         if lowest_depth_and_ancient_indx != -1 {
             cluster.entries [lowest_depth_and_ancient_indx as usize] = entry;
-        } else {
-            cluster.entries [lowest_depth_index] = entry;
+        } else if entry.depth >= lowest_depth {
+            // Only replace the entry if it's not shallower than all existing entries
+            cluster.entries[lowest_depth_index] = entry;
         }
         // Drop _guard and return
     }

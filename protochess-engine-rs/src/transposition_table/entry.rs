@@ -2,13 +2,20 @@ use crate::types::{Move, Depth, Centipawns};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum EntryFlag{
-    ALPHA,
-    EXACT,
-    BETA,
-    NULL,
+    EXACT = 0,
+    ALPHA = 1,
+    BETA = 2,
+    NULL = 3,
+}
+impl EntryFlag {
+    #[inline(always)]
+    pub fn equal_or_better_than(self, other: EntryFlag) -> bool {
+        // Values are ordered so that EXACT < ALPHA <= BETA < NULL (ALPHA and BETA are worth the same)
+        (self as u8) <= (other as u8) || (self == EntryFlag::BETA && other == EntryFlag::ALPHA)
+    }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Entry {
     pub key: u64,
     pub flag: EntryFlag,
@@ -26,6 +33,16 @@ impl Entry {
             mv: Move::null(),
             depth: 0,
             ancient: true
+        }
+    }
+    #[inline(always)]
+    pub fn equal_or_better_than(&self, other: &Entry) -> bool {
+        if self.depth != other.depth {
+            // A deeper entry is always better: if depths are different, prefer higher depth
+            self.depth > other.depth
+        } else {
+            // If the depth is the same, the entry with the most useful value is better
+            self.flag.equal_or_better_than(other.flag)
         }
     }
 }
