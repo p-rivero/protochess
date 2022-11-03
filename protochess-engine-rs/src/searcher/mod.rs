@@ -10,9 +10,14 @@ use alphabeta::alphabeta;
 
 
 // Global structures, shared between threads
+// Transposition table, accessed concurrently by all threads (lazy SMP)
 static mut TRANSPOSITION_TABLE: Option<TranspositionTable> = None;
+// Depth of the deepest search of the current threadpool
 static mut GLOBAL_DEPTH: AtomicU8 = AtomicU8::new(0);
+// Counter for the variable deepening search
 static mut SEARCH_ID: AtomicU64 = AtomicU64::new(1);
+// Threadpool id, so that threads know if their search is outdated
+static mut CURRENT_POOL_ID: u32 = 0;
 
 
 

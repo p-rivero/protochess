@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::sync::atomic::{Ordering::Relaxed};
 use std::thread;
 use instant::{Instant, Duration};
@@ -7,12 +8,12 @@ use crate::position::Position;
 use crate::move_generator::MoveGenerator;
 use crate::evaluator::Evaluator;
 
-use super::{Searcher, init_globals, transposition_table, GLOBAL_DEPTH, SEARCH_ID};
+use super::{Searcher, init_globals, transposition_table, GLOBAL_DEPTH, SEARCH_ID, CURRENT_POOL_ID};
 
 // This file contains the multi-threaded search using Lazy SMP, which uses the alphabeta() function from alphabeta.rs
 
 
-static NUM_THREADS: u32 = 4;
+static NUM_THREADS: u32 = 8;
 
 impl Searcher {
     pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: Depth) -> Result<(Move, Depth), GameResult> {
@@ -29,44 +30,60 @@ impl Searcher {
         // Initialize the global structures
         init_globals();
         
-        // Init threads, store handles
-        let mut handles = Vec::with_capacity(NUM_THREADS as usize);
+        // Init threads, store handles in a queue
+        let mut handles = VecDeque::with_capacity(NUM_THREADS as usize);
         for thread_id in 0..NUM_THREADS {
             // For each thread, create a local copy of the heuristics
             let mut pos_copy = position.clone();
             let mut eval_copy = eval.clone();
             let movegen_copy = (*movegen).clone();
+            let pool_id = unsafe { CURRENT_POOL_ID };
             let h = thread::spawn(move || {
                 let mut searcher = Searcher::new();
-                searcher.search_thread(thread_id, &mut pos_copy, &mut eval_copy, &movegen_copy, max_depth, time_sec)
+                searcher.search_thread(thread_id, pool_id, &mut pos_copy, &mut eval_copy, &movegen_copy, max_depth, time_sec)
             });
-            handles.push(h);
+            handles.push_back(h);
         }
         
         // Wait for threads to finish
         let mut best_move = Move::null();
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
         let mut best_depth = 0;
-        for h in handles {
+        loop {
+            let h = handles.pop_front().unwrap();
+            // Poll all threads for results
+            if !h.is_finished() {
+                handles.push_back(h);
+                thread::sleep(Duration::from_millis(50));
+                continue;
+            }
             // If any thread returns a GameResult, drop the other threads and return the result
             let (mv, score, depth) = h.join().unwrap()?;
             // If any thread reaches the target depth, drop the other threads and return the move
             if depth == max_depth {
-                println!("TARGET DEPTH REACHED");
-                return Ok((mv, depth));
+                best_move = mv;
+                best_score = score;
+                best_depth = depth;
+                break;
             }
+            // Get the best result of all threads
             if depth > best_depth || (depth == best_depth && score > best_score) {
                 best_move = mv;
                 best_score = score;
                 best_depth = depth;
             }
+            if handles.is_empty() {
+                break;
+            }
         }
+        // Before returning the best move, signal to remaining threads that they are invalid
+        unsafe { CURRENT_POOL_ID += 1; }
         println!("Best move at depth {} with score {} ", best_depth, best_score);
         Ok((best_move, best_depth))
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, thread_id: u32, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: Depth, time_sec: u64) -> Result<(Move, Centipawns, Depth), GameResult> {
+    fn search_thread(&mut self, thread_id: u32, pool_id: u32, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: Depth, time_sec: u64) -> Result<(Move, Centipawns, Depth), GameResult> {
         let end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut best_move: Move = Move::null();
@@ -98,8 +115,13 @@ impl Searcher {
                     return Err(GameResult::Stalemate);
                 }
             }
+            if unsafe { CURRENT_POOL_ID } != pool_id {
+                // This thread has been invalidated by a new search
+                break;
+            }
+            
             //Print PV info
-            println!("Thread {} score: {}, depth: {}, nodes: {}", thread_id, best_score, best_depth, self.nodes_searched);
+            println!("Thread {}.{} score: {}, depth: {}, nodes: {}", pool_id, thread_id, best_score, best_depth, self.nodes_searched);
             
             // Set the global depth to max(local_depth, global_depth)
             // GLOBAL_DEPTH contains the maximum depth searched by any thread
