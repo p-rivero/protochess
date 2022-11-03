@@ -13,8 +13,9 @@ use super::{Searcher, transposition_table};
 
 
 // Interface between lazy SMP algorithm and alphabeta
-pub(crate) fn alphabeta(searcher: &mut Searcher, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearcherError> {
-    searcher.alphabeta(position, eval, movegen, depth, alpha, beta, do_null, end_time)
+pub(crate) fn alphabeta(searcher: &mut Searcher, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearcherError> {
+    // Use -MAX instead of MIN to avoid overflow when negating
+    searcher.alphabeta(position, eval, movegen, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
 }
 
 impl Searcher {
@@ -40,7 +41,7 @@ impl Searcher {
                         if entry.value < alpha {
                             return Ok(alpha);
                         }
-                        if entry.value >= beta{
+                        if entry.value >= beta {
                             return Ok(beta);
                         }
                         return Ok(entry.value);
@@ -123,9 +124,9 @@ impl Searcher {
 
                 if score > alpha {
                     if score >= beta {
-                        //Record new killer moves
+                        // Record new killer moves
                         self.update_killers(depth, (&mv).to_owned());
-                        //Beta cutoff, store in transpositon table
+                        // Beta cutoff, store in transpositon table
                         transposition_table().insert(position.get_zobrist(), Entry{
                             key: position.get_zobrist(),
                             flag: EntryFlag::BETA,
@@ -138,7 +139,7 @@ impl Searcher {
                     }
                     alpha = score;
 
-                    //History heuristic
+                    // History heuristic
                     self.update_history_heuristic(depth, &mv);
                 }
             }
@@ -248,13 +249,12 @@ impl Searcher {
             (eval.score_move(&self.history_moves, &self.killer_moves[depth as usize], position, &mv), mv)
         }).collect();
 
-        //Assign PV/hash moves to Centipawns::MAX
+        // Assign PV/hash moves to Centipawns::MAX (search first in the PV)
         if let Some(entry) = transposition_table().retrieve(position.get_zobrist()) {
             let best_move = &entry.mv;
-            for i in 0..moves_and_score.len() {
-                if moves_and_score[i].1 == *best_move {
-                    moves_and_score[i] = (Centipawns::MAX, moves_and_score[i].1);
-                    break;
+            for (score, mv) in &mut moves_and_score {
+                if mv == best_move {
+                    *score = Centipawns::MAX;
                 }
             }
         }

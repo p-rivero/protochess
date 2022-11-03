@@ -52,6 +52,7 @@ impl Searcher {
             let (mv, score, depth) = h.join().unwrap()?;
             // If any thread reaches the target depth, drop the other threads and return the move
             if depth == max_depth {
+                println!("TARGET DEPTH REACHED");
                 return Ok((mv, depth));
             }
             if depth > best_depth || (depth == best_depth && score > best_score) {
@@ -60,6 +61,7 @@ impl Searcher {
                 best_depth = depth;
             }
         }
+        println!("Best move at depth {} with score {} ", best_depth, best_score);
         Ok((best_move, best_depth))
     }
     
@@ -77,7 +79,7 @@ impl Searcher {
         loop {
             self.nodes_searched = 0;
             self.current_searching_depth = local_depth;
-            match crate::searcher::alphabeta(self, position, eval, movegen, local_depth, -Centipawns::MAX, Centipawns::MAX, true, &end_time) {
+            match super::alphabeta(self, position, eval, movegen, local_depth, &end_time) {
                 Ok(score) => {
                     best_score = score;
                     best_move = transposition_table().retrieve(position.get_zobrist()).unwrap().mv;
