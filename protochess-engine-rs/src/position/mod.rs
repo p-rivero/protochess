@@ -1,20 +1,22 @@
 use arrayvec::ArrayVec;
 use std::sync::Arc;
+use std::collections::HashMap;
 
 use crate::types::*;
 use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
 use crate::utils::{from_index, to_index};
 
+use movement_pattern::{MovementPattern, MovementPatternExternal, external_mp_to_internal, internal_mp_to_external};
+use piece::Piece;
+use zobrist_table::ZobristTable;
+pub use parse_fen::parse_fen;
 use position_properties::PositionProperties;
-use crate::position::movement_pattern::{MovementPattern, MovementPatternExternal, external_mp_to_internal, internal_mp_to_external};
-use crate::position::piece::Piece;
-use std::collections::HashMap;
-use crate::position::zobrist_table::ZobristTable;
 
 mod position_properties;
-mod castle_rights;
+pub mod castle_rights;
 mod zobrist_table;
+pub mod parse_fen;
 pub mod piece;
 pub mod piece_set;
 pub mod movement_pattern;
@@ -50,8 +52,8 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn default() -> Position{
-        Position::from_fen(String::from(fen::STARTING_POS))
+    pub fn default() -> Position {
+        parse_fen(String::from(fen::STARTING_POS))
     }
 
     /// Registers a new piece type for this position
@@ -118,7 +120,7 @@ impl Position {
                 let captd_owner = captd.player_num;
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&captd_piece_type,captd_owner , capt_index);
                 new_props.captured_piece = Some((owner, captd_piece_type));
-                self._remove_piece(capt_index);
+                self.remove_piece(capt_index);
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
@@ -155,16 +157,16 @@ impl Position {
             MoveType::PromotionCapture | MoveType::Promotion => {
                 new_props.promote_from = Some(from_piece_type.to_owned());
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&from_piece_type, my_player_num, to);
-                self._remove_piece(to);
+                self.remove_piece(to);
                 let promote_to_pt = PieceType::from_char(mv.get_promotion_char().unwrap());
                 new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&promote_to_pt, my_player_num, to);
-                self.add_piece_impl(my_player_num, promote_to_pt, to);
+                self.add_piece(my_player_num, promote_to_pt, to);
             },
             _ => {}
         };
 
-        //Pawn en-passant
-        //Check for a pawn double push to set ep square
+        // Pawn en-passant
+        // Check for a pawn double push to set ep square
         let (x1, y1) = from_index(from);
         let (x2, y2) = from_index(to);
 
@@ -244,8 +246,8 @@ impl Position {
         //Undo Promotion
         match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
-                self._remove_piece(from);
-                self.add_piece_impl(my_player_num, self.properties.promote_from.as_ref().unwrap().to_owned(), from);
+                self.remove_piece(from);
+                self.add_piece(my_player_num, self.properties.promote_from.as_ref().unwrap().to_owned(), from);
             },
             _ => {}
         };
@@ -256,7 +258,7 @@ impl Position {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt = mv.get_target();
                 let (owner, pt) = self.properties.captured_piece.as_ref().unwrap();
-                self.add_piece_impl(*owner, pt.to_owned(), capt);
+                self.add_piece(*owner, pt.to_owned(), capt);
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
@@ -344,7 +346,7 @@ impl Position {
                   movement_patterns: HashMap<char, MovementPatternExternal>,
                   pieces: Vec<(Player, BIndex, PieceType)>) -> Position
     {
-        let mut pos = Position::from_fen(String::from(fen::EMPTY));
+        let mut pos = parse_fen(String::from(fen::EMPTY));
         pos.dimensions = dims;
         pos.bounds = bounds;
         for (chr, mpe) in movement_patterns {
@@ -352,177 +354,8 @@ impl Position {
         }
 
         for (owner, index, piece_type) in pieces {
-            pos.add_piece(owner, piece_type, index);
+            pos.public_add_piece(owner, piece_type, index);
         }
-        pos
-    }
-
-    pub fn from_fen(fen: String) -> Position {
-        let dims = BDimensions{ width: fen::BOARD_WIDTH, height: fen::BOARD_HEIGHT };
-
-        let mut wb_pieces = ArrayVec::<[_;4]>::new();
-        let mut w_pieces = PieceSet::new(0);
-        let mut b_pieces = PieceSet::new(1);
-
-        let mut x: BCoord = 0;
-        let mut y: BCoord = 7;
-        let mut field = 0;
-
-        let mut whos_turn = 0;
-        let mut can_w_castle_k = false;
-        let mut can_b_castle_k = false;
-        let mut can_w_castle_q = false;
-        let mut can_b_castle_q = false;
-        
-        let mut ep_x: i8 = -1;
-        let mut ep_y: i8 = -1;
-        
-        for c in fen.chars() {
-            if c == ' ' {
-                field += 1;
-                continue;
-            }
-            match field{
-                //position
-                0 => {
-                    if c == '/' {
-                        x = 0;
-                        y -= 1;
-                        continue;
-                    } else if c.is_numeric() {
-                        x += c.to_digit(10).expect("Not a digit!") as BCoord;
-                        continue;
-                    }
-
-                    let index = to_index(x, y);
-                    let pieces = if c.is_ascii_uppercase() {
-                        &mut w_pieces
-                    } else {
-                        &mut b_pieces
-                    };
-                    let bitboard: &mut Bitboard = match c.to_ascii_lowercase() {
-                        'k' => { &mut pieces.king.bitboard },
-                        'q' => { &mut pieces.queen.bitboard },
-                        'r' => { &mut pieces.rook.bitboard },
-                        'b' => { &mut pieces.bishop.bitboard },
-                        'n' => { &mut pieces.knight.bitboard },
-                        'p' => { &mut pieces.pawn.bitboard },
-                        _ => continue,
-                    };
-
-                    bitboard.set_bit(index);
-                    if c.is_uppercase() {
-                        w_pieces.occupied.set_bit(index)
-                    } else {
-                        b_pieces.occupied.set_bit(index)
-                    };
-                    x += 1;
-                }
-                //next to move
-                1 => {
-                    if c == 'w' {
-                        whos_turn = 0;
-                    } else {
-                        whos_turn = 1;
-                    }
-                }
-                //Castling rights
-                2 => {
-                    match c {
-                        'K' => {can_w_castle_k = true;}
-                        'Q' => {can_w_castle_q = true;}
-                        'k' => {can_b_castle_k = true;}
-                        'q' => {can_b_castle_q = true;}
-                        _ => {}
-                    }
-                }
-                //En Passant square
-                3 => {
-                    // This field can be either '-' or a square in the form of a letter followed by a number
-                    if c == '-' {
-                        continue;
-                    } else if c.is_numeric() {
-                        ep_y = c.to_digit(10).expect("Not a digit!") as i8 - 1;
-                    } else {
-                        ep_x = c as i8 - 'a' as i8;
-                    }
-                }
-                _ => continue,
-            }
-        }
-
-        let mut occupied = Bitboard::zero();
-        occupied |= &w_pieces.occupied;
-        occupied |= &b_pieces.occupied;
-        let zobrist_table = ZobristTable::new();
-        let mut zobrist_key = 0;
-
-        let mut properties = PositionProperties::default();
-        zobrist_key ^= zobrist_table.get_castling_zobrist(0, true);
-        zobrist_key ^= zobrist_table.get_castling_zobrist(0, false);
-        zobrist_key ^= zobrist_table.get_castling_zobrist(1, true);
-        zobrist_key ^= zobrist_table.get_castling_zobrist(1, false);
-        if !can_w_castle_k {
-            properties.castling_rights.disable_kingside_castle(0);
-            zobrist_key ^= zobrist_table.get_castling_zobrist(0, true);
-        }
-
-        if !can_b_castle_k {
-            properties.castling_rights.disable_kingside_castle(1);
-            zobrist_key ^= zobrist_table.get_castling_zobrist(1, true);
-        }
-
-        if !can_w_castle_q {
-            properties.castling_rights.disable_queenside_castle(0);
-            zobrist_key ^= zobrist_table.get_castling_zobrist(0, false);
-        }
-
-        if !can_b_castle_q {
-            properties.castling_rights.disable_queenside_castle(1);
-            zobrist_key ^= zobrist_table.get_castling_zobrist(1, false);
-        }
-        
-        if ep_x != -1 {
-            if ep_y == -1 || (ep_y != 2 && ep_y != 5) {
-                panic!("Invalid en passant square: {}", fen);
-            }
-            properties.ep_square = Some(to_index(ep_x as BCoord, ep_y as BCoord));
-            zobrist_key ^= zobrist_table.get_ep_zobrist_file(ep_x as BCoord);
-        }
-
-
-        for piece in w_pieces.get_piece_refs().into_iter().chain(b_pieces.get_piece_refs().into_iter()) {
-            let mut bb_copy = (&piece.bitboard).to_owned();
-            while !bb_copy.is_zero() {
-                let indx = bb_copy.lowest_one().unwrap();
-                zobrist_key ^= zobrist_table.get_zobrist_sq(piece, indx);
-                bb_copy.clear_bit(indx);
-            }
-        }
-
-        properties.zobrist_key = zobrist_key;
-
-        wb_pieces.push(w_pieces);
-        wb_pieces.push(b_pieces);
-
-        let mut bounds = Bitboard::zero();
-        for x in 0..8 {
-            for y in 0..8 {
-                bounds.set_bit_at(x,y);
-            }
-        }
-
-        let pos = Position{
-            whos_turn,
-            num_players: 2,
-            dimensions: dims,
-            pieces: wb_pieces,
-            occupied,
-            bounds,
-            properties: Arc::new(properties),
-            movement_rules: Default::default()
-        };
-
         pos
     }
 
@@ -541,7 +374,7 @@ impl Position {
     }
 
     /// Returns bitoard of piece at index
-    pub fn piece_bb_at(&mut self,index: BIndex) -> Option<&mut Bitboard> {
+    pub fn piece_bb_at(&mut self, index: BIndex) -> Option<&mut Bitboard> {
         if let Some((_num, piece)) = self.piece_at(index) {
             return Some(&mut piece.bitboard)
         }
@@ -556,27 +389,28 @@ impl Position {
         false
     }
 
-    pub fn move_piece(&mut self, from: BIndex, to: BIndex) {
-        if let Some(source_bb) = self.piece_bb_at(from) {
-            source_bb.clear_bit(from);
-            source_bb.set_bit(to);
-        } else {
-            println!("nothing to move??");
-            println!("from {} {}", from_index(from).0, from_index(from).1);
-            println!("to {} {}", from_index(to).0, from_index(to).1);
-            println!("==");
-        }
+    
+    /// Public interface for modifying the position
+    pub fn public_add_piece(&mut self, owner: Player, pt: PieceType, index: BIndex) {
+        let mut new_props = (*self.properties).clone();
+        let zobrist_table = &ZOBRIST_TABLE;
+        new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&pt, owner, index);
+        self.add_piece(owner, pt, index);
+        self.update_occupied();
+        new_props.prev_properties = Some(Arc::clone(&self.properties));
+        self.properties = Arc::new(new_props);
     }
 
-    /// Removes a piece from the position, assuming the piece is there
-    fn _remove_piece(&mut self, index: BIndex) {
-        let capd_bb:&mut Bitboard = self.piece_bb_at(index).unwrap();
-        capd_bb.clear_bit(index);
+    pub fn public_remove_piece(&mut self, index: BIndex) {
+        self.remove_piece(index);
+        self.update_occupied();
     }
-
+    
+    
+    
     /// Adds a piece to the position, assuming the piecetype already exists
     /// Does nothing if a custom piece isn't registered yet
-    fn add_piece_impl(&mut self, owner: Player, pt: PieceType, index: BIndex) {
+    fn add_piece(&mut self, owner: Player, pt: PieceType, index: BIndex) {
         match pt {
             PieceType::King => {self.pieces[owner as usize].king.bitboard.set_bit(index);},
             PieceType::Queen => {self.pieces[owner as usize].queen.bitboard.set_bit(index);},
@@ -594,6 +428,24 @@ impl Position {
             },
         }
     }
+    
+    /// Removes a piece from the position, assuming the piece is there
+    fn remove_piece(&mut self, index: BIndex) {
+        let capd_bb:&mut Bitboard = self.piece_bb_at(index).unwrap();
+        capd_bb.clear_bit(index);
+    }
+    
+    fn move_piece(&mut self, from: BIndex, to: BIndex) {
+        if let Some(source_bb) = self.piece_bb_at(from) {
+            source_bb.clear_bit(from);
+            source_bb.set_bit(to);
+        } else {
+            println!("nothing to move??");
+            println!("from {} {}", from_index(from).0, from_index(from).1);
+            println!("to {} {}", from_index(to).0, from_index(to).1);
+            println!("==");
+        }
+    }
 
     /// Updates the occupied bitboard
     /// Must be called after every position update/modification
@@ -604,77 +456,4 @@ impl Position {
             self.occupied |= &ps.occupied;
         }
     }
-
-    /// Public interface for modifying the position
-    pub fn add_piece(&mut self, owner: Player, pt: PieceType, index: BIndex) {
-        let mut new_props:PositionProperties = (*self.properties).clone();
-        let zobrist_table = &ZOBRIST_TABLE;
-        new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from_pt(&pt, owner, index);
-        self.add_piece_impl(owner, pt, index);
-        self.update_occupied();
-        new_props.prev_properties = Some(Arc::clone(&self.properties));
-        self.properties = Arc::new(new_props);
-    }
-
-    pub fn remove_piece(&mut self, index: BIndex) {
-        self._remove_piece(index);
-        self.update_occupied();
-    }
 }
-
-#[cfg(test)]
-mod pos_test {
-    use crate::position::Position;
-    use crate::move_generator::MoveGenerator;
-    use crate::types::Move;
-
-    #[test]
-    fn print_pieces() {
-        let pos = Position::default();
-        for pce in pos.pieces_as_tuples() {
-            println!("{:?}", pce);
-        }
-
-        for pce in pos.tiles_as_tuples() {
-            println!("{:?}", pce);
-        }
-
-    }
-
-
-    #[test]
-    fn null_move_eq() {
-        let mut pos = Position::default();
-        //let movegen = MoveGenerator::new();
-        let zob_0 = pos.get_zobrist();
-        pos.make_move(Move::null());
-        pos.make_move(Move::null());
-        pos.make_move(Move::null());
-        pos.make_move(Move::null());
-        pos.unmake_move();
-        pos.unmake_move();
-        pos.unmake_move();
-        pos.unmake_move();
-        assert_eq!(zob_0, pos.get_zobrist());
-    }
-    #[test]
-    fn zobrist_equality() {
-        let mut pos = Position::default();
-        let movegen = MoveGenerator::new();
-        let zob_0 = pos.get_zobrist();
-        for mv in movegen.get_pseudo_moves(&mut pos) {
-            pos.make_move(mv);
-            for mv in movegen.get_pseudo_moves(&mut pos) {
-                pos.make_move(mv);
-                for mv in movegen.get_pseudo_moves(&mut pos) {
-                    pos.make_move(mv);
-                    pos.unmake_move();
-                }
-                pos.unmake_move();
-            }
-            pos.unmake_move();
-        };
-        assert_eq!(zob_0, pos.get_zobrist())
-    }
-}
-

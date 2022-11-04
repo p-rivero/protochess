@@ -1,9 +1,7 @@
 use instant::Instant;
 
+use crate::State;
 use crate::types::{Move, MoveType, Depth, SearcherError, Centipawns};
-use crate::position::Position;
-use crate::move_generator::MoveGenerator;
-use crate::evaluator::Evaluator;
 use crate::transposition_table::{Entry, EntryFlag};
 
 use super::{Searcher, transposition_table};
@@ -13,16 +11,16 @@ use super::{Searcher, transposition_table};
 
 
 // Interface between lazy SMP algorithm and alphabeta
-pub(crate) fn alphabeta(searcher: &mut Searcher, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearcherError> {
+pub(crate) fn alphabeta(searcher: &mut Searcher, state: &mut State, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearcherError> {
     // Use -MAX instead of MIN to avoid overflow when negating
-    searcher.alphabeta(position, eval, movegen, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
+    searcher.alphabeta(state, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
 }
 
 impl Searcher {
-    fn alphabeta(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearcherError> {
-
+    fn alphabeta(&mut self, state: &mut State, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearcherError> {
+        
         if depth <= 0 {
-            return self.quiesce(position, eval, movegen, 0, alpha, beta);
+            return self.quiesce(state, 0, alpha, beta);
         }
         
         self.nodes_searched += 1;
@@ -34,7 +32,7 @@ impl Searcher {
         }
 
         let is_pv = alpha != beta - 1;
-        if let Some(entry) = transposition_table().retrieve(position.get_zobrist()) {
+        if let Some(entry) = transposition_table().retrieve(state.position.get_zobrist()) {
             if entry.depth >= depth {
                 match entry.flag {
                     EntryFlag::EXACT => {
@@ -63,7 +61,7 @@ impl Searcher {
 
         //Null move pruning
         if !is_pv && do_null {
-            if let Some(beta) = self.try_null_move(position, eval, movegen, depth, alpha, beta, end_time)? {
+            if let Some(beta) = self.try_null_move(state, depth, alpha, beta, end_time)? {
                 return Ok(beta);
             }
         }
@@ -72,20 +70,21 @@ impl Searcher {
         let mut num_legal_moves = 0;
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
-        let in_check = movegen.in_check(position);
+        let in_check = state.position_in_check();
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
-        for (_move_score, mv) in self.sort_moves_by_score(eval, movegen.get_pseudo_moves(position), position, depth) {
+        let moves = state.movegen.get_pseudo_moves(&mut state.position);
+        for (_move_score, mv) in self.sort_moves_by_score(state, moves, depth) {
             
-            if !movegen.is_move_legal(&mv, position) {
+            if !state.is_move_legal(&mv) {
                 continue;
             }
 
             num_legal_moves += 1;
-            position.make_move((&mv).to_owned());
+            state.position.make_move((&mv).to_owned());
             let mut score: Centipawns;
             if num_legal_moves == 1 {
-                score = -self.alphabeta(position, eval, movegen, depth - 1, -beta, -alpha, true, end_time)?;
+                score = -self.alphabeta(state, depth - 1, -beta, -alpha, true, end_time)?;
             } else {
                 //Try late move reduction
                 if num_legal_moves > 4
@@ -98,7 +97,7 @@ impl Searcher {
                     if num_legal_moves > 10 {
                         reduced_depth = depth - 3;
                     }
-                    score = -self.alphabeta(position, eval, movegen, reduced_depth, -alpha - 1, -alpha, true, end_time)?;
+                    score = -self.alphabeta(state, reduced_depth, -alpha - 1, -alpha, true, end_time)?;
                 } else {
                     //Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
@@ -107,16 +106,16 @@ impl Searcher {
                 if score > alpha {
                     //PVS
                     //Null window search
-                    score = -self.alphabeta(position, eval, movegen, depth - 1, -alpha - 1, -alpha, true, end_time)?;
+                    score = -self.alphabeta(state, depth - 1, -alpha - 1, -alpha, true, end_time)?;
                     //Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta(position, eval, movegen, depth - 1, -beta, -alpha, true, end_time)?;
+                        score = -self.alphabeta(state, depth - 1, -beta, -alpha, true, end_time)?;
                     }
                 }
 
             }
 
-            position.unmake_move();
+            state.position.unmake_move();
 
             if score > best_score {
                 best_score = score;
@@ -127,8 +126,8 @@ impl Searcher {
                         // Record new killer moves
                         self.update_killers(depth, (&mv).to_owned());
                         // Beta cutoff, store in transpositon table
-                        transposition_table().insert(position.get_zobrist(), Entry{
-                            key: position.get_zobrist(),
+                        transposition_table().insert(state.position.get_zobrist(), Entry{
+                            key: state.position.get_zobrist(),
                             flag: EntryFlag::BETA,
                             value: beta,
                             mv,
@@ -172,8 +171,8 @@ impl Searcher {
 
         if alpha != old_alpha {
             //Alpha improvement, record PV
-            transposition_table().insert(position.get_zobrist(), Entry{
-                key: position.get_zobrist(),
+            transposition_table().insert(state.position.get_zobrist(), Entry{
+                key: state.position.get_zobrist(),
                 flag: EntryFlag::EXACT,
                 value: best_score,
                 mv: (&best_move).to_owned(),
@@ -181,8 +180,8 @@ impl Searcher {
                 ancient: false
             })
         } else {
-            transposition_table().insert(position.get_zobrist(), Entry{
-                key: position.get_zobrist(),
+            transposition_table().insert(state.position.get_zobrist(), Entry{
+                key: state.position.get_zobrist(),
                 flag: EntryFlag::ALPHA,
                 value: alpha,
                 mv: best_move,
@@ -194,8 +193,9 @@ impl Searcher {
     }
 
 
-    fn quiesce(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, mut alpha: Centipawns, beta: Centipawns) -> Result<Centipawns, SearcherError> {
-        let score = eval.evaluate(position, movegen);
+    fn quiesce(&mut self, state: &mut State, depth: Depth, mut alpha: Centipawns, beta: Centipawns) -> Result<Centipawns, SearcherError> {
+        let score = state.get_score();
+        
         if score >= beta{
             return Ok(beta);
         }
@@ -204,14 +204,15 @@ impl Searcher {
         }
 
         // Get only captures, sorted by move ordering heuristics (try the most promising moves first)
-        for (_move_score, mv) in self.sort_moves_by_score(eval, movegen.get_capture_moves(position), position, depth) {
-            if !movegen.is_move_legal(&mv, position) {
+        let moves = state.movegen.get_capture_moves(&mut state.position);
+        for (_move_score, mv) in self.sort_moves_by_score(state, moves, depth) {
+            if !state.is_move_legal(&mv) {
                 continue;
             }
 
-            position.make_move((&mv).to_owned());
-            let score = -self.quiesce(position, eval, movegen, depth, -beta, -alpha)?;
-            position.unmake_move();
+            state.position.make_move((&mv).to_owned());
+            let score = -self.quiesce(state, depth, -beta, -alpha)?;
+            state.position.unmake_move();
 
             if score >= beta {
                 return Ok(beta);
@@ -244,13 +245,14 @@ impl Searcher {
     }
 
     #[inline]
-    fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, eval: &mut Evaluator, moves: I, position: &mut Position, depth: Depth) -> Vec<(Centipawns, Move)> {
-        let mut moves_and_score: Vec<(Centipawns, Move)> = moves.map(|mv| {
-            (eval.score_move(&self.history_moves, &self.killer_moves[depth as usize], position, &mv), mv)
-        }).collect();
+    fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, state: &mut State, moves: I, depth: Depth) -> Vec<(Centipawns, Move)> {
+        let killer_moves_at_depth = &self.killer_moves[depth as usize];
+        let mut moves_and_score: Vec<(Centipawns, Move)> = moves.map(|mv| 
+            (state.eval.score_move(&self.history_moves, killer_moves_at_depth, &mut state.position, &mv), mv))
+            .collect();
 
         // Assign PV/hash moves to Centipawns::MAX (search first in the PV)
-        if let Some(entry) = transposition_table().retrieve(position.get_zobrist()) {
+        if let Some(entry) = transposition_table().retrieve(state.position.get_zobrist()) {
             let best_move = &entry.mv;
             for (score, mv) in &mut moves_and_score {
                 if mv == best_move {
@@ -266,12 +268,12 @@ impl Searcher {
     }
 
     #[inline]
-    fn try_null_move(&mut self, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, depth: Depth, _alpha: Centipawns, beta: Centipawns, end_time: &Instant) -> Result<Option<Centipawns>, SearcherError> {
+    fn try_null_move(&mut self, state: &mut State, depth: Depth, _alpha: Centipawns, beta: Centipawns, end_time: &Instant) -> Result<Option<Centipawns>, SearcherError> {
         
-        if depth > 3 && eval.can_do_null_move(position) && !movegen.in_check(position) {
-            position.make_move(Move::null());
-            let nscore = -self.alphabeta(position,eval, movegen, depth - 3, -beta, -beta + 1, false, end_time)?;
-            position.unmake_move();
+        if depth > 3 && state.eval.can_do_null_move(&mut state.position) && !state.position_in_check() {
+            state.position.make_move(Move::null());
+            let nscore = -self.alphabeta(state, depth - 3, -beta, -beta + 1, false, end_time)?;
+            state.position.unmake_move();
             if nscore >= beta {
                 return Ok(Some(beta));
             }

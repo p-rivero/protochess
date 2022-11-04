@@ -2,19 +2,24 @@
 extern crate lazy_static;
 extern crate impl_ops;
 
+use thread_handler::ThreadHandler;
+use utils::custom_position::make_custom_position;
+
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGenerator;
-use crate::utils::{to_rank_file, to_index, from_index};
+use crate::position::parse_fen;
+use crate::utils::{to_index, from_index};
 
 //Private modules
 mod constants;
-mod move_generator;
-mod types;
-mod position;
-mod evaluator;
+pub mod move_generator;
+pub mod types;
+pub mod position;
+pub mod evaluator;
 mod searcher;
-mod utils;
+pub mod utils;
 mod transposition_table;
+mod thread_handler;
 use std::collections::HashMap;
 use crate::evaluator::Evaluator;
 use crate::position::movement_pattern::MovementPattern;
@@ -22,6 +27,63 @@ use crate::types::*;
 pub use crate::types::PieceType;
 use crate::searcher::Searcher;
 pub use crate::position::movement_pattern::MovementPatternExternal;
+
+
+
+#[derive(Clone)]
+pub struct State {
+    pub position: Position,
+    pub movegen: MoveGenerator,
+    pub(crate) eval: Evaluator,
+}
+
+impl State {
+    pub fn new(position: Position) -> State {
+        State {
+            movegen: MoveGenerator::new(),
+            eval: Evaluator::new(),
+            position,
+        }
+    }
+    
+    #[inline(always)]
+    pub fn get_score(&mut self) -> Centipawns {
+        self.eval.evaluate(&mut self.position, &self.movegen)
+    }
+    
+    #[inline(always)]
+    pub fn position_in_check(&mut self) -> bool {
+        self.movegen.in_check(&mut self.position)
+    }
+    
+    #[inline(always)]
+    fn legal_moves(&mut self) -> Vec<((BCoord, BCoord), (BCoord, BCoord))> {
+        self.movegen.get_legal_moves_as_tuples(&mut self.position)
+    }
+    
+    #[inline(always)]
+    pub fn is_move_legal(&mut self, mv: &Move) -> bool {
+        self.movegen.is_move_legal(mv, &mut self.position)
+    }
+    
+    /// Performs a move from (x1, y1) to (x2, y2) on the current board position
+    pub fn attempt_move(position: &mut Position, movegen: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
+        let from = to_index(x1, y1);
+        let to = to_index(x2, y2);
+
+        let moves = movegen.get_pseudo_moves(position);
+        for mv in moves {
+            if !movegen.is_move_legal(&mv, position) {
+                continue;
+            }
+            if mv.get_from() == from && mv.get_to() == to {
+                position.make_move(mv);
+                return true
+            }
+        }
+        false
+    }
+}
 
 
 pub struct Game {
@@ -43,42 +105,9 @@ impl Game {
         self.current_position.set_bounds(BDimensions{ width, height }, bounds);
     }
 
-    fn each_owner_contains_k(vec: &Vec<(Player, BCoord, BCoord, char)>) -> bool {
-        let mut num_players = 0;
-        for (owner, _, _, _) in vec {
-            if *owner >= num_players {
-                num_players = owner + 1;
-            }
-        }
-        let mut has_k = vec![false; num_players as usize];
-        for (owner, _, _, pce_char) in vec {
-            if pce_char.to_ascii_lowercase() == 'k' {
-                has_k[*owner as usize] = true;
-            }
-        }
-        for k in has_k {
-            if !k { return false; }
-        }
-        true
-    }
     pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
                      valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, char)>) {
-        assert!(Game::each_owner_contains_k(&pieces));
-        let mut width = 0;
-        let mut height = 0;
-        let mut bounds = Bitboard::zero();
-        for sq in valid_squares {
-            if sq.0 >= width { width = sq.0 + 1; }
-            if sq.1 >= height { height = sq.1 + 1; }
-            bounds.set_bit_at(sq.0, sq.1);
-        }
-
-        let pieces =
-            pieces.into_iter()
-                .map(|(owner, x, y, pce_chr)|
-                    (*owner, to_index(*x, *y), PieceType::from_char(*pce_chr)))
-                .collect();
-        self.current_position = Position::custom(BDimensions{width, height}, bounds, movement_patterns, pieces)
+        self.current_position = make_custom_position(movement_patterns, valid_squares, pieces);
     }
 
 
@@ -100,20 +129,7 @@ impl Game {
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
     pub fn make_move(&mut self, move_generator: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
-        let from = to_index(x1, y1);
-        let to = to_index(x2, y2);
-
-        let moves = move_generator.get_pseudo_moves(&mut self.current_position);
-        for mv in moves {
-            if !move_generator.is_move_legal(&mv, &mut self.current_position) {
-                continue;
-            }
-            if mv.get_from() == from && mv.get_to() == to {
-                self.current_position.make_move(mv);
-                return true
-            }
-        }
-        false
+        State::attempt_move(&mut self.current_position, move_generator, x1, y1, x2, y2)
     }
 
     /// Undoes the most recent move on the current board position
@@ -129,135 +145,74 @@ impl Game {
 
 
 /// Starting point for the engine
-pub struct Engine {
-    pub current_position: Position,
-    pub move_generator: MoveGenerator,
-    pub(crate) evaluator: Evaluator,
+pub struct Engine{
+    pub state: State,
+    pub thread_handler: ThreadHandler,
 }
 
 impl Engine {
     /// Initializes a new engine
     pub fn default() -> Engine {
         Engine{
-            move_generator: MoveGenerator::new(),
-            evaluator: Evaluator::new(),
-            current_position: Position::default(),
+            state: State::new(Position::default()),
+            thread_handler: ThreadHandler::std_threads(),
+        }
+    }
+    pub fn default_wasm() -> Engine {
+        Engine{
+            state: State::new(Position::default()),
+            thread_handler: ThreadHandler::wasm_threads(),
         }
     }
     pub fn from_fen(fen: String) -> Engine {
         Engine{
-            move_generator: MoveGenerator::new(),
-            evaluator: Evaluator::new(),
-            current_position: Position::from_fen(fen),
+            state: State::new(parse_fen(fen)),
+            thread_handler: ThreadHandler::std_threads(),
         }
     }
 
     /// Returns the zobrist hash key for the current position
     pub fn get_zobrist(&self) -> u64 {
-        self.current_position.get_zobrist()
+        self.state.position.get_zobrist()
     }
 
     /// Returns the score of the current position for the side to move
     pub fn get_score(&mut self) -> Centipawns {
-        self.evaluator.evaluate(&mut self.current_position, &self.move_generator)
+        self.state.get_score()
     }
 
     /// Registers a custom piecetype for the current position
     pub fn register_piecetype(&mut self, char_rep: char, mpe: MovementPatternExternal) {
-        self.current_position.register_piecetype(char_rep, mpe);
+        self.state.position.register_piecetype(char_rep, mpe);
     }
 
     /// Adds a new piece on the board
     pub fn add_piece(&mut self, _owner: usize, _piece_type: PieceType, x: BCoord, y: BCoord) {
-        self.current_position.add_piece(0, PieceType::Custom('a'), to_index(x,y));
+        self.state.position.public_add_piece(0, PieceType::Custom('a'), to_index(x,y));
     }
 
     /// Removes a piece on the board, if it exists
     pub fn remove_piece(&mut self, index: BIndex) {
-        self.current_position.remove_piece(index);
+        self.state.position.public_remove_piece(index);
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
     pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
-        let from = to_index(x1, y1);
-        let to = to_index(x2, y2);
-
-        let moves = self.move_generator.get_pseudo_moves(&mut self.current_position);
-        for mv in moves {
-            if !self.move_generator.is_move_legal(&mv, &mut self.current_position) {
-                continue;
-            }
-            if mv.get_from() == from && mv.get_to() == to {
-                self.current_position.make_move(mv);
-                return true
-            }
-        }
-        false
+        State::attempt_move(&mut self.state.position, &self.state.movegen, x1, y1, x2, y2)
     }
 
     /// Undoes the most recent move on the current board position
     pub fn undo(&mut self) {
-        self.current_position.unmake_move();
+        self.state.position.unmake_move();
     }
 
     pub fn to_string(&mut self) -> String {
-        self.current_position.to_string()
-    }
-
-    /// Returns the number of possible moves from a board position up to a given depth
-    /// See https://www.chessprogramming.org/Perft
-    pub fn perft(&mut self, depth: Depth) -> u64 {
-        let mut nodes = 0u64;
-
-        let moves = self.move_generator.get_pseudo_moves(&mut self.current_position);
-
-        if depth == 1 {
-            return self.move_generator.count_legal_moves(&mut self.current_position);
-        }
-        for mv in moves{
-            if !self.move_generator.is_move_legal(&mv, &mut self.current_position) {
-                continue;
-            }
-            self.current_position.make_move(mv);
-            nodes += self.perft(depth - 1);
-            self.current_position.unmake_move();
-        }
-        nodes
-    }
-
-    /// Like perft, but prints the moves at the first ply
-    pub fn perft_divide(&mut self, depth: Depth) -> u64 {
-        let mut nodes = 0u64;
-
-        let moves = self.move_generator.get_pseudo_moves(&mut self.current_position);
-        if depth == 1 {
-            return self.move_generator.count_legal_moves(&mut self.current_position);
-        }
-        let mut printing = Vec::new();
-        for mv in moves{
-            if !self.move_generator.is_move_legal(&mv, &mut self.current_position) {
-                continue;
-            }
-
-            let (x,y) = from_index(mv.get_from());
-            let (x2,y2) = from_index(mv.get_to());
-            self.current_position.make_move(mv);
-            let plus = self.perft(depth - 1);
-            nodes += plus;
-            self.current_position.unmake_move();
-            //Print nodes
-            printing.push(format!("{}{}: {}", to_rank_file(x,y), to_rank_file(x2,y2), plus));
-        }
-        printing.sort();
-        for s in printing {
-            println!("{}",s);
-        }
-        nodes
+        self.state.position.to_string()
     }
 
     ///Calculates and plays the best move found up to a given depth
     pub fn play_best_move(&mut self, depth: Depth) -> bool {
-        let best_move = Searcher::get_best_move(&mut self.current_position, &mut self.evaluator, &self.move_generator, depth);
+        let best_move = Searcher::get_best_move(&self, depth);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, _)) => self.make_move(x1, y1, x2, y2),
             None => false
@@ -266,7 +221,7 @@ impl Engine {
 
     ///Returns (fromx,fromy,tox,toy)
     pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord)> {
-        let best_move = Searcher::get_best_move(&mut self.current_position, &mut self.evaluator, &self.move_generator, depth);
+        let best_move = Searcher::get_best_move(&self, depth);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, _)) => Some((x1, y1, x2, y2)),
             None => None
@@ -275,7 +230,7 @@ impl Engine {
 
     ///Calculates and plays the best move found
     pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, Depth) {
-        let best_move = Searcher::get_best_move_timeout(&self.current_position, &self.evaluator, &self.move_generator, max_sec);
+        let best_move = Searcher::get_best_move_timeout(&self, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, depth)) => (self.make_move(x1, y1, x2, y2), depth),
             None => return (false, 0)
@@ -284,7 +239,7 @@ impl Engine {
 
     ///Returns ((fromX,fromY,toX,toY), depth)
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord), Depth)> {
-        let best_move = Searcher::get_best_move_timeout(&mut self.current_position, &mut self.evaluator, &self.move_generator, max_sec);
+        let best_move = Searcher::get_best_move_timeout(&self, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, depth)) => Some(((x1, y1, x2, y2), depth)),
             None => None
@@ -299,7 +254,7 @@ impl Engine {
                 Some((x1, y1, x2, y2, *depth))
             },
             Err(GameResult::Checkmate) => {
-                let loser = self.current_position.whos_turn;
+                let loser = self.state.position.whos_turn;
                 if loser == 0 {
                     println!("CHECKMATE! Black wins!");
                 } else {
@@ -315,7 +270,7 @@ impl Engine {
     }
 
     pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<(BCoord, BCoord)>{
-        let moves = self.move_generator.get_legal_moves_as_tuples(&mut self.current_position);
+        let moves = self.state.legal_moves();
         let mut possible_moves = Vec::new();
         for (from, to) in moves {
             if from == (x, y) {
@@ -326,27 +281,12 @@ impl Engine {
     }
 
     pub fn to_move_in_check(&mut self) -> bool {
-        self.move_generator.in_check(&mut self.current_position)
+        self.state.position_in_check()
     }
 
     pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
                      valid_squares:Vec<(BCoord, BCoord)>, pieces: Vec<(Player, BCoord, BCoord, char)>) {
-        assert!(Game::each_owner_contains_k(&pieces));
-        let mut width = 0;
-        let mut height = 0;
-        let mut bounds = Bitboard::zero();
-        for sq in valid_squares {
-            if sq.0 >= width { width = sq.0 + 1; }
-            if sq.1 >= height { height = sq.1 + 1; }
-            bounds.set_bit_at(sq.0, sq.1);
-        }
-
-        let pieces =
-            pieces.into_iter()
-                .map(|(owner, x, y, pce_chr)|
-                    (owner, to_index(x, y), PieceType::from_char(pce_chr)))
-                .collect();
-        self.current_position = Position::custom(BDimensions{width, height}, bounds, movement_patterns, pieces)
+        self.state.position = make_custom_position(movement_patterns, &valid_squares, &pieces)
     }
 }
 

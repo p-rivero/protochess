@@ -6,7 +6,7 @@ use crate::move_generator::attack_tables::AttackTables;
 use crate::move_generator::bitboard_moves::BitboardMoves;
 use crate::utils::{from_index, to_index};
 
-mod attack_tables;
+pub mod attack_tables;
 mod bitboard_moves;
 #[derive(Clone, Debug)]
 pub struct MoveGenerator {
@@ -555,12 +555,12 @@ impl MoveGenerator {
 
 #[cfg(test)]
 mod eval_test {
-    use crate::position::Position;
+    use crate::parse_fen;
     use crate::move_generator::MoveGenerator;
 
     #[test]
     fn capture_moves() {
-        let mut pos = Position::from_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
+        let mut pos = parse_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
         let movegen = MoveGenerator::new();
         println!("{}",pos.get_zobrist());
         println!("{}", movegen.in_check(&mut pos));

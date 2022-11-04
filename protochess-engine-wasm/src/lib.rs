@@ -29,8 +29,9 @@ pub struct Protochess {
 impl Protochess {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Protochess {
+        utils::set_panic_hook();
         Protochess{
-            engine: Engine::default()
+            engine: Engine::default_wasm()
         }
     }
 
@@ -61,7 +62,7 @@ impl Protochess {
     }
 
     pub fn get_state(&self) -> JsValue {
-        let game_state = serialize_game_state(&self.engine.current_position);
+        let game_state = serialize_game_state(&self.engine.state.position);
         JsValue::from_serde(&game_state).unwrap()
     }
 

@@ -1,12 +1,9 @@
 use std::collections::VecDeque;
 use std::sync::atomic::{Ordering::Relaxed};
-use std::thread;
 use instant::{Instant, Duration};
 
+use crate::{Engine, State};
 use crate::types::{Move, Depth, GameResult, SearcherError, Centipawns};
-use crate::position::Position;
-use crate::move_generator::MoveGenerator;
-use crate::evaluator::Evaluator;
 
 use super::{Searcher, init_globals, transposition_table, GLOBAL_DEPTH, SEARCH_ID, CURRENT_POOL_ID};
 
@@ -16,16 +13,16 @@ use super::{Searcher, init_globals, transposition_table, GLOBAL_DEPTH, SEARCH_ID
 static NUM_THREADS: u32 = 8;
 
 impl Searcher {
-    pub fn get_best_move(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, depth: Depth) -> Result<(Move, Depth), GameResult> {
+    pub fn get_best_move(engine: &Engine, depth: Depth) -> Result<(Move, Depth), GameResult> {
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
-        Searcher::get_best_move_impl(position, eval, movegen, depth, 1_000_000)
+        Searcher::get_best_move_impl(engine, depth, 1_000_000)
     }
 
-    pub fn get_best_move_timeout(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, time_sec: u64) -> Result<(Move, Depth), GameResult> {
-        Searcher::get_best_move_impl(position, eval, movegen, Depth::MAX, time_sec)
+    pub fn get_best_move_timeout(engine: &Engine, time_sec: u64) -> Result<(Move, Depth), GameResult> {
+        Searcher::get_best_move_impl(engine, Depth::MAX, time_sec)
     }
     
-    fn get_best_move_impl(position: &Position, eval: &Evaluator, movegen: &MoveGenerator, max_depth: Depth, time_sec: u64) -> Result<(Move, Depth), GameResult> {
+    fn get_best_move_impl(engine: &Engine, max_depth: Depth, time_sec: u64) -> Result<(Move, Depth), GameResult> {
         
         // Initialize the global structures
         init_globals();
@@ -34,13 +31,11 @@ impl Searcher {
         let mut handles = VecDeque::with_capacity(NUM_THREADS as usize);
         for thread_id in 0..NUM_THREADS {
             // For each thread, create a local copy of the heuristics
-            let mut pos_copy = position.clone();
-            let mut eval_copy = eval.clone();
-            let movegen_copy = (*movegen).clone();
+            let mut state_copy = engine.state.clone();
             let pool_id = unsafe { CURRENT_POOL_ID };
-            let h = thread::spawn(move || {
+            let h = engine.thread_handler.spawn(move || {
                 let mut searcher = Searcher::new();
-                searcher.search_thread(thread_id, pool_id, &mut pos_copy, &mut eval_copy, &movegen_copy, max_depth, time_sec)
+                searcher.search_thread(thread_id, pool_id, &mut state_copy, max_depth, time_sec)
             });
             handles.push_back(h);
         }
@@ -54,7 +49,7 @@ impl Searcher {
             // Poll all threads for results
             if !h.is_finished() {
                 handles.push_back(h);
-                thread::sleep(Duration::from_millis(50));
+                engine.thread_handler.sleep(Duration::from_millis(50));
                 continue;
             }
             // If any thread returns a GameResult, drop the other threads and return the result
@@ -83,7 +78,7 @@ impl Searcher {
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, thread_id: u32, pool_id: u32, position: &mut Position, eval: &mut Evaluator, movegen: &MoveGenerator, max_depth: Depth, time_sec: u64) -> Result<(Move, Centipawns, Depth), GameResult> {
+    fn search_thread(&mut self, thread_id: u32, pool_id: u32, state: &mut State, max_depth: Depth, time_sec: u64) -> Result<(Move, Centipawns, Depth), GameResult> {
         let end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut best_move: Move = Move::null();
@@ -96,10 +91,10 @@ impl Searcher {
         loop {
             self.nodes_searched = 0;
             self.current_searching_depth = local_depth;
-            match super::alphabeta(self, position, eval, movegen, local_depth, &end_time) {
+            match super::alphabeta(self, state, local_depth, &end_time) {
                 Ok(score) => {
                     best_score = score;
-                    best_move = transposition_table().retrieve(position.get_zobrist()).unwrap().mv;
+                    best_move = transposition_table().retrieve(state.position.get_zobrist()).unwrap().mv;
                     best_depth = local_depth;
                 },
                 Err(SearcherError::Timeout) => {

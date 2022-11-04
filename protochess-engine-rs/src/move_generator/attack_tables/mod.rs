@@ -22,7 +22,7 @@ pub struct AttackTables {
 }
 
 impl AttackTables {
-    pub(crate) fn new() -> AttackTables {
+    pub fn new() -> AttackTables {
         let mut knight_attacks = ArrayVec::<[Bitboard;256]>::new();
         let mut king_attacks = ArrayVec::<[Bitboard;256]>::new();
         let mut north_pawn_attacks = ArrayVec::<[Bitboard;256]>::new();
@@ -333,27 +333,4 @@ impl AttackTables {
             ^ self.get_bishop_attack(loc_index, occ, enemies)
     }
 
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::move_generator::attack_tables::AttackTables;
-    use crate::types::Bitboard;
-    //use crate::types::bitboard::to_string;
-
-
-    #[test]
-    fn test() {
-        let _attacktb = AttackTables::new();
-        let mut bb = Bitboard::zero();
-        bb |= 9252345218324798u64;
-
-
-
-        // println!("occ \n{}", to_string(&bb));
-        // let rankatt = _attacktb.get_rank_attack(2,&bb);
-        // println!("{}", to_string(&rankatt));
-
-
-    }
 }

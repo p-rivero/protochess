@@ -43,20 +43,3 @@ impl CastleRights {
         self.1 &= !(1 << playernum)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::position::castle_rights::CastleRights;
-
-    #[test]
-    fn test() {
-        let mut test_rights = CastleRights::new();
-        println!("{}",test_rights.can_player_castle_queenside(0));
-        test_rights.disable_queenside_castle(0);
-        println!("{}",test_rights.can_player_castle_queenside(0));
-        println!("{}",test_rights.can_player_castle_kingside(0));
-        test_rights.disable_kingside_castle(0);
-        println!("{}",test_rights.can_player_castle_kingside(0));
-
-    }
-}

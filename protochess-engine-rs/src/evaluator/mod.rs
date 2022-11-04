@@ -11,7 +11,7 @@ use crate::constants::piece_scores::*;
 
 /// Assigns a score to a given position
 #[derive(Clone, Debug)]
-pub(crate) struct Evaluator {
+pub struct Evaluator {
     //Piece values for pieces,
     //Hard coded for builtin pieces,
     //generated dynamically based on the piece's movement pattern
@@ -242,17 +242,3 @@ impl Evaluator {
 
 }
 
-#[cfg(test)]
-mod eval_test {
-    use crate::evaluator::Evaluator;
-    use crate::position::Position;
-    use crate::move_generator::MoveGenerator;
-
-    #[test]
-    fn test() {
-        let mut eval = Evaluator::new();
-        let movegen = MoveGenerator::new();
-        let mut pos = Position::from_fen("rnbqkbnr/pppppppp/8/8/8/3PP3/PPP2PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
-        println!("{}", eval.evaluate(&mut pos, &movegen));
-    }
-}
