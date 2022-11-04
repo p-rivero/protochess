@@ -117,8 +117,8 @@ impl Room {
                                                                      request_game_state.pieces,
                                                                      request_game_state.movement_patterns){
                                         self.game.set_state(movements,
-                                                            valid_squares,
-                                                            valid_pieces);
+                                                            &valid_squares,
+                                                            &valid_pieces);
                                         self.broadcast_game_update();
                                     }
                                 }

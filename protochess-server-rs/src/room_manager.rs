@@ -112,8 +112,8 @@ impl RoomManager {
                                          init_gamestate.pieces,
                                          init_gamestate.movement_patterns){
             new_room.game.set_state(movements,
-                                    valid_squares,
-                                    valid_pieces);
+                                    &valid_squares,
+                                    &valid_pieces);
         }else{
             return Err(());
         }
@@ -145,7 +145,7 @@ impl RoomManager {
 
 
     pub async fn add_client_to_room(&self, room_id: &String, client: Arc<Client>) -> Result<UnboundedSender<RoomMessage>, ()> {
-        let mut return_val;
+        let return_val;
         //Have to put block here to let lock go out of scope
         {
             let mut rc = self.rooms.write().await;

@@ -189,14 +189,14 @@ mod tests {
     use crate::GameState;
     #[test]
     fn serde() {
-        let lol = (json!(GameState{
+        let lol = json!(GameState{
         width:8,
         height:8,
         to_move:0,
         pieces: vec![],
         tiles: vec![],
         movement_patterns: HashMap::new()
-        }));
+        });
         println!("{}", lol);
     }
 }

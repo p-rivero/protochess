@@ -31,12 +31,13 @@ pub async fn user_connected(ws: WebSocket, rooms: Rooms){
     let ping_cnt = ping_counter.clone();
     let pong_cnt = pong_counter.clone();
     //hb_tx goes out of scope, ending the task
-    let (hb_tx, mut hb_rx) = tokio::sync::oneshot::channel::<()>();
+    let (_, mut hb_rx) = tokio::sync::oneshot::channel::<()>();
     tokio::spawn(async move {
         let mut heartbeat_interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
         loop {
             heartbeat_interval.tick().await;
-            tx.send(Ok(warp::ws::Message::ping(Vec::new())));
+            tx.send(Ok(warp::ws::Message::ping(Vec::new()))) //Send ping
+                .unwrap_or_else(|e| eprintln!("websocket send error: {}", e));
             ping_cnt.fetch_add(1, Ordering::Relaxed);
             let pings = ping_cnt.load(Ordering::Relaxed);
             let pongs = pong_cnt.load(Ordering::Relaxed);

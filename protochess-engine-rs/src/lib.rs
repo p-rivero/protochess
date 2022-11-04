@@ -43,15 +43,15 @@ impl Game {
         self.current_position.set_bounds(BDimensions{ width, height }, bounds);
     }
 
-    fn each_owner_contains_k(vec: &Vec<(Player, BCoord, BCoord, char)>) -> bool{
+    fn each_owner_contains_k(vec: &Vec<(Player, BCoord, BCoord, char)>) -> bool {
         let mut num_players = 0;
-        for (owner, _x, _y, _pce) in vec {
+        for (owner, _, _, _) in vec {
             if *owner >= num_players {
                 num_players = owner + 1;
             }
         }
         let mut has_k = vec![false; num_players as usize];
-        for (owner, _x, _y, pce_char) in vec {
+        for (owner, _, _, pce_char) in vec {
             if pce_char.to_ascii_lowercase() == 'k' {
                 has_k[*owner as usize] = true;
             }
@@ -137,11 +137,18 @@ pub struct Engine {
 
 impl Engine {
     /// Initializes a new engine
-    pub fn default() -> Engine{
+    pub fn default() -> Engine {
         Engine{
             move_generator: MoveGenerator::new(),
-            current_position: Position::default(),
             evaluator: Evaluator::new(),
+            current_position: Position::default(),
+        }
+    }
+    pub fn from_fen(fen: String) -> Engine {
+        Engine{
+            move_generator: MoveGenerator::new(),
+            evaluator: Evaluator::new(),
+            current_position: Position::from_fen(fen),
         }
     }
 
@@ -156,12 +163,12 @@ impl Engine {
     }
 
     /// Registers a custom piecetype for the current position
-    pub fn register_piecetype(&mut self, char_rep:char, mpe: MovementPatternExternal) {
+    pub fn register_piecetype(&mut self, char_rep: char, mpe: MovementPatternExternal) {
         self.current_position.register_piecetype(char_rep, mpe);
     }
 
     /// Adds a new piece on the board
-    pub fn add_piece(&mut self, _owner:usize, _piece_type: PieceType, x: BCoord, y: BCoord) {
+    pub fn add_piece(&mut self, _owner: usize, _piece_type: PieceType, x: BCoord, y: BCoord) {
         self.current_position.add_piece(0, PieceType::Custom('a'), to_index(x,y));
     }
 
@@ -195,14 +202,6 @@ impl Engine {
 
     pub fn to_string(&mut self) -> String {
         self.current_position.to_string()
-    }
-
-    pub fn from_fen(fen:String) -> Engine{
-        Engine{
-            move_generator: MoveGenerator::new(),
-            evaluator: Evaluator::new(),
-            current_position: Position::from_fen(fen),
-        }
     }
 
     /// Returns the number of possible moves from a board position up to a given depth

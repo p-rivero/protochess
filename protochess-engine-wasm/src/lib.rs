@@ -3,7 +3,6 @@ mod utils;
 use protochess_engine_rs::Engine;
 use protochess_common::{GameState, serialize_game_state, validate_gamestate_request};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::__rt::std::rc::Rc;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.

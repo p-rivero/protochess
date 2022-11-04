@@ -61,12 +61,12 @@ pub enum ClientRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::client_message::{ClientRequest };
-    use crate::client_message::ClientResponse;
-    use crate::client_message::Turn;
-    use std::collections::HashMap;
-    use serde_json::json;
-    use uuid::Uuid;
+    // use crate::client_message::{ClientRequest };
+    // use crate::client_message::ClientResponse;
+    // use crate::client_message::Turn;
+    // use std::collections::HashMap;
+    // use serde_json::json;
+    // use uuid::Uuid;
     #[test]
     fn serde() {
         /*

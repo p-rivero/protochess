@@ -10,16 +10,18 @@ pub fn main() {
     //let mut engine = protochess_engine_rs::Engine::from_fen("rnbqkbnr/pppppppp/8/8/8/8/8/RNBQKBNR w KQkq - 0 1".parse().unwrap());
     println!("{}", engine.to_string());
 
+    let start = instant::Instant::now();
     let mut ply = 0;
     loop {
 
-        if !engine.play_best_move_timeout(4).0 {
+        if !engine.play_best_move_timeout(10).0 {
             break;
         }
         ply += 1;
+        println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
         println!("{}", engine.to_string());
-        println!("========================================");
+        println!("\n========================================\n");
 
 
 
