@@ -2,6 +2,7 @@ mod utils;
 
 use protochess_engine_rs::Engine;
 use protochess_common::{GameState, serialize_game_state, validate_gamestate_request};
+use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -58,12 +59,12 @@ impl Protochess {
 
     pub fn get_best_move_timeout(&mut self, time:usize) -> JsValue {
         let best = self.engine.get_best_move_timeout(time as u64);
-        JsValue::from_serde(&best).unwrap()
+        to_value(&best).unwrap()
     }
 
     pub fn get_state(&self) -> JsValue {
         let game_state = serialize_game_state(&self.engine.state.position);
-        JsValue::from_serde(&game_state).unwrap()
+        to_value(&game_state).unwrap()
     }
 
     pub fn to_move_in_check(&mut self) -> bool {
@@ -72,7 +73,7 @@ impl Protochess {
 
     ///True on succcess
     pub fn set_state(&mut self, val: &JsValue) -> bool {
-        let request_game_state: GameState = val.into_serde().unwrap();
+        let request_game_state: GameState = from_value(val.to_owned()).unwrap();
         if let Some((movements, valid_squares, valid_pieces)) =
         validate_gamestate_request(request_game_state.tiles,
                                    request_game_state.pieces,
@@ -87,6 +88,6 @@ impl Protochess {
 
     pub fn moves_from(&mut self, x:u8, y:u8) -> JsValue{
         let moves = self.engine.moves_from(x, y);
-        JsValue::from_serde(&moves).unwrap()
+        to_value(&moves).unwrap()
     }
 }
