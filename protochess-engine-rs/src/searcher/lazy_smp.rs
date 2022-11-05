@@ -10,8 +10,6 @@ use super::{Searcher, init_globals, transposition_table, GLOBAL_DEPTH, SEARCH_ID
 // This file contains the multi-threaded search using Lazy SMP, which uses the alphabeta() function from alphabeta.rs
 
 
-static NUM_THREADS: u32 = 8;
-
 impl Searcher {
     pub fn get_best_move(engine: &Engine, depth: Depth) -> Result<(Move, Depth), GameResult> {
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
@@ -28,14 +26,15 @@ impl Searcher {
         init_globals();
         
         // Init threads, store handles in a queue
-        let mut handles = VecDeque::with_capacity(NUM_THREADS as usize);
-        for thread_id in 0..NUM_THREADS {
+        let num_threads = engine.thread_handler.num_threads();
+        let mut handles = VecDeque::with_capacity(num_threads as usize);
+        for thread_id in 0..num_threads {
             // For each thread, create a local copy of the heuristics
             let mut state_copy = engine.state.clone();
             let pool_id = unsafe { CURRENT_POOL_ID };
             let h = engine.thread_handler.spawn(move || {
                 let mut searcher = Searcher::new();
-                searcher.search_thread(thread_id, pool_id, &mut state_copy, max_depth, time_sec)
+                searcher.search_thread(thread_id, pool_id, num_threads, &mut state_copy, max_depth, time_sec)
             });
             handles.push_back(h);
         }
@@ -78,7 +77,7 @@ impl Searcher {
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, thread_id: u32, pool_id: u32, state: &mut State, max_depth: Depth, time_sec: u64) -> Result<(Move, Centipawns, Depth), GameResult> {
+    fn search_thread(&mut self, thread_id: u32, pool_id: u32, num_threads: u32, state: &mut State, max_depth: Depth, time_sec: u64) -> Result<(Move, Centipawns, Depth), GameResult> {
         let end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut best_move: Move = Move::null();
@@ -129,7 +128,7 @@ impl Searcher {
                 break;
             }
                         
-            if NUM_THREADS == 1 {
+            if num_threads == 1 {
                 // Iterative deepening
                 local_depth += 1;
             } else {

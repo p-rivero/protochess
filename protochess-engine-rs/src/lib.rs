@@ -170,6 +170,9 @@ impl Engine {
             thread_handler: ThreadHandler::std_threads(),
         }
     }
+    pub fn set_num_threads(&mut self, num_threads: u32) {
+        self.thread_handler.set_num_threads(num_threads);
+    }
 
     /// Returns the zobrist hash key for the current position
     pub fn get_zobrist(&self) -> u64 {
