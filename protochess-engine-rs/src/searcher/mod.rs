@@ -60,7 +60,7 @@ fn init_globals() {
     }
 }
 
-#[inline]
+#[inline(always)]
 fn transposition_table() -> &'static mut TranspositionTable {
     unsafe {
         // All threads can access the transposition table. Each row is protected by a lock.

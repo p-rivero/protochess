@@ -73,6 +73,48 @@ impl MovementPattern {
         }
         false
     }
+    pub fn can_slide_north(&self) -> bool {
+        self.translate_north || self.attack_north
+    }
+    pub fn can_slide_south(&self) -> bool {
+        self.translate_south || self.attack_south
+    }
+    pub fn can_slide_east(&self) -> bool {
+        self.translate_east || self.attack_east
+    }
+    pub fn can_slide_west(&self) -> bool {
+        self.translate_west || self.attack_west
+    }
+    pub fn can_slide_northeast(&self) -> bool {
+        self.translate_northeast || self.attack_northeast
+    }
+    pub fn can_slide_northwest(&self) -> bool {
+        self.translate_northwest || self.attack_northwest
+    }
+    pub fn can_slide_southeast(&self) -> bool {
+        self.translate_southeast || self.attack_southeast
+    }
+    pub fn can_slide_southwest(&self) -> bool {
+        self.translate_southwest || self.attack_southwest
+    }
+    pub fn can_slide_main_direction(&self) -> bool {
+        self.can_slide_north() || self.can_slide_south() || self.can_slide_east() || self.can_slide_west()
+    }
+    pub fn can_slide_north_indirectly(&self) -> bool {
+        self.can_slide_north() || self.can_slide_northeast() || self.can_slide_northwest()
+    }
+    pub fn can_slide_south_indirectly(&self) -> bool {
+        self.can_slide_south() || self.can_slide_southeast() || self.can_slide_southwest()
+    }
+    pub fn can_slide_east_indirectly(&self) -> bool {
+        self.can_slide_east() || self.can_slide_northeast() || self.can_slide_southeast()
+    }
+    pub fn can_slide_west_indirectly(&self) -> bool {
+        self.can_slide_west() || self.can_slide_northwest() || self.can_slide_southwest()
+    }
+    pub fn can_promote(&self) -> bool {
+        self.promotion_squares.is_some()
+    }
 }
 
 pub fn external_mp_to_internal(mpe: MovementPatternExternal) -> MovementPattern{

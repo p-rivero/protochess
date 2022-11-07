@@ -6,91 +6,34 @@ mod custom_pieces {
 
     #[test]
     fn custom_pieces() {
-        let mut pos = protochess_engine_rs::Position::default();
-        pos.register_piecetype('c',MovementPatternExternal {
-            promotion_squares: None,
-            promo_vals: None,
-            attack_sliding_deltas: vec![vec![(1,1),(2,2)]],
-            attack_jump_deltas: vec![],
-            attack_north: false,
-            attack_south: false,
-            attack_east: false,
-            attack_west: false,
-            attack_northeast: false,
-            attack_northwest: false,
-            attack_southeast: false,
-            attack_southwest: false,
-            translate_jump_deltas: vec![],
-            translate_sliding_deltas: vec![vec![(1,1),(2,2)]],
-            translate_north: false,
-            translate_south: false,
-            translate_east: false,
-            translate_west: false,
-            translate_northeast: false,
-            translate_northwest: false,
-            translate_southeast: false,
-            translate_southwest: false
-        });
-        pos.register_piecetype('a',MovementPatternExternal {
-            promotion_squares: None,
-            promo_vals: None,
-            attack_sliding_deltas: vec![vec![(1,1),(2,2)]],
-            attack_jump_deltas: vec![],
-            attack_north: false,
-            attack_south: false,
-            attack_east: false,
-            attack_west: false,
-            attack_northeast: false,
-            attack_northwest: false,
-            attack_southeast: false,
-            attack_southwest: false,
-            translate_jump_deltas: vec![],
-            translate_sliding_deltas: vec![vec![(1,1),(2,2)]],
-            translate_north: false,
-            translate_south: false,
-            translate_east: false,
-            translate_west: false,
-            translate_northeast: false,
-            translate_northwest: false,
-            translate_southeast: false,
-            translate_southwest: false
-        });
-
-        for thing in pos.get_char_movementpattern_map() {
-            println!("{:?}", thing);
-        }
-
-
         let mut engine = protochess_engine_rs::Engine::default();
 
-
-        /*
-        engine.register_piecetype('a',MovementPattern {
+        // Queen
+        engine.register_piecetype('a', MovementPatternExternal {
             promotion_squares: None,
             promo_vals: None,
-            attack_sliding_deltas: vec![vec![(1,1),(2,2)]],
+            attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
-            attack_north: false,
-            attack_south: false,
-            attack_east: false,
-            attack_west: false,
-            attack_northeast: false,
-            attack_northwest: false,
-            attack_southeast: false,
-            attack_southwest: false,
+            attack_north: true,
+            attack_south: true,
+            attack_east: true,
+            attack_west: true,
+            attack_northeast: true,
+            attack_northwest: true,
+            attack_southeast: true,
+            attack_southwest: true,
             translate_jump_deltas: vec![],
-            translate_sliding_deltas: vec![vec![(1,1),(2,2)]],
-            translate_north: false,
-            translate_south: false,
-            translate_east: false,
-            translate_west: false,
-            translate_northeast: false,
-            translate_northwest: false,
-            translate_southeast: false,
-            translate_southwest: false
+            translate_sliding_deltas: vec![],
+            translate_north: true,
+            translate_south: true,
+            translate_east: true,
+            translate_west: true,
+            translate_northeast: true,
+            translate_northwest: true,
+            translate_southeast: true,
+            translate_southwest: true
         });
 
-         */
         println!("{}", engine.get_zobrist());
         println!("BASE SCORE: {}", engine.get_score());
         engine.add_piece(0, PieceType::Custom('a'), 0, 3);

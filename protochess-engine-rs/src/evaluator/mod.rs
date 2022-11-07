@@ -30,11 +30,12 @@ impl Evaluator {
     }
     /// Retrieves the score for the player to move (position.whos_turn)
     pub fn evaluate(&mut self, position: &mut Position, movegen: &MoveGenerator) -> Centipawns {
-        let mut score = 0;
         let player_num = position.whos_turn;
+        // Material score (black pieces are negative)
+        let mut score: Centipawns = 0;
+        //Material score of both players (black pieces are positive)
+        let mut total_material_score: Centipawns = 0;
         
-        //Material score
-        let mut total_material_score = 0;
         for ps in position.pieces.iter() {
             let material_score = self.get_material_score_for_pieceset(position, ps);
             
@@ -76,22 +77,20 @@ impl Evaluator {
         material_score += piece_set.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
 
         for custom in &piece_set.custom {
-            if self.custom_piece_value_table.contains_key(&custom.piece_type) {
-                let score = *self.custom_piece_value_table.get(&custom.piece_type).unwrap();
-                material_score += custom.bitboard.count_ones() as Centipawns * score;
-            }
-            else {
-                let option_mp = position.get_movement_pattern(&custom.piece_type);
-                let score = {
-                    if let Some(mp) = option_mp {
-                        Evaluator::score_movement_pattern(mp)
-                    } else {
-                        0
-                    }
+            let score = 
+                if self.custom_piece_value_table.contains_key(&custom.piece_type) {
+                    *self.custom_piece_value_table.get(&custom.piece_type).unwrap()
+                } else {
+                    let piece_score = 
+                        if let Some(mp) = position.get_movement_pattern(&custom.piece_type) {
+                            Evaluator::score_movement_pattern(mp)
+                        } else {
+                            0
+                        };
+                    self.custom_piece_value_table.insert(custom.piece_type.to_owned(), piece_score);
+                    piece_score
                 };
-                self.custom_piece_value_table.insert(custom.piece_type.to_owned(), score);
-                material_score += custom.bitboard.count_ones() as Centipawns * score;
-            }
+            material_score += custom.bitboard.count_ones() as Centipawns * score;
         }
         material_score
     }
@@ -150,34 +149,70 @@ impl Evaluator {
     }
 
     /// Returns a score value for a movement pattern
-    fn score_movement_pattern(mp:&MovementPattern) -> Centipawns {
+    fn score_movement_pattern(mp: &MovementPattern) -> Centipawns {
+        // https://www.chessprogramming.org/Point_Value
+        
+        // This function is called only once, so it's worth it to implement a more complex scoring system
+        
         let mut score: Centipawns = 0;
-        // With all cardinal directions for attacking and translating, score = 960, which is
-        // a little greater than a queen (900)
-        if mp.attack_north {score += 60};
-        if mp.translate_north {score += 60};
-        if mp.attack_east {score += 60};
-        if mp.translate_east {score += 60};
-        if mp.attack_south {score += 60};
-        if mp.translate_south {score += 60};
-        if mp.attack_west {score += 60};
-        if mp.translate_west {score += 60};
-        if mp.attack_northeast {score += 60};
-        if mp.translate_northeast {score += 60};
-        if mp.attack_northwest {score += 60};
-        if mp.translate_northwest {score += 60};
-        if mp.attack_southeast {score += 60};
-        if mp.translate_southeast {score += 60};
-        if mp.attack_southwest {score += 60};
-        if mp.translate_southwest {score += 60};
-
-        score += (mp.translate_jump_deltas.len() * 18) as Centipawns;
-        score += (mp.attack_jump_deltas.len() * 18) as Centipawns;
-        for d in mp.translate_sliding_deltas.iter().chain(mp.attack_sliding_deltas.iter()) {
-            score += (d.len() * 18) as Centipawns;
+        
+        // 130 centipawns for each direction (Rook is 4*130 = 520 centipawns, Queen is 8*130 = 1040 centipawns)
+        if mp.attack_north {score += 80}
+        if mp.translate_north {score += 50}
+        if mp.attack_east {score += 80}
+        if mp.translate_east {score += 50}
+        if mp.attack_south {score += 80}
+        if mp.translate_south {score += 50}
+        if mp.attack_west {score += 80}
+        if mp.translate_west {score += 50}
+        
+        if mp.attack_northeast {score += 80}
+        if mp.translate_northeast {score += 50}
+        if mp.attack_northwest {score += 80}
+        if mp.translate_northwest {score += 50}
+        if mp.attack_southeast {score += 80}
+        if mp.translate_southeast {score += 50}
+        if mp.attack_southwest {score += 80}
+        if mp.translate_southwest {score += 50}
+        
+        // Debuff for being limited to a single color of squares
+        if !mp.can_slide_main_direction() && !mp.can_promote() {
+            // Bishop is 4*130 - 150 = 370 centipawns
+            score -= 150;
         }
+        
+        // Debuff for being limited to a single direction
+        if mp.can_slide_north_indirectly() && !mp.can_slide_south_indirectly() && !mp.can_promote() {
+            score -= 200;
+        }
+        if mp.can_slide_south_indirectly() && !mp.can_slide_north_indirectly() && !mp.can_promote() {
+            score -= 200;
+        }
+        if mp.can_slide_east_indirectly() && !mp.can_slide_west_indirectly() && !mp.can_promote() {
+            score -= 200;
+        }
+        if mp.can_slide_west_indirectly() && !mp.can_slide_east_indirectly() && !mp.can_promote() {
+            score -= 200;
+        }
+        
+        // 40 centipawns for each jump (Knight is 8*40 = 320 centipawns)
+        score += (mp.translate_jump_deltas.len() * 20) as Centipawns;
+        score += (mp.attack_jump_deltas.len() * 20) as Centipawns;
+        // 40 centipawns for each delta-based slide group
+        for d in mp.translate_sliding_deltas.iter().chain(mp.attack_sliding_deltas.iter()) {
+            score += (d.len() * 20) as Centipawns;
+        }
+        
+        // 40 centipawns for being able to promote
+        if mp.can_promote() {
+            // Pawn is 20*3 + 40 = 100 centipawns
+            score += 40;
+        }
+        
+        println!("SCORE FOR MOVEMENT PATTERN: {}", score);
 
-        score
+        // Minimum score is 10
+        std::cmp::max(score, 10)
     }
 
     fn get_positional_score(&mut self, is_endgame: bool, position: &Position, piece_set: &PieceSet, movegen: &MoveGenerator) -> Centipawns {
@@ -198,12 +233,8 @@ impl Evaluator {
             while !bb_copy.is_zero() {
                 let index = bb_copy.lowest_one().unwrap();
                 //If it is the king then limit moves (encourage moving away from the center)
-                if  p.piece_type == PieceType::King {
-                    if !is_endgame {
-                        score += -score_table[index as usize] * PST_MULTIPLIER;
-                    } else {
-                        score += score_table[index as usize] * PST_MULTIPLIER;
-                    }
+                if  p.piece_type == PieceType::King && !is_endgame {
+                    score -= score_table[index as usize] * PST_MULTIPLIER;
                 } else {
                     score += score_table[index as usize] * PST_MULTIPLIER;
                 }
