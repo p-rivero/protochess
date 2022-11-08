@@ -1,7 +1,6 @@
 use crate::types::*;
 use crate::position::Position;
 use crate::position::piece_set::PieceSet;
-use crate::position::piece::Piece;
 use crate::move_generator::attack_tables::AttackTables;
 use crate::move_generator::bitboard_moves::BitboardMoves;
 use crate::utils::{from_index, to_index};
@@ -363,79 +362,6 @@ impl MoveGenerator {
             }
         }
         iters.into_iter().flatten().chain(moves.into_iter())
-    }
-
-    /// Returns the number of moves of a piecetype on an otherwise empty board
-    /// Useful for evaluation
-    pub fn get_num_moves_on_empty_board(&self, index: BIndex, position: &Position, piece: &Piece, bounds: &Bitboard) -> u32 {
-        let (x, y) = from_index(index);
-        if !position.xy_in_bounds(x, y) {
-           return 0;
-        }
-        let zero = Bitboard::zero();
-        let not_in_bounds = !&position.bounds;
-        let mut moves = match piece.piece_type {
-            PieceType::Queen => {self.attack_tables.get_queen_attack(index, &not_in_bounds, &zero)}
-            PieceType::Bishop => {self.attack_tables.get_bishop_attack(index, &not_in_bounds, &zero)}
-            PieceType::Rook => {self.attack_tables.get_rook_attack(index, &not_in_bounds, &zero)}
-            PieceType::Knight => {self.attack_tables.get_knight_attack(index, &not_in_bounds, &zero)}
-            PieceType::King => {self.attack_tables.get_king_attack(index, &not_in_bounds, &zero)}
-            PieceType::Pawn => {self.attack_tables.get_north_pawn_attack(index, &not_in_bounds, &zero)}
-            PieceType::Custom(_c) => {
-                let mp = {
-                    if let Some(mp) = position.get_movement_pattern(&piece.piece_type) {
-                        mp
-                    } else {
-                        return 0;
-                    }
-                };
-
-                let mut slides = self.attack_tables.get_sliding_moves_bb(
-                    index,
-                    &not_in_bounds,
-                    mp.translate_north || mp.attack_north,
-                    mp.translate_east || mp.attack_east,
-                    mp.translate_south || mp.attack_south,
-                    mp.translate_west || mp.attack_west,
-                    mp.translate_northeast || mp.attack_northeast,
-                    mp.translate_northwest || mp.attack_northwest,
-                    mp.translate_southeast || mp.attack_southeast,
-                    mp.translate_southwest || mp.attack_southwest
-                );
-
-                // Delta based moves (sliding, non sliding)
-                let (x, y) = from_index(index);
-                for (dx, dy) in mp.translate_jump_deltas.iter().chain(mp.attack_jump_deltas.iter()) {
-                    let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                    if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                        continue;
-                    }
-
-                    let to = to_index(x2 as BCoord, y2 as BCoord);
-                    if bounds.get_bit(to) {
-                        slides.set_bit(to);
-                    }
-                }
-                for run in mp.attack_sliding_deltas.iter().chain(mp.translate_sliding_deltas.iter()) {
-                    for (dx, dy) in run {
-                        let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                        if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                            break;
-                        }
-                        let to = to_index(x2 as BCoord, y2 as BCoord);
-                        //Out of bounds, next sliding moves can be ignored
-                        if !bounds.get_bit(to) {
-                            break;
-                        }
-                        slides.set_bit(to);
-                    }
-                }
-                slides
-            }
-        };
-        //Keep only in bounds
-        moves &= bounds;
-        moves.count_ones()
     }
 
     /// Returns whether or not a player is in check for a given position

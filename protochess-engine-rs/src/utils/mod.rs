@@ -1,7 +1,5 @@
-mod rankfile;
-mod coord_index;
+mod board;
 pub mod perft;
 pub mod custom_position;
 
-pub use rankfile::*;
-pub use coord_index::*;
+pub use board::*;

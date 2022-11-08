@@ -7,6 +7,3 @@ pub const BISHOP_SCORE: Centipawns = 370;
 pub const KNIGHT_SCORE: Centipawns = 320;
 pub const PAWN_SCORE: Centipawns = 100;
 pub const CASTLING_BONUS: Centipawns = 400;
-
-//Multiplier for the piece square table (positional score)
-pub const PST_MULTIPLIER: Centipawns = 5;

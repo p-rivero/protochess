@@ -2,7 +2,7 @@
 // Class for storing the value of a position, must allow negative values
 pub type Centipawns = isize;
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Copy)]
 pub enum PieceType {
     King,
     Queen,

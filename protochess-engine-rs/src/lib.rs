@@ -22,7 +22,6 @@ mod transposition_table;
 mod thread_handler;
 use std::collections::HashMap;
 use crate::evaluator::Evaluator;
-use crate::position::movement_pattern::MovementPattern;
 use crate::types::*;
 pub use crate::types::PieceType;
 use crate::searcher::Searcher;

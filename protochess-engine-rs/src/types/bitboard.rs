@@ -25,6 +25,9 @@ impl Bitboard {
     pub fn one() -> Bitboard {
         Bitboard { board_internal: numext_fixed_uint::U256::one() }
     }
+    pub fn all_ones() -> Bitboard {
+        Bitboard { board_internal: numext_fixed_uint::U256::max_value() }
+    }
     pub fn set_bit(&mut self, index: BIndex) {
         self.board_internal.set_bit(index as usize, true);
     }

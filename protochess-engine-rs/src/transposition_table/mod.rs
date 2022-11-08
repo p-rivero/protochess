@@ -7,7 +7,9 @@ pub use self::entry::Entry;
 pub use self::entry::EntryFlag;
 
 
-const TABLE_SIZE: usize = 1_500_000;
+// Since we will be computing zobrist_key % TABLE_SIZE, we want it to be a power of 2
+// 2^21 entries is about 2 million entries. Each entry is 4*32 = 128 bytes, so this is about 256 MB
+const TABLE_SIZE: usize = 2_usize.pow(21);
 const ENTRIES_PER_CLUSTER: usize = 4;
 
 
@@ -16,6 +18,7 @@ pub struct Cluster {
     // a more relaxed locking strategy. All threads can read the cluster while another thread is writing,
     // but 2 threads can't write at the same time.
     // In the worst case, a thread will read an old value, but that's fine.
+    // TODO: Remove mutex
     mutex: std::sync::Mutex<()>,
     entries: [Entry; ENTRIES_PER_CLUSTER]
 }
