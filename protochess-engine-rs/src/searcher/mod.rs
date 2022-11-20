@@ -50,11 +50,7 @@ impl Searcher {
 #[inline]
 fn init_globals() {
     unsafe {
-        if TRANSPOSITION_TABLE.is_none() {
-            TRANSPOSITION_TABLE = Some(TranspositionTable::new());
-        } else {
-            transposition_table().set_ancient();
-        }
+        TRANSPOSITION_TABLE = Some(TranspositionTable::new());
         GLOBAL_DEPTH.store(0, Relaxed);
         SEARCH_ID.store(1, Relaxed);
     }

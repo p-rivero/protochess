@@ -85,7 +85,13 @@ fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &P
         PieceType::Rook => {movegen.attack_tables.get_rook_attack(index, &walls, &zero)}
         PieceType::Knight => {movegen.attack_tables.get_knight_attack(index, &walls, &zero)}
         PieceType::King => {movegen.attack_tables.get_king_attack(index, &walls, &zero)}
-        PieceType::Pawn => {movegen.attack_tables.get_north_pawn_attack(index, &walls, &Bitboard::all_ones())}
+        PieceType::Pawn => {
+            if piece.player_num == 0 {
+                movegen.attack_tables.get_north_pawn_attack(index, &walls, &Bitboard::all_ones())
+            } else {
+                movegen.attack_tables.get_south_pawn_attack(index, &walls, &Bitboard::all_ones())
+            }
+        }
         PieceType::Custom(_c) => {
             let mp = {
                 if let Some(mp) = position.get_movement_pattern(&piece.piece_type) {

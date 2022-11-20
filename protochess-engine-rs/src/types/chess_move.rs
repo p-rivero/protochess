@@ -100,6 +100,6 @@ impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (x1, y1) = from_index(self.get_from());
         let (x2, y2) = from_index(self.get_to());
-        write!(f, "(from: {}, to:{})", to_rank_file(x1, y1),to_rank_file(x2, y2))
+        write!(f, "({} -> {})", to_rank_file(x1, y1),to_rank_file(x2, y2))
     }
 }

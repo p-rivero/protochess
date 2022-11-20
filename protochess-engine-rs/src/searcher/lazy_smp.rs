@@ -115,7 +115,7 @@ impl Searcher {
             }
             
             //Print PV info
-            println!("Thread {}.{} score: {}, depth: {}, nodes: {}", pool_id, thread_id, best_score, best_depth, self.nodes_searched);
+            println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", best_depth, best_move, best_score, self.nodes_searched);
             
             // Set the global depth to max(local_depth, global_depth)
             // GLOBAL_DEPTH contains the maximum depth searched by any thread

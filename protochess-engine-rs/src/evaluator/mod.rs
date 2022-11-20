@@ -57,7 +57,11 @@ impl Evaluator {
             let positional_score = self.get_positional_score(is_endgame, position, ps,movegen);
             //Castling bonus
             if position.properties.castling_rights.did_player_castle(ps.player_num) && !is_endgame {
-                score += CASTLING_BONUS;
+                if ps.player_num == player_num {
+                    score += CASTLING_BONUS;
+                } else {
+                    score -= CASTLING_BONUS;
+                }
             }
             
             if ps.player_num == player_num {
