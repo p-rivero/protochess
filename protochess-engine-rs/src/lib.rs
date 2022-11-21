@@ -182,6 +182,11 @@ impl Engine {
     pub fn get_score(&mut self) -> Centipawns {
         self.state.get_score()
     }
+    
+    /// Returns the character representation of the piece at the given coordinates
+    pub fn get_piece_at(&mut self, x: BCoord, y: BCoord) -> Option<char> {
+        self.state.position.piece_at(to_index(x, y)).map(|p| p.1.char_rep)
+    }
 
     /// Registers a custom piecetype for the current position
     pub fn register_piecetype(&mut self, char_rep: char, mpe: MovementPatternExternal) {

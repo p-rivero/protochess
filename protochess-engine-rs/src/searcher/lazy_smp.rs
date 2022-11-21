@@ -72,7 +72,9 @@ impl Searcher {
         }
         // Before returning the best move, signal to remaining threads that they are invalid
         unsafe { CURRENT_POOL_ID += 1; }
-        println!("Best move at depth {} with score {} ", best_depth, best_score);
+        if num_threads > 1 {
+            println!("Best move {} at depth {} with score {} ", best_move, best_depth, best_score);
+        }
         Ok((best_move, best_depth))
     }
     

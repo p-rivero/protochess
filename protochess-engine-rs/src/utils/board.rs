@@ -53,11 +53,30 @@ fn to_xy(rank_file:String) -> (u8, u8) {
 */
 
 /// Converts an (x, y) location to chess rank-file notation
-/// Ex: to_rank_file(0, 1) = A2
+/// Ex: to_rank_file(0, 1) = a2
 pub fn to_rank_file(x: BCoord, y: BCoord) -> String {
     let mut return_string = String::new();
-    return_string.push(std::char::from_u32((x+65) as u32).unwrap());
+    let ascii_a = 'a' as u8;
+    return_string.push((ascii_a + x) as char);
     return_string.push_str(format!("{}", (y + 1)).as_ref());
     return_string
 }
 
+pub fn to_long_algebraic_notation(x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, mut piece: char) -> String {
+    let mut result = format!("{}{} ", to_rank_file(x1, y1), to_rank_file(x2, y2));
+    // If the piece is not a pawn, we write the piece letter
+    piece = piece.to_ascii_uppercase();
+    if piece != 'P' {
+        result = format!("{}{}", piece, result);
+    }
+    if result == "Ke1g1 " {
+        result = "O-O ".to_string();
+    } else if result == "Ke1c1 " {
+        result = "O-O-O ".to_string();
+    } else if result == "Ke8g8 " {
+        result = "O-O ".to_string();
+    } else if result == "Ke8c8 " {
+        result = "O-O-O ".to_string();
+    }
+    result
+}

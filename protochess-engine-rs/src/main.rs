@@ -1,5 +1,9 @@
 //#[macro_use] extern crate scan_rules;
 
+use std::io::Write;
+
+use protochess_engine_rs::utils::to_long_algebraic_notation;
+
 pub fn main() {
     
     // Some interesting FENs:
@@ -17,6 +21,9 @@ pub fn main() {
     
     let mut engine = protochess_engine_rs::Engine::default();
     
+    let mut pgn_file = std::fs::File::create("pgn.txt").expect("create failed");
+
+    
     let args: Vec<String> = std::env::args().collect();
     if args.len() > 2 {
         let fen = args[2].to_owned();
@@ -33,7 +40,10 @@ pub fn main() {
     let mut ply = 0;
     loop {
 
-        if !engine.play_best_move_timeout(10).0 {
+        if let Some(mv) = engine.get_best_move(9) {
+            engine.make_move(mv.0, mv.1, mv.2, mv.3);
+            print_pgn(&mut pgn_file, ply, mv, engine.get_piece_at(mv.2, mv.3).unwrap());
+        } else {
             break;
         }
         ply += 1;
@@ -42,19 +52,14 @@ pub fn main() {
         println!("{}", engine.to_string());
         println!("\n========================================\n");
 
-
-
-        /*
-        readln! {
-            // Space-separated ints
-            (let x1: u8, let y1: u8, let x2: u8, let y2: u8) => {
-                println!("x1 y1 x2 y2: {} {} {} {}", x1, y1, x2, y2);
-                engine.make_move(x1, y1, x2, y2);
-                println!("{}", engine.to_string());
-            }
-        }
-
-         */
-
     }
+}
+
+fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, mv: (u8, u8, u8, u8), piece: char) {
+    if (ply % 2) == 0 {
+        let round = format!("{}. ", ply/2 + 1);
+        pgn_file.write_all(round.as_bytes()).expect("write failed");
+    }
+    let move_str = to_long_algebraic_notation(mv.0, mv.1, mv.2, mv.3, piece);
+    pgn_file.write_all(move_str.as_bytes()).expect("write failed");
 }
