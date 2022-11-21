@@ -132,7 +132,6 @@ impl Searcher {
                             value: beta,
                             mv,
                             depth,
-                            ancient: false
                         });
                         return Ok(beta);
                     }
@@ -177,7 +176,6 @@ impl Searcher {
                 value: best_score,
                 mv: (&best_move).to_owned(),
                 depth,
-                ancient: false
             })
         } else {
             transposition_table().insert(state.position.get_zobrist(), Entry{
@@ -186,7 +184,6 @@ impl Searcher {
                 value: alpha,
                 mv: best_move,
                 depth,
-                ancient: false
             })
         }
         Ok(alpha)
@@ -240,7 +237,7 @@ impl Searcher {
         if !mv.get_is_capture() {
             self.history_moves
                 [mv.get_from() as usize]
-                [mv.get_to() as usize] += depth as u16;
+                [mv.get_to() as usize] += depth as Centipawns;
         }
     }
 

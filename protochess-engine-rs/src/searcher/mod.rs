@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering::Relaxed};
 
-use crate::types::{Move, Depth};
+use crate::types::{Move, Depth, Centipawns};
 use crate::transposition_table::TranspositionTable;
 
 
@@ -20,13 +20,12 @@ static mut SEARCH_ID: AtomicU64 = AtomicU64::new(1);
 static mut CURRENT_POOL_ID: u32 = 0;
 
 
-
 pub(crate) struct Searcher {
     //We store two killer moves per ply,
     //indexed by killer_moves[depth][0] or killer_moves[depth][0]
     killer_moves: [[Move;2];64],
     //Indexed by history_moves[side2move][from][to]
-    history_moves: [[u16;256];256],
+    history_moves: [[Centipawns;256];256],
     // Stats
     nodes_searched: u64,
     current_searching_depth: Depth,

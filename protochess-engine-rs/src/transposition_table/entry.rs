@@ -22,7 +22,6 @@ pub struct Entry {
     pub value: Centipawns,
     pub mv: Move,
     pub depth: Depth,
-    pub ancient: bool
 }
 impl Entry {
     pub fn null() -> Entry {
@@ -32,7 +31,6 @@ impl Entry {
             value: 0,
             mv: Move::null(),
             depth: 0,
-            ancient: true
         }
     }
     #[inline(always)]

@@ -83,46 +83,36 @@ impl Evaluator {
         material_score += piece_set.bishop.bitboard.count_ones() as Centipawns * BISHOP_SCORE;
         material_score += piece_set.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
 
-        for custom in &piece_set.custom {
-            let score = 
-                if self.custom_piece_value_table.contains_key(&custom.piece_type) {
-                    *self.custom_piece_value_table.get(&custom.piece_type).unwrap()
-                } else {
-                    let piece_score = 
-                        if let Some(mp) = position.get_movement_pattern(&custom.piece_type) {
-                            score_movement_pattern(mp)
-                        } else {
-                            0
-                        };
-                    self.custom_piece_value_table.insert(custom.piece_type.to_owned(), piece_score);
-                    piece_score
-                };
-            material_score += custom.bitboard.count_ones() as Centipawns * score;
+        for piece in &piece_set.custom {
+            let score = self.get_material_score(piece.piece_type, position);
+            material_score += piece.bitboard.count_ones() as Centipawns * score;
         }
         material_score
     }
 
     /// Scores a move on a position
     /// This is used for move ordering in order to search the moves with the most potential first
-    pub fn score_move(&mut self, history_moves: &[[u16;256];256], killer_moves: &[Move;2], position: &mut Position, mv: &Move) -> Centipawns {
-        if !mv.get_is_capture() {
-            return if mv == &killer_moves[0] || mv == &killer_moves[1] {
-                9000
-            } else {
-                history_moves[mv.get_from() as usize][mv.get_to() as usize] as Centipawns
-            }
+    pub fn score_move(&mut self, history_moves: &[[Centipawns;256];256], killer_moves: &[Move;2], position: &mut Position, mv: &Move) -> Centipawns {
+        const CAPTURE_BASE_SCORE: Centipawns = 10000;
+        const KILLERMOVE_SCORE: Centipawns = 9000;
+        if mv.get_is_capture() {
+            let attacker: PieceType = (&position.piece_at(mv.get_from()).unwrap().1.piece_type).to_owned();
+            let victim: PieceType = (&position.piece_at(mv.get_target()).unwrap().1.piece_type).to_owned();
+
+            let attack_score = self.get_material_score(attacker, position);
+            let victim_score = self.get_material_score(victim, position);
+
+            return CAPTURE_BASE_SCORE + victim_score - attack_score
         }
-        let attacker:PieceType = (&position.piece_at(mv.get_from()).unwrap().1.piece_type).to_owned();
-        let victim:PieceType = (&position.piece_at(mv.get_target()).unwrap().1.piece_type).to_owned();
-
-        let attack_score = self.get_material_score(attacker, position);
-        let victim_score = self.get_material_score(victim, position);
-
-        (KING_SCORE + (victim_score - attack_score)) as Centipawns
+        if mv == &killer_moves[0] || mv == &killer_moves[1] {
+            KILLERMOVE_SCORE
+        } else {
+            history_moves[mv.get_from() as usize][mv.get_to() as usize]
+        }
     }
 
     /// Returns the current material score for a given Position
-    pub fn get_material_score(&mut self, piece_type:PieceType, position:&Position) -> Centipawns {
+    pub fn get_material_score(&mut self, piece_type: PieceType, position: &Position) -> Centipawns {
         match piece_type {
             PieceType::Pawn => { PAWN_SCORE }
             PieceType::Knight => { KNIGHT_SCORE }
@@ -134,15 +124,14 @@ impl Evaluator {
                 if self.custom_piece_value_table.contains_key(&piece_type) {
                     *self.custom_piece_value_table.get(&piece_type).unwrap()
                 } else {
-                    let option_mp = position.get_movement_pattern(&piece_type);
                     let score = {
-                        if let Some(mp) = option_mp {
+                        if let Some(mp) = position.get_movement_pattern(&piece_type) {
                             score_movement_pattern(mp)
                         } else {
                             0
                         }
                     };
-                    self.custom_piece_value_table.insert((&piece_type).to_owned(), score);
+                    self.custom_piece_value_table.insert(piece_type, score);
                     score
                 }
             }

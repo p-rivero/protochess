@@ -8,7 +8,7 @@ pub use self::entry::EntryFlag;
 
 
 // Since we will be computing zobrist_key % TABLE_SIZE, we want it to be a power of 2
-// 2^21 entries is about 2 million entries. Each entry is 4*32 = 128 bytes, so this is about 256 MB
+// 2^21 clusters is about 2 million clusters. Each cluster is 4*24 = 96 bytes, so this is about 192 MB
 const TABLE_SIZE: usize = 2_usize.pow(21);
 const ENTRIES_PER_CLUSTER: usize = 4;
 
@@ -41,16 +41,6 @@ impl TranspositionTable {
         }
     }
 
-    /// Sets all the entries in the table to ancient, allowing them to be rewritten
-    /// before any new entries are rewritten
-    pub fn set_ancient(&mut self) {
-        for cluster in self.data.iter_mut() {
-            for entry in cluster.entries.iter_mut() {
-                entry.ancient = true;
-            }
-        }
-    }
-
     /// Inserts a new Entry item into the transposition table
     pub fn insert(&mut self, zobrist_key:u64, entry: Entry) {
         let cluster = &mut self.data[zobrist_key as usize % TABLE_SIZE];
@@ -70,28 +60,17 @@ impl TranspositionTable {
         }
 
         // No exact match found, we need to replace an entry for a different position
-        // Replace the ancient entry with the lowest depth. If there are no ancient entries, replace the entry with the lowest depth
-        let mut lowest_depth_and_ancient = Depth::MAX;
-        let mut lowest_depth_and_ancient_indx: i32 = -1;
-
+        // Replace the entry with the lowest depth
         let mut lowest_depth = Depth::MAX;
         let mut lowest_depth_index = 0;
         for i in 0..ENTRIES_PER_CLUSTER {
-            if cluster.entries[i].ancient
-                && cluster.entries[i].depth <= lowest_depth_and_ancient {
-                lowest_depth_and_ancient = cluster.entries[i].depth;
-                lowest_depth_and_ancient_indx = i as i32;
-            }
-
             if cluster.entries[i].depth <= lowest_depth {
                 lowest_depth = cluster.entries[i].depth;
                 lowest_depth_index = i;
             }
         }
 
-        if lowest_depth_and_ancient_indx != -1 {
-            cluster.entries [lowest_depth_and_ancient_indx as usize] = entry;
-        } else if entry.depth >= lowest_depth {
+        if entry.depth >= lowest_depth {
             // Only replace the entry if it's not shallower than all existing entries
             cluster.entries[lowest_depth_index] = entry;
         }

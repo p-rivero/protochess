@@ -1,6 +1,6 @@
 
 // Class for storing the value of a position, must allow negative values
-pub type Centipawns = isize;
+pub type Centipawns = i32;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Copy)]
 pub enum PieceType {
