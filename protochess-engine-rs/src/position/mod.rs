@@ -95,10 +95,18 @@ impl Position {
     pub fn make_move(&mut self, mv: Move) {
         let zobrist_table = &ZOBRIST_TABLE;
         let my_player_num = self.whos_turn;
-        self.whos_turn = (self.whos_turn + 1) % self.num_players;
-
         let mut new_props:PositionProperties = (*self.properties).clone();
-        new_props.zobrist_key ^= zobrist_table.get_to_move_zobrist(self.whos_turn);
+        
+        // Remove zobrist hash of the old player
+        new_props.zobrist_key ^= zobrist_table.get_player_zobrist(self.whos_turn);
+        // Update the player
+        self.whos_turn = self.whos_turn + 1;
+        if self.whos_turn == self.num_players {
+            self.whos_turn = 0;
+        }
+        // Add zobrist hash of the new player
+        new_props.zobrist_key ^= zobrist_table.get_player_zobrist(self.whos_turn);
+        
         //In the special case of the null move, don't do anything except update whos_turn
         //And update props
         if mv.get_move_type() == MoveType::Null {
@@ -223,9 +231,9 @@ impl Position {
     pub fn unmake_move(&mut self) {
 
         if self.whos_turn == 0 {
-            self.whos_turn = self.num_players -1;
+            self.whos_turn = self.num_players - 1;
         } else {
-            self.whos_turn = (self.whos_turn - 1) % self.num_players;
+            self.whos_turn -= 1;
         }
 
         let my_player_num = self.whos_turn;

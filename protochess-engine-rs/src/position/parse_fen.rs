@@ -153,6 +153,8 @@ pub fn parse_fen(fen: String) -> Position {
             bb_copy.clear_bit(indx);
         }
     }
+    
+    zobrist_key ^= zobrist_table.get_player_zobrist(whos_turn);
 
     properties.zobrist_key = zobrist_key;
 

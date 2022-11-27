@@ -63,7 +63,7 @@ impl ZobristTable {
     }
 
     /// Zobrist for the player to move
-    pub fn get_to_move_zobrist(&self, player_num: Player) -> u64 {
+    pub fn get_player_zobrist(&self, player_num: Player) -> u64 {
         if player_num == 0 {
             self.white_to_move
         } else {
