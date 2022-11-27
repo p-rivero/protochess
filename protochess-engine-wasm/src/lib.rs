@@ -44,8 +44,15 @@ impl Protochess {
         self.engine.play_best_move(depth)
     }
 
-    pub fn make_move(&mut self, x1: u8, y1: u8, x2: u8, y2: u8) -> bool {
-        self.engine.make_move(x1,y1,x2,y2)
+    pub fn make_move(&mut self, x1: u8, y1: u8, x2: u8, y2: u8, promotion: char) -> bool {
+        let prom = {
+            if promotion == 0 as char {
+                None
+            } else {
+                Some(promotion)
+            }
+        };
+        self.engine.make_move(x1,y1,x2,y2,prom)
     }
 
     pub fn play_best_move_timeout(&mut self, time: usize) -> i8 {

@@ -83,10 +83,9 @@ impl Room {
                                     let (x1, y1) = from;
                                     let (x2, y2) = to;
                                     let move_gen:&protochess_engine_rs::MoveGenerator = &MOVEGEN;
-                                    if self.game.make_move(move_gen, x1, y1, x2, y2){
-                                        // TODO add promotion
+                                    if self.game.make_move(move_gen, x1, y1, x2, y2, turn.promote_to) {
                                         self.last_turn = Some(Turn {
-                                            promote_to: None,
+                                            promote_to: turn.promote_to,
                                             from,
                                             to
                                         });

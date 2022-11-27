@@ -66,13 +66,17 @@ impl State {
     }
     
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn attempt_move(position: &mut Position, movegen: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
+    /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
+    pub fn attempt_move(position: &mut Position, movegen: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<char>) -> bool {
         let from = to_index(x1, y1);
         let to = to_index(x2, y2);
 
         let moves = movegen.get_pseudo_moves(position);
         for mv in moves {
             if !movegen.is_move_legal(&mv, position) {
+                continue;
+            }
+            if mv.get_promotion_char() != promotion {
                 continue;
             }
             if mv.get_from() == from && mv.get_to() == to {
@@ -127,8 +131,8 @@ impl Game {
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn make_move(&mut self, move_generator: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
-        State::attempt_move(&mut self.current_position, move_generator, x1, y1, x2, y2)
+    pub fn make_move(&mut self, move_generator: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<char>) -> bool {
+        State::attempt_move(&mut self.current_position, move_generator, x1, y1, x2, y2, promotion)
     }
 
     /// Undoes the most recent move on the current board position
@@ -204,8 +208,9 @@ impl Engine {
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord) -> bool {
-        State::attempt_move(&mut self.state.position, &self.state.movegen, x1, y1, x2, y2)
+    /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
+    pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<char>) -> bool {
+        State::attempt_move(&mut self.state.position, &self.state.movegen, x1, y1, x2, y2, promotion)
     }
 
     /// Undoes the most recent move on the current board position
@@ -221,16 +226,16 @@ impl Engine {
     pub fn play_best_move(&mut self, depth: Depth) -> bool {
         let best_move = Searcher::get_best_move(&self, depth);
         match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, _)) => self.make_move(x1, y1, x2, y2),
+            Some((x1, y1, x2, y2, prom, _)) => self.make_move(x1, y1, x2, y2, prom),
             None => false
         }
     }
 
-    ///Returns (fromx,fromy,tox,toy)
-    pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord)> {
+    /// Returns (fromx,fromy,tox,toy,promotion) if there is a move to be made
+    pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<char>)> {
         let best_move = Searcher::get_best_move(&self, depth);
         match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, _)) => Some((x1, y1, x2, y2)),
+            Some((x1, y1, x2, y2, prom, _)) => Some((x1, y1, x2, y2, prom)),
             None => None
         }
     }
@@ -239,26 +244,27 @@ impl Engine {
     pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, Depth) {
         let best_move = Searcher::get_best_move_timeout(&self, max_sec);
         match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, depth)) => (self.make_move(x1, y1, x2, y2), depth),
+            Some((x1, y1, x2, y2, prom, depth)) => (self.make_move(x1, y1, x2, y2, prom), depth),
             None => return (false, 0)
         }
     }
 
-    ///Returns ((fromX,fromY,toX,toY), depth)
-    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord), Depth)> {
+    ///Returns ((fromX,fromY,toX,toY,promotion), depth)
+    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord, Option<char>), Depth)> {
         let best_move = Searcher::get_best_move_timeout(&self, max_sec);
         match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, depth)) => Some(((x1, y1, x2, y2), depth)),
+            Some((x1, y1, x2, y2, prom, depth)) => Some(((x1, y1, x2, y2, prom), depth)),
             None => None
         }
     }
     
-    fn process_move(&self, mv: &Result<(Move, Depth), GameResult>) -> Option<(BCoord, BCoord, BCoord, BCoord, Depth)> {
+    fn process_move(&self, mv: &Result<(Move, Depth), GameResult>) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<char>, Depth)> {
         match mv {
             Ok((best, depth)) => {
                 let (x1, y1) = from_index(best.get_from());
                 let (x2, y2) = from_index(best.get_to());
-                Some((x1, y1, x2, y2, *depth))
+                let prom = best.get_promotion_char();
+                Some((x1, y1, x2, y2, prom, *depth))
             },
             Err(GameResult::Checkmate) => {
                 let loser = self.state.position.whos_turn;

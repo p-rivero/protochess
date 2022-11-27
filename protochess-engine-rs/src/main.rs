@@ -41,7 +41,7 @@ pub fn main() {
     loop {
 
         if let Some(mv) = engine.get_best_move(9) {
-            engine.make_move(mv.0, mv.1, mv.2, mv.3);
+            engine.make_move(mv.0, mv.1, mv.2, mv.3, mv.4);
             print_pgn(&mut pgn_file, ply, mv, engine.get_piece_at(mv.2, mv.3).unwrap());
         } else {
             break;
@@ -55,11 +55,11 @@ pub fn main() {
     }
 }
 
-fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, mv: (u8, u8, u8, u8), piece: char) {
+fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, mv: (u8, u8, u8, u8, Option<char>), piece: char) {
     if (ply % 2) == 0 {
         let round = format!("{}. ", ply/2 + 1);
         pgn_file.write_all(round.as_bytes()).expect("write failed");
     }
-    let move_str = to_long_algebraic_notation(mv.0, mv.1, mv.2, mv.3, piece);
+    let move_str = to_long_algebraic_notation(mv.0, mv.1, mv.2, mv.3, piece, mv.4);
     pgn_file.write_all(move_str.as_bytes()).expect("write failed");
 }

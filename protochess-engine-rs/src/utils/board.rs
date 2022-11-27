@@ -62,7 +62,11 @@ pub fn to_rank_file(x: BCoord, y: BCoord) -> String {
     return_string
 }
 
-pub fn to_long_algebraic_notation(x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, mut piece: char) -> String {
+pub fn to_long_algebraic_notation(x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, mut piece: char, promotion: Option<char>) -> String {
+    if let Some(prom) = promotion {
+        return format!("{}{}={} ", to_rank_file(x1, y1), to_rank_file(x2, y2), prom.to_ascii_uppercase());
+    }
+    
     let mut result = format!("{}{} ", to_rank_file(x1, y1), to_rank_file(x2, y2));
     // If the piece is not a pawn, we write the piece letter
     piece = piece.to_ascii_uppercase();
