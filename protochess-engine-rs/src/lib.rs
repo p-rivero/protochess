@@ -258,24 +258,25 @@ impl Engine {
         }
     }
     
-    fn process_move(&self, mv: &Result<(Move, Depth), GameResult>) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<char>, Depth)> {
+    // Unwraps a SearchResult into basic data types
+    fn process_move(&self, mv: &SearchResult) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<char>, Depth)> {
         match mv {
-            Ok((best, depth)) => {
+            // TODO: Use backup
+            SearchResult::BestMove(best, depth, _backup) => {
                 let (x1, y1) = from_index(best.get_from());
                 let (x2, y2) = from_index(best.get_to());
                 let prom = best.get_promotion_char();
                 Some((x1, y1, x2, y2, prom, *depth))
             },
-            Err(GameResult::Checkmate) => {
-                let loser = self.state.position.whos_turn;
-                if loser == 0 {
+            SearchResult::Checkmate(losing_player) => {
+                if *losing_player == 0 {
                     println!("CHECKMATE! Black wins!");
                 } else {
                     println!("CHECKMATE! White wins!");
                 } 
                 None
             }
-            Err(GameResult::Stalemate) => {
+            SearchResult::Stalemate => {
                 println!("STALEMATE!");
                 None
             }

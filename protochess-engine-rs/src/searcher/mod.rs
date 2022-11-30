@@ -41,8 +41,8 @@ impl Searcher {
         }
     }
     // PUBLIC METHODS (defined in lazy_smp.rs):
-    // get_best_move(position, eval, movegen, depth) -> Result<(Move, Depth), GameResult> 
-    // get_best_move_timeout(position, eval, movegen, time_sec) -> Result<(Move, Depth), GameResult>
+    // get_best_move(position, eval, movegen, depth) -> SearchResult 
+    // get_best_move_timeout(position, eval, movegen, time_sec) -> SearchResult
 }
 
 

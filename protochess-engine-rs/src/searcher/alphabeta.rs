@@ -1,7 +1,7 @@
 use instant::Instant;
 
 use crate::State;
-use crate::types::{Move, MoveType, Depth, SearcherError, Centipawns};
+use crate::types::{Move, MoveType, Depth, SearchError, Centipawns};
 use crate::transposition_table::{Entry, EntryFlag};
 
 use super::{Searcher, transposition_table};
@@ -11,23 +11,24 @@ use super::{Searcher, transposition_table};
 
 
 // Interface between lazy SMP algorithm and alphabeta
-pub(crate) fn alphabeta(searcher: &mut Searcher, state: &mut State, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearcherError> {
+pub(crate) fn alphabeta(searcher: &mut Searcher, state: &mut State, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchError> {
     // Use -MAX instead of MIN to avoid overflow when negating
     searcher.alphabeta(state, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
 }
 
 impl Searcher {
-    fn alphabeta(&mut self, state: &mut State, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearcherError> {
+    fn alphabeta(&mut self, state: &mut State, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearchError> {
         
         if depth <= 0 {
             return self.quiesce(state, 0, alpha, beta);
         }
         
+        let is_root = self.nodes_searched == 0;
         self.nodes_searched += 1;
         if self.nodes_searched & 0x7FFFF == 0 {
             // Check for timeout periodically (~500k nodes)
             if Instant::now() >= *end_time {
-                return Err(SearcherError::Timeout);
+                return Err(SearchError::Timeout);
             }
         }
 
@@ -61,12 +62,18 @@ impl Searcher {
 
         //Null move pruning
         if !is_pv && do_null {
-            if let Some(beta) = self.try_null_move(state, depth, alpha, beta, end_time)? {
-                return Ok(beta);
+            if depth > 3 && state.eval.can_do_null_move(&mut state.position) && !state.position_in_check() {
+                state.position.make_move(Move::null());
+                let nscore = -self.alphabeta(state, depth - 3, -beta, -beta + 1, false, end_time)?;
+                state.position.unmake_move();
+                if nscore >= beta {
+                    return Ok(beta);
+                }
             }
         }
 
         let mut best_move = Move::null();
+        let mut second_best_move = Move::null();
         let mut num_legal_moves = 0;
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
@@ -119,6 +126,7 @@ impl Searcher {
 
             if score > best_score {
                 best_score = score;
+                second_best_move = best_move;
                 best_move = mv;
 
                 if score > alpha {
@@ -146,9 +154,8 @@ impl Searcher {
         if num_legal_moves == 0 {
             return if in_check {
                 // No legal moves and in check: Checkmate
-                if self.nodes_searched == 1 {
-                    // We are at the root: the game is over
-                    Err(SearcherError::Checkmate)
+                if is_root {
+                    Err(SearchError::Checkmate)
                 } else {
                     // Keep playing until checkmate
                     // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
@@ -158,9 +165,8 @@ impl Searcher {
                 }
             } else {
                 // No legal moves but also not in check: Stalemate
-                if self.nodes_searched == 1 {
-                    // We are at the root: it's a draw
-                    Err(SearcherError::Stalemate)
+                if is_root {
+                    Err(SearchError::Stalemate)
                 } else {
                     // Keep playing until stalemate
                     Ok(0)
@@ -186,11 +192,23 @@ impl Searcher {
                 depth,
             })
         }
+        // The root node returns the best move instead of the score
+        if is_root {
+            assert!(!best_move.is_null());
+            assert!(depth == self.current_searching_depth);
+            let backup_move = {
+                if second_best_move.is_null() { None }
+                else { Some(second_best_move) }
+            };
+            // This is not an error, but we use the error type to return the best move
+            return Err(SearchError::BestMove(best_move, best_score, backup_move));
+        }
+        
         Ok(alpha)
     }
 
 
-    fn quiesce(&mut self, state: &mut State, depth: Depth, mut alpha: Centipawns, beta: Centipawns) -> Result<Centipawns, SearcherError> {
+    fn quiesce(&mut self, state: &mut State, depth: Depth, mut alpha: Centipawns, beta: Centipawns) -> Result<Centipawns, SearchError> {
         let score = state.get_score();
         
         if score >= beta{
@@ -262,20 +280,6 @@ impl Searcher {
         moves_and_score.sort_unstable_by(|a, b| b.0.cmp(&a.0));
         
         moves_and_score
-    }
-
-    #[inline]
-    fn try_null_move(&mut self, state: &mut State, depth: Depth, _alpha: Centipawns, beta: Centipawns, end_time: &Instant) -> Result<Option<Centipawns>, SearcherError> {
-        
-        if depth > 3 && state.eval.can_do_null_move(&mut state.position) && !state.position_in_check() {
-            state.position.make_move(Move::null());
-            let nscore = -self.alphabeta(state, depth - 3, -beta, -beta + 1, false, end_time)?;
-            state.position.unmake_move();
-            if nscore >= beta {
-                return Ok(Some(beta));
-            }
-        }
-        Ok(None)
     }
 
 }

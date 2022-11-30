@@ -3,25 +3,23 @@ use std::sync::atomic::{Ordering::Relaxed};
 use instant::{Instant, Duration};
 
 use crate::{Engine, State};
-use crate::types::{Move, Depth, GameResult, SearcherError, Centipawns};
+use crate::types::{Move, Depth, SearchResult, SearchError};
 
-use super::{Searcher, init_globals, transposition_table, GLOBAL_DEPTH, SEARCH_ID, CURRENT_POOL_ID};
+use super::{Searcher, init_globals, GLOBAL_DEPTH, SEARCH_ID, CURRENT_POOL_ID};
 
 // This file contains the multi-threaded search using Lazy SMP, which uses the alphabeta() function from alphabeta.rs
 
-
 impl Searcher {
-    pub fn get_best_move(engine: &Engine, depth: Depth) -> Result<(Move, Depth), GameResult> {
+    pub fn get_best_move(engine: &Engine, depth: Depth) -> SearchResult {
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
         Searcher::get_best_move_impl(engine, depth, 1_000_000)
     }
 
-    pub fn get_best_move_timeout(engine: &Engine, time_sec: u64) -> Result<(Move, Depth), GameResult> {
+    pub fn get_best_move_timeout(engine: &Engine, time_sec: u64) -> SearchResult {
         Searcher::get_best_move_impl(engine, Depth::MAX, time_sec)
     }
     
-    fn get_best_move_impl(engine: &Engine, max_depth: Depth, time_sec: u64) -> Result<(Move, Depth), GameResult> {
-        
+    fn get_best_move_impl(engine: &Engine, max_depth: Depth, time_sec: u64) -> SearchResult {
         // Initialize the global structures
         init_globals();
         
@@ -41,8 +39,8 @@ impl Searcher {
         
         // Wait for threads to finish
         let mut best_move = Move::null();
-        let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
         let mut best_depth = 0;
+        let mut best_backup = None;
         loop {
             let h = handles.pop_front().unwrap();
             // Poll all threads for results
@@ -51,20 +49,30 @@ impl Searcher {
                 engine.thread_handler.sleep(Duration::from_millis(50));
                 continue;
             }
-            // If any thread returns a GameResult, drop the other threads and return the result
-            let (mv, score, depth) = h.join().unwrap()?;
-            // If any thread reaches the target depth, drop the other threads and return the move
-            if depth == max_depth {
-                best_move = mv;
-                best_score = score;
-                best_depth = depth;
-                break;
-            }
-            // Get the best result of all threads
-            if depth > best_depth || (depth == best_depth && score > best_score) {
-                best_move = mv;
-                best_score = score;
-                best_depth = depth;
+            match h.join().unwrap() {
+                // If any thread returns a checkmate or stalemate, drop the other threads and return the result
+                SearchResult::Checkmate(p) => {
+                    return SearchResult::Checkmate(p);
+                },
+                SearchResult::Stalemate => {
+                    return SearchResult::Stalemate;
+                },
+                // Else, update the global best move with this thread's best move
+                SearchResult::BestMove(mv, depth, backup) => {
+                    // If any thread reaches the target depth, drop the other threads and return the move
+                    if depth == max_depth {
+                        best_move = mv;
+                        best_depth = depth;
+                        best_backup = backup;
+                        break;
+                    }
+                    // Prefer deepest search
+                    if depth > best_depth {
+                        best_move = mv;
+                        best_depth = depth;
+                        best_backup = backup;
+                    }
+                },
             }
             if handles.is_empty() {
                 break;
@@ -73,17 +81,17 @@ impl Searcher {
         // Before returning the best move, signal to remaining threads that they are invalid
         unsafe { CURRENT_POOL_ID += 1; }
         if num_threads > 1 {
-            println!("Best move {} at depth {} with score {} ", best_move, best_depth, best_score);
+            println!("Best move {} at depth {}", best_move, best_depth);
         }
-        Ok((best_move, best_depth))
+        SearchResult::BestMove(best_move, best_depth, best_backup)
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, thread_id: u32, pool_id: u32, num_threads: u32, state: &mut State, max_depth: Depth, time_sec: u64) -> Result<(Move, Centipawns, Depth), GameResult> {
+    fn search_thread(&mut self, thread_id: u32, pool_id: u32, num_threads: u32, state: &mut State, max_depth: Depth, time_sec: u64) -> SearchResult {
         let end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut best_move: Move = Move::null();
-        let mut best_score: Centipawns = 0;
+        let mut backup_move: Option<Move> = None;
         let mut best_depth: Depth = 0;
         
         // At the start, each thread should search a different depth (between 1 and max_depth, inclusive)
@@ -93,31 +101,41 @@ impl Searcher {
             self.nodes_searched = 0;
             self.current_searching_depth = local_depth;
             match super::alphabeta(self, state, local_depth, &end_time) {
-                Ok(score) => {
-                    best_score = score;
-                    best_move = transposition_table().retrieve(state.position.get_zobrist()).unwrap().mv;
-                    best_depth = local_depth;
+                Ok(_) => {
+                    // This should not happen, scores are only passad between inner nodes
+                    panic!("Search thread returned a score instead of a move");
                 },
-                Err(SearcherError::Timeout) => {
+                Err(SearchError::BestMove(mv, score, backup)) => {
+                    // This is not an error, but a signal to return the best move
+                    best_move = mv;
+                    best_depth = local_depth;
+                    if backup.is_some() {
+                        backup_move = backup;
+                    }
+                    //Print PV info
+                    println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", local_depth, mv, score, self.nodes_searched);
+                    if backup.is_some() {
+                        println!("Backup move: {}", backup.unwrap());
+                    }
+                },
+                Err(SearchError::Timeout) => {
                     // Thread timed out, return the best move found so far
                     break;
                 },
-                Err(SearcherError::Checkmate) => {
+                Err(SearchError::Checkmate) => {
                     assert!(best_depth == 0);
-                    return Err(GameResult::Checkmate);
+                    let losing_player = state.position.whos_turn;
+                    return SearchResult::Checkmate(losing_player);
                 },
-                Err(SearcherError::Stalemate) => {
+                Err(SearchError::Stalemate) => {
                     assert!(best_depth == 0);
-                    return Err(GameResult::Stalemate);
+                    return SearchResult::Stalemate;
                 }
             }
             if unsafe { CURRENT_POOL_ID } != pool_id {
                 // This thread has been invalidated by a new search
                 break;
             }
-            
-            //Print PV info
-            println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", best_depth, best_move, best_score, self.nodes_searched);
             
             // Set the global depth to max(local_depth, global_depth)
             // GLOBAL_DEPTH contains the maximum depth searched by any thread
@@ -144,6 +162,6 @@ impl Searcher {
             local_depth = std::cmp::min(local_depth, max_depth);
         }
 
-        Ok((best_move.to_owned(), best_score, best_depth))
+        SearchResult::BestMove(best_move, best_depth, backup_move)
     }
 }
