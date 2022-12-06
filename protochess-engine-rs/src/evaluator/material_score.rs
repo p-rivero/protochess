@@ -62,8 +62,6 @@ pub fn score_movement_pattern(mp: &MovementPattern) -> Centipawns {
         score += 40;
     }
     
-    println!("SCORE FOR MOVEMENT PATTERN: {}", score);
-
     // Minimum score is 10
     std::cmp::max(score, 10)
 }

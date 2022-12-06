@@ -2,6 +2,7 @@
 extern crate lazy_static;
 extern crate impl_ops;
 
+use position::piece::PieceId;
 use thread_handler::ThreadHandler;
 use utils::custom_position::make_custom_position;
 
@@ -23,7 +24,6 @@ mod thread_handler;
 use std::collections::HashMap;
 use crate::evaluator::Evaluator;
 use crate::types::*;
-pub use crate::types::PieceType;
 use crate::searcher::Searcher;
 pub use crate::position::movement_pattern::MovementPatternExternal;
 
@@ -189,7 +189,7 @@ impl Engine {
     
     /// Returns the character representation of the piece at the given coordinates
     pub fn get_piece_at(&mut self, x: BCoord, y: BCoord) -> Option<char> {
-        self.state.position.piece_at(to_index(x, y)).map(|p| p.1.char_rep)
+        self.state.position.piece_at(to_index(x, y)).map(|p| p.1.char_rep())
     }
 
     /// Registers a custom piecetype for the current position
@@ -198,8 +198,8 @@ impl Engine {
     }
 
     /// Adds a new piece on the board
-    pub fn add_piece(&mut self, _owner: usize, _piece_type: PieceType, x: BCoord, y: BCoord) {
-        self.state.position.public_add_piece(0, PieceType::Custom('a'), to_index(x,y));
+    pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord) {
+        self.state.position.public_add_piece(owner, piece_type, to_index(x,y));
     }
 
     /// Removes a piece on the board, if it exists

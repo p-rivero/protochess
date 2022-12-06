@@ -32,7 +32,30 @@ impl PieceSet {
         }
     }
 
-    pub fn piece_at(&mut self, index: BIndex) -> Option<&mut Piece> {
+    // TODO: Adapt this to use the new PieceSet
+    pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {
+        if self.king.bitboard.get_bit(index) {
+            Some(&self.king)
+        } else if self.queen.bitboard.get_bit(index)  {
+            Some(&self.queen)
+        } else if self.bishop.bitboard.get_bit(index)  {
+            Some(&self.bishop)
+        } else if self.knight.bitboard.get_bit(index)  {
+            Some(&self.knight)
+        } else if self.rook.bitboard.get_bit(index)  {
+            Some(&self.rook)
+        } else if self.pawn.bitboard.get_bit(index)  {
+            Some(&self.pawn)
+        } else {
+            for p in self.custom.iter() {
+                if p.bitboard.get_bit(index)  {
+                    return Some(p);
+                }
+            }
+            None
+        }
+    }
+    pub fn piece_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
         if self.king.bitboard.get_bit(index) {
             Some(&mut self.king)
         } else if self.queen.bitboard.get_bit(index)  {

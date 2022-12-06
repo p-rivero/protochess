@@ -1,6 +1,7 @@
+use crate::constants::piece_scores::*;
 use crate::types::{Centipawns, BIndex, Bitboard, BCoord};
 use crate::utils::{from_index, to_index, distance_to_one};
-use crate::{Position, MoveGenerator, PieceType};
+use crate::{Position, MoveGenerator};
 use crate::position::piece::Piece;
 
 const POSITION_BASE_MULT: Centipawns = 5;
@@ -79,22 +80,22 @@ fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &P
     }
     let zero = Bitboard::zero();
     let walls = !&position.bounds;
-    let mut moves = match piece.piece_type {
-        PieceType::Queen => {movegen.attack_tables.get_queen_attack(index, &walls, &zero)}
-        PieceType::Bishop => {movegen.attack_tables.get_bishop_attack(index, &walls, &zero)}
-        PieceType::Rook => {movegen.attack_tables.get_rook_attack(index, &walls, &zero)}
-        PieceType::Knight => {movegen.attack_tables.get_knight_attack(index, &walls, &zero)}
-        PieceType::King => {movegen.attack_tables.get_king_attack(index, &walls, &zero)}
-        PieceType::Pawn => {
-            if piece.player_num == 0 {
+    let mut moves = match piece.get_piece_id() {
+        ID_QUEEN => {movegen.attack_tables.get_queen_attack(index, &walls, &zero)}
+        ID_BISHOP => {movegen.attack_tables.get_bishop_attack(index, &walls, &zero)}
+        ID_ROOK => {movegen.attack_tables.get_rook_attack(index, &walls, &zero)}
+        ID_KNIGHT => {movegen.attack_tables.get_knight_attack(index, &walls, &zero)}
+        ID_KING => {movegen.attack_tables.get_king_attack(index, &walls, &zero)}
+        ID_PAWN => {
+            if piece.player_num() == 0 {
                 movegen.attack_tables.get_north_pawn_attack(index, &walls, &Bitboard::all_ones())
             } else {
                 movegen.attack_tables.get_south_pawn_attack(index, &walls, &Bitboard::all_ones())
             }
         }
-        PieceType::Custom(_c) => {
+        _ => {
             let mp = {
-                if let Some(mp) = position.get_movement_pattern(&piece.piece_type) {
+                if let Some(mp) = position.get_movement_pattern(piece.get_piece_id()) {
                     mp
                 } else {
                     return Bitboard::zero();
@@ -150,27 +151,26 @@ fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &P
 }
 
 fn get_promotion_squares(position: &Position, piece: &Piece) -> Bitboard {
-    match piece.piece_type {
-        PieceType::Pawn => {
-            let mut promotion_squares = Bitboard::zero();
-            let y = if piece.player_num == 0 { position.dimensions.height - 1 } else { 0 };
-            for x in 0..position.dimensions.width {
-                promotion_squares.set_bit_at(x, y);
-            }
-            promotion_squares
+    let piece_id = piece.get_piece_id();
+    if piece_id == ID_PAWN {
+        let mut promotion_squares = Bitboard::zero();
+        let y = if piece.player_num() == 0 { position.dimensions.height - 1 } else { 0 };
+        for x in 0..position.dimensions.width {
+            promotion_squares.set_bit_at(x, y);
         }
-        PieceType::Custom(_c) => {
-            if let Some(mp) = position.get_movement_pattern(&piece.piece_type) {
-                if let Some(promotion_squares) = &mp.promotion_squares {
-                    promotion_squares.clone()
-                } else {
-                    Bitboard::zero()
-                }
+        promotion_squares
+    } else if piece_id >= BASE_ID_CUSTOM {
+        if let Some(mp) = position.get_movement_pattern(piece.get_piece_id()) {
+            if let Some(promotion_squares) = &mp.promotion_squares {
+                promotion_squares.clone()
             } else {
                 Bitboard::zero()
             }
+        } else {
+            Bitboard::zero()
         }
-        _ => Bitboard::zero()
+    } else {
+        Bitboard::zero()
     }
 }
 

@@ -2,7 +2,7 @@ extern crate protochess_engine_rs;
 
 #[cfg(test)]
 mod custom_pieces {
-    use protochess_engine_rs::{MovementPatternExternal, PieceType};
+    use protochess_engine_rs::{MovementPatternExternal, position::piece::PieceId};
 
     #[test]
     fn custom_pieces() {
@@ -33,20 +33,14 @@ mod custom_pieces {
             translate_southeast: true,
             translate_southwest: true
         });
-
-        println!("{}", engine.get_zobrist());
-        println!("BASE SCORE: {}", engine.get_score());
-        engine.add_piece(0, PieceType::Custom('a'), 0, 3);
-        println!("NEW SCORE: {}", engine.get_score());
-        println!("{}", engine.to_string());
-
-
-        let mut ply = 0;
-        engine.play_best_move(1);
-        ply += 1;
-        println!("PLY: {} Engine plays: \n", ply);
-        println!("{}", engine.to_string());
-        println!("========================================");
+        
+        // Initial score should be 0
+        assert_eq!(engine.get_score(), 0);
+        // Add a queen to the board
+        engine.add_piece(0, 100 + 'a' as PieceId, 0, 3);
+        let queen_material = 1040;
+        let queen_position = 10;
+        assert_eq!(engine.get_score(), queen_material + queen_position);
     }
 
 }

@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::position::castle_rights::CastleRights;
-use crate::types::{Player, BIndex, Move, PieceType};
+use crate::types::{BIndex, Move};
+
+use super::piece::{PieceIdWithPlayer, PieceId};
 
 /// Properties that are hard to recover from a Move
 #[derive(Clone, Debug)]
@@ -9,12 +11,12 @@ pub struct PositionProperties {
     pub zobrist_key: u64,
     pub move_played: Option<Move>,
     //If the last move was a promotion, promote_from is the previous piecetype
-    pub promote_from: Option<PieceType>,
+    pub promote_from: Option<PieceId>,
     pub castling_rights: CastleRights,
     //EP square (square behind a double pawn push)
     pub ep_square: Option<BIndex>,
-    //Tuple (owner, PieceType) of the last piece captured, if any
-    pub captured_piece: Option<(Player, PieceType)>,
+    // Full id (piece type + player num) of the captured piece, if any
+    pub captured_piece: Option<PieceIdWithPlayer>,
     pub prev_properties: Option<Arc<PositionProperties>>,
 }
 

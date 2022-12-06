@@ -1,3 +1,4 @@
+use crate::constants::piece_scores::{ID_KING, ID_ROOK};
 use crate::types::*;
 use crate::position::Position;
 use crate::position::piece_set::PieceSet;
@@ -135,7 +136,7 @@ impl MoveGenerator {
             if position.properties.castling_rights.can_player_castle_kingside(position.whos_turn) {
                 let rook_index = to_index(position.dimensions.width - 1, ky);
                 if let Some((owner, pt)) = position.piece_at(rook_index) {
-                    if owner == whos_turn && pt.piece_type == PieceType::Rook {
+                    if owner == whos_turn && pt.get_piece_id() == ID_ROOK {
                         //See if the space between is clear
                         let east = self.attack_tables.masks.get_east(king_index);
                         let mut occ = east & &position.occupied;
@@ -156,7 +157,7 @@ impl MoveGenerator {
             if position.properties.castling_rights.can_player_castle_queenside(position.whos_turn) {
                 let rook_index = to_index(0 ,ky);
                 if let Some((owner, pt)) = position.piece_at(rook_index) {
-                    if owner == whos_turn && pt.piece_type == PieceType::Rook {
+                    if owner == whos_turn && pt.get_piece_id() == ID_ROOK {
                         let west = self.attack_tables.masks.get_west(king_index);
                         let mut occ = west & &position.occupied;
                         occ.clear_bit(rook_index);
@@ -199,13 +200,11 @@ impl MoveGenerator {
 
         for p in &my_pieces.custom {
             //let movement = p.movement_pattern.as_ref().unwrap();
-            let movement = {
-                if let Some(mp) = position.get_movement_pattern(&p.piece_type) {
-                    mp
-                } else {
-                    continue;
-                }
-            };
+            let mp = position.get_movement_pattern(p.get_piece_id());
+            if mp.is_none() {
+                continue;
+            }
+            let movement = mp.unwrap();
 
             let bb = &p.bitboard;
             let mut bb_copy = bb.to_owned();
@@ -430,7 +429,8 @@ impl MoveGenerator {
         }
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
-            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.piece_type == PieceType::King {
+            // TODO: Allow custom pieces to capture kings
+            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
                 in_check = true;
                 break;
             }
@@ -442,8 +442,9 @@ impl MoveGenerator {
     ///Checks if a move is legal
     pub fn is_move_legal(&self, mv:&Move, position:&mut Position) -> bool{
         //You cannot capture kings
+        // TODO: Allow capturing kings
         if mv.get_move_type() == MoveType::PromotionCapture || mv.get_move_type() == MoveType::Capture {
-            if position.piece_at(mv.get_target()).unwrap().1.piece_type == PieceType::King {
+            if position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
                 return false;
             }
         }
@@ -455,7 +456,8 @@ impl MoveGenerator {
         }
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
-            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.piece_type == PieceType::King {
+            // TODO: Allow custom pieces to capture kings
+            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
                 legality = false;
                 break;
             }

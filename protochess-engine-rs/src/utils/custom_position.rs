@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{types::{Player, BCoord, Bitboard, BDimensions}, PieceType};
+use crate::types::{Player, BCoord, Bitboard, BDimensions, char_to_pieceid};
 use super::to_index;
 use crate::{Position, MovementPatternExternal};
 
@@ -19,7 +19,7 @@ pub fn make_custom_position(movement_patterns: HashMap<char, MovementPatternExte
     }
 
     let pieces = pieces.into_iter()
-        .map(|(owner, x, y, pce_chr)| (*owner, to_index(*x, *y), PieceType::from_char(*pce_chr)))
+        .map(|(owner, x, y, pce_chr)| (*owner, to_index(*x, *y), char_to_pieceid(*pce_chr)))
         .collect();
     Position::custom(BDimensions{width, height}, bounds, movement_patterns, pieces)
 }

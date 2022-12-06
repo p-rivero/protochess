@@ -7,6 +7,7 @@ use crate::types::*;
 use crate::utils::to_index;
 
 use super::Position;
+use super::piece::Piece;
 use super::piece_set::PieceSet;
 use super::position_properties::PositionProperties;
 use super::zobrist_table::ZobristTable;
@@ -108,7 +109,26 @@ pub fn parse_fen(fen: String) -> Position {
     let mut occupied = Bitboard::zero();
     occupied |= &w_pieces.occupied;
     occupied |= &b_pieces.occupied;
-    let zobrist_table = ZobristTable::new();
+    
+    // TODO: Remove this
+    let zobrist_table = {
+        let mut zob = ZobristTable::new();
+        // Iterate for entire alphabet
+        for c in ('a' as u8)..=('z' as u8) {
+            zob.register_piecetype(Piece::blank_custom(0, c as char));
+            zob.register_piecetype(Piece::blank_custom(1, c as char));
+        }
+        for i in 0..=1 {
+            zob.register_piecetype(Piece::blank_king(i));
+            zob.register_piecetype(Piece::blank_queen(i));
+            zob.register_piecetype(Piece::blank_rook(i));
+            zob.register_piecetype(Piece::blank_bishop(i));
+            zob.register_piecetype(Piece::blank_knight(i));
+            zob.register_piecetype(Piece::blank_pawn(i));
+        }
+        zob
+    };
+    
     let mut zobrist_key = 0;
 
     let mut properties = PositionProperties::default();

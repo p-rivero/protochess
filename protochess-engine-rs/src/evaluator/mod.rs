@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
+use crate::position::piece::{PieceId, PieceIdWithPlayer};
 use crate::position::piece_set::PieceSet;
 use crate::position::Position;
 use crate::move_generator::MoveGenerator;
-use crate::types::{Move, PieceType, Centipawns, Player};
+use crate::types::{Move, Centipawns};
 use crate::constants::piece_scores::*;
 
 
@@ -18,10 +19,10 @@ pub struct Evaluator {
     //Piece values for pieces,
     //Hard coded for builtin pieces,
     //generated dynamically based on the piece's movement pattern
-    custom_piece_value_table: HashMap<PieceType, Centipawns, ahash::RandomState>,
+    custom_piece_value_table: HashMap<PieceId, Centipawns, ahash::RandomState>,
     //Piece-square values for all pieces, done as a function of movement possibilities
     //Generated dynamically for all pieces
-    piece_square_table: HashMap<(PieceType,Player), Vec<Centipawns>, ahash::RandomState>
+    piece_square_table: HashMap<PieceIdWithPlayer, Vec<Centipawns>, ahash::RandomState>
 }
 
 impl Evaluator {
@@ -84,7 +85,7 @@ impl Evaluator {
         material_score += piece_set.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
 
         for piece in &piece_set.custom {
-            let score = self.get_material_score(piece.piece_type, position);
+            let score = self.get_material_score(piece.get_piece_id(), position);
             material_score += piece.bitboard.count_ones() as Centipawns * score;
         }
         material_score
@@ -96,8 +97,8 @@ impl Evaluator {
         const CAPTURE_BASE_SCORE: Centipawns = 10000;
         const KILLERMOVE_SCORE: Centipawns = 9000;
         if mv.get_is_capture() {
-            let attacker: PieceType = (&position.piece_at(mv.get_from()).unwrap().1.piece_type).to_owned();
-            let victim: PieceType = (&position.piece_at(mv.get_target()).unwrap().1.piece_type).to_owned();
+            let attacker = position.piece_at(mv.get_from()).unwrap().1.get_piece_id();
+            let victim = position.piece_at(mv.get_target()).unwrap().1.get_piece_id();
 
             let attack_score = self.get_material_score(attacker, position);
             let victim_score = self.get_material_score(victim, position);
@@ -112,20 +113,20 @@ impl Evaluator {
     }
 
     /// Returns the current material score for a given Position
-    pub fn get_material_score(&mut self, piece_type: PieceType, position: &Position) -> Centipawns {
+    pub fn get_material_score(&mut self, piece_type: PieceId, position: &Position) -> Centipawns {
         match piece_type {
-            PieceType::Pawn => { PAWN_SCORE }
-            PieceType::Knight => { KNIGHT_SCORE }
-            PieceType::Bishop => { BISHOP_SCORE }
-            PieceType::Rook => { ROOK_SCORE }
-            PieceType::Queen => { QUEEN_SCORE }
-            PieceType::King => { KING_SCORE }
-            PieceType::Custom(_c) => {
+            ID_PAWN => { PAWN_SCORE }
+            ID_KNIGHT => { KNIGHT_SCORE }
+            ID_BISHOP => { BISHOP_SCORE }
+            ID_ROOK => { ROOK_SCORE }
+            ID_QUEEN => { QUEEN_SCORE }
+            ID_KING => { KING_SCORE }
+            _ => {
                 if self.custom_piece_value_table.contains_key(&piece_type) {
                     *self.custom_piece_value_table.get(&piece_type).unwrap()
                 } else {
                     let score = {
-                        if let Some(mp) = position.get_movement_pattern(&piece_type) {
+                        if let Some(mp) = position.get_movement_pattern(piece_type) {
                             score_movement_pattern(mp)
                         } else {
                             0
@@ -148,7 +149,7 @@ impl Evaluator {
         let mut score = 0;
 
         for p in piece_set.get_piece_refs() {
-            let key = (p.piece_type, p.player_num);
+            let key = p.get_full_id();
             let score_table =
                 match self.piece_square_table.get(&key) {
                     Some(score_table) => score_table,
@@ -163,7 +164,7 @@ impl Evaluator {
             while !bb_copy.is_zero() {
                 let index = bb_copy.lowest_one().unwrap();
                 //If it is the king then limit moves (encourage moving away from the center)
-                if  p.piece_type == PieceType::King && !is_endgame {
+                if  p.get_piece_id() == ID_KING && !is_endgame {
                     score -= score_table[index as usize];
                 } else {
                     score += score_table[index as usize];
