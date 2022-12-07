@@ -7,7 +7,6 @@ use crate::types::*;
 use crate::utils::to_index;
 
 use super::Position;
-use super::piece::Piece;
 use super::piece_set::PieceSet;
 use super::position_properties::PositionProperties;
 use super::zobrist_table::ZobristTable;
@@ -111,23 +110,7 @@ pub fn parse_fen(fen: String) -> Position {
     occupied |= &b_pieces.occupied;
     
     // TODO: Remove this
-    let zobrist_table = {
-        let mut zob = ZobristTable::new();
-        // Iterate for entire alphabet
-        for c in ('a' as u8)..=('z' as u8) {
-            zob.register_piecetype(Piece::blank_custom(0, c as char));
-            zob.register_piecetype(Piece::blank_custom(1, c as char));
-        }
-        for i in 0..=1 {
-            zob.register_piecetype(Piece::blank_king(i));
-            zob.register_piecetype(Piece::blank_queen(i));
-            zob.register_piecetype(Piece::blank_rook(i));
-            zob.register_piecetype(Piece::blank_bishop(i));
-            zob.register_piecetype(Piece::blank_knight(i));
-            zob.register_piecetype(Piece::blank_pawn(i));
-        }
-        zob
-    };
+    let zobrist_table = ZobristTable::new();
     
     let mut zobrist_key = 0;
 
@@ -169,7 +152,7 @@ pub fn parse_fen(fen: String) -> Position {
         let mut bb_copy = (&piece.bitboard).to_owned();
         while !bb_copy.is_zero() {
             let indx = bb_copy.lowest_one().unwrap();
-            zobrist_key ^= zobrist_table.get_zobrist_sq(piece, indx);
+            zobrist_key ^= piece.get_zobrist(indx);
             bb_copy.clear_bit(indx);
         }
     }

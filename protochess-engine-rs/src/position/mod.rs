@@ -26,23 +26,7 @@ pub mod movement_pattern;
 
 //No reason to have more than one zobrist table
 lazy_static! {
-    static ref ZOBRIST_TABLE: ZobristTable = {
-        let mut zob = ZobristTable::new();
-        // Iterate for entire alphabet
-        for c in ('a' as u8)..=('z' as u8) {
-            zob.register_piecetype(Piece::blank_custom(0, c as char));
-            zob.register_piecetype(Piece::blank_custom(1, c as char));
-        }
-        for i in 0..=1 {
-            zob.register_piecetype(Piece::blank_king(i));
-            zob.register_piecetype(Piece::blank_queen(i));
-            zob.register_piecetype(Piece::blank_rook(i));
-            zob.register_piecetype(Piece::blank_bishop(i));
-            zob.register_piecetype(Piece::blank_knight(i));
-            zob.register_piecetype(Piece::blank_pawn(i));
-        }
-        zob
-    };
+    static ref ZOBRIST_TABLE: ZobristTable = ZobristTable::new();
 }
 
 
@@ -64,10 +48,7 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn default() -> Position {
-        // Ensure that the zobrist table is initialized
-        let _ = &*ZOBRIST_TABLE;
-        
+    pub fn default() -> Position {        
         parse_fen(String::from(fen::STARTING_POS))
     }
 
@@ -79,7 +60,6 @@ impl Position {
         self.movement_rules.insert(id, mp);
         //Insert blank for all players
         for (i, p) in self.pieces.iter_mut().enumerate() {
-                //ZOBRIST_TABLE.register_piecetype(0, &PieceType::Custom(char_rep));
             p.custom.push(Piece::blank_custom(i as Player, char_rep));
         }
     }
@@ -139,7 +119,7 @@ impl Position {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt_index = mv.get_target();
                 let (_owner, captured_piece) = self.piece_at(capt_index).unwrap();
-                new_props.zobrist_key ^= zobrist_table.get_zobrist_sq(captured_piece, capt_index);
+                new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
                 new_props.captured_piece = Some(captured_piece.get_full_id());
                 self.remove_piece(capt_index);
             },
@@ -147,8 +127,8 @@ impl Position {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x - 1, y);
-                new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from(ID_ROOK, my_player_num, rook_from);
-                new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from(ID_ROOK, my_player_num, rook_to);
+                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
+                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
                 self.move_piece(rook_from, rook_to);
                 new_props.castling_rights.set_player_castled(my_player_num);
             },
@@ -156,8 +136,8 @@ impl Position {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x + 1, y);
-                new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from(ID_ROOK, my_player_num, rook_from);
-                new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from(ID_ROOK, my_player_num, rook_to);
+                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
+                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
                 self.move_piece(rook_from, rook_to);
                 new_props.castling_rights.set_player_castled(my_player_num);
             }
@@ -168,8 +148,9 @@ impl Position {
         let to = mv.get_to();
         let from_piece = self.piece_at(from).unwrap().1;
         let from_piece_type = from_piece.get_piece_id();
-        new_props.zobrist_key ^= zobrist_table.get_zobrist_sq(&from_piece, from);
-        new_props.zobrist_key ^= zobrist_table.get_zobrist_sq(&from_piece, to);
+        let from_piece_new_pos_zobrist = from_piece.get_zobrist(to);
+        new_props.zobrist_key ^= from_piece.get_zobrist(from);
+        new_props.zobrist_key ^= from_piece_new_pos_zobrist;
         
 
         //Move piece to location
@@ -178,12 +159,12 @@ impl Position {
         match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
                 // Remove zobrist hash of the old piece
-                new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from(from_piece_type, my_player_num, to);
+                new_props.zobrist_key ^= from_piece_new_pos_zobrist;
                 new_props.promote_from = Some(from_piece_type);
                 self.remove_piece(to);
                 // Add new piece
                 let promote_to_pt = char_to_pieceid(mv.get_promotion_char().unwrap());
-                new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from(promote_to_pt, my_player_num, to);
+                new_props.zobrist_key ^= Piece::compute_zobrist_at(promote_to_pt, my_player_num, to);
                 self.add_piece(my_player_num, promote_to_pt, to);
             },
             _ => {}
@@ -434,8 +415,7 @@ impl Position {
     /// Public interface for modifying the position
     pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex) {
         let mut new_props = (*self.properties).clone();
-        let zobrist_table = &ZOBRIST_TABLE;
-        new_props.zobrist_key ^= zobrist_table.get_zobrist_sq_from(piece_type, owner, index);
+        new_props.zobrist_key ^= Piece::compute_zobrist_at(piece_type, owner, index);
         self.add_piece(owner, piece_type, index);
         self.update_occupied();
         new_props.prev_properties = Some(Arc::clone(&self.properties));

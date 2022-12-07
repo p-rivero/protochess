@@ -1,15 +1,17 @@
-use crate::types::{Player, Bitboard};
+use crate::types::{Player, Bitboard, BIndex};
 use crate::constants::piece_scores::*;
 
-pub type PieceId = i32;
-pub type PieceIdWithPlayer = u128;
+pub type PieceId = u32;
+pub type PieceIdWithPlayer = u64;
 
+// Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
 #[derive(Clone, Debug)]
 pub struct Piece {
     id: PieceId,
     char_rep: char,
     //Player num for the owner of this piece
     player_num: Player,
+    zobrist_hashes: Vec<u64>,
     // TODO: Make private
     pub bitboard: Bitboard, // Occupancy bitboard
     is_leader: bool,
@@ -23,6 +25,7 @@ impl Piece {
             id,
             char_rep,
             player_num,
+            zobrist_hashes: Piece::compute_zobrist(id, player_num),
             bitboard: Bitboard::zero(),
             is_leader,
             can_double_move,
@@ -55,6 +58,12 @@ impl Piece {
         self.player_num
     }
     
+    // Get the zobrist hash for this piece at the given index
+    #[inline(always)]
+    pub fn get_zobrist(&self, index: BIndex) -> u64 {
+        self.zobrist_hashes[index as usize]
+    }
+    
     // Helpers for getting the original id and the player_num from the id
     #[inline(always)]
     pub fn get_player_from_id(id: PieceIdWithPlayer) -> Player {
@@ -63,6 +72,23 @@ impl Piece {
     #[inline(always)]
     pub fn get_piecetype_from_id(id: PieceIdWithPlayer) -> PieceId {
         (id & 0xFFFFFFFF) as PieceId
+    }
+    
+    fn compute_zobrist(id: PieceId, player_num: Player) -> Vec<u64> {
+        let mut zobrist = Vec::with_capacity(256);
+        for i in 0..=255 {
+            zobrist.push(Piece::compute_zobrist_at(id, player_num, i));
+        }
+        zobrist
+    }
+    // TODO: Make private, use RNG
+    pub fn compute_zobrist_at(id: PieceId, player_num: Player, index: BIndex) -> u64 {
+        let seed = (id as u64) << 16 | (player_num as u64) << 8 | index as u64;
+        
+        // Use Donald Knuth's multiplicative hash
+        const KNUTH_MUL: u64 = 6364136223846793005;
+        // const KNUTH_ADD: u64 = 1442695040888963407; // Unused, since we only do 1 iteration
+        seed.wrapping_mul(KNUTH_MUL)
     }
     
     
