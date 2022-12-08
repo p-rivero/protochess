@@ -1,4 +1,4 @@
-use crate::{types::Centipawns, position::piece::PieceId};
+use crate::{types::Centipawns, piece::PieceId};
 
 pub const KING_SCORE: Centipawns = 320 * CRITICAL_PIECE_MULTIPLIER;
 pub const QUEEN_SCORE: Centipawns = 1040;

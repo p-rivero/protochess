@@ -184,7 +184,7 @@ impl MoveGenerator {
 
     /// Iterator that yields pseudo-legal moves from a positon
     /// Considering only custom piece types
-    fn get_custom_psuedo_moves(&self, position:&mut Position) -> impl Iterator<Item=Move> {
+    fn get_custom_psuedo_moves(&self, position: &Position) -> impl Iterator<Item=Move> {
         let my_pieces: &PieceSet = &position.pieces[position.whos_turn as usize];
 
         let mut iters:Vec<BitboardMoves> = Vec::new();
@@ -199,12 +199,7 @@ impl MoveGenerator {
         let occ_or_not_in_bounds = &position.occupied | !&position.bounds;
 
         for p in &my_pieces.custom {
-            //let movement = p.movement_pattern.as_ref().unwrap();
-            let mp = position.get_movement_pattern(p.get_piece_id());
-            if mp.is_none() {
-                continue;
-            }
-            let movement = mp.unwrap();
+            let movement = p.get_movement();
 
             let bb = &p.bitboard;
             let mut bb_copy = bb.to_owned();

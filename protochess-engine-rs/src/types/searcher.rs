@@ -1,4 +1,6 @@
-use super::{Move, Centipawns};
+use super::Move;
+
+pub type Centipawns = i32;
 
 pub enum SearchError {
     Timeout,

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod eval_test {
-    use protochess_engine_rs::evaluator::Evaluator;
+    use protochess_engine_rs::piece::evaluator::Evaluator;
     use protochess_engine_rs::position::parse_fen;
     use protochess_engine_rs::move_generator::MoveGenerator;
 

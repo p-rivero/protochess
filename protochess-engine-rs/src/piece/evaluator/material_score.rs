@@ -1,4 +1,4 @@
-use crate::position::movement_pattern::MovementPattern;
+use super::super::movement_pattern::MovementPattern;
 use crate::types::Centipawns;
 
 /// Returns a score value for a piece, given its movement pattern

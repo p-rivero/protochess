@@ -1,8 +1,8 @@
-use crate::{constants::piece_scores::*, position::piece::PieceId};
+use crate::{constants::piece_scores::*, piece::PieceId};
 
+// TODO: Remove this file
 
 // Class for storing the value of a position, must allow negative values
-pub type Centipawns = i32;
 
 pub fn char_to_pieceid(c:char) -> PieceId {
     match c.to_ascii_lowercase() {

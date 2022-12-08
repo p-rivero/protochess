@@ -2,7 +2,7 @@
 extern crate lazy_static;
 extern crate impl_ops;
 
-use position::piece::PieceId;
+use crate::piece::PieceId;
 use thread_handler::ThreadHandler;
 use utils::custom_position::make_custom_position;
 
@@ -13,19 +13,19 @@ use crate::utils::{to_index, from_index};
 
 //Private modules
 mod constants;
+pub mod piece;
 pub mod move_generator;
 pub mod types;
 pub mod position;
-pub mod evaluator;
 mod searcher;
 pub mod utils;
 mod transposition_table;
 mod thread_handler;
 use std::collections::HashMap;
-use crate::evaluator::Evaluator;
+use crate::piece::evaluator::Evaluator;
 use crate::types::*;
 use crate::searcher::Searcher;
-pub use crate::position::movement_pattern::MovementPatternExternal;
+pub use crate::piece::MovementPatternExternal;
 
 
 

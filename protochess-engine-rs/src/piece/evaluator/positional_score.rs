@@ -2,7 +2,7 @@ use crate::constants::piece_scores::*;
 use crate::types::{Centipawns, BIndex, Bitboard, BCoord};
 use crate::utils::{from_index, to_index, distance_to_one};
 use crate::{Position, MoveGenerator};
-use crate::position::piece::Piece;
+use crate::piece::Piece;
 
 const POSITION_BASE_MULT: Centipawns = 5;
 const POSITION_EDGE_DIST_MULT: Centipawns = 5;
@@ -94,13 +94,7 @@ fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &P
             }
         }
         _ => {
-            let mp = {
-                if let Some(mp) = position.get_movement_pattern(piece.get_piece_id()) {
-                    mp
-                } else {
-                    return Bitboard::zero();
-                }
-            };
+            let mp = piece.get_movement();
 
             let mut slides = movegen.attack_tables.get_sliding_moves_bb(
                 index,
@@ -160,12 +154,9 @@ fn get_promotion_squares(position: &Position, piece: &Piece) -> Bitboard {
         }
         promotion_squares
     } else if piece_id >= BASE_ID_CUSTOM {
-        if let Some(mp) = position.get_movement_pattern(piece.get_piece_id()) {
-            if let Some(promotion_squares) = &mp.promotion_squares {
-                promotion_squares.clone()
-            } else {
-                Bitboard::zero()
-            }
+        let mp = piece.get_movement();
+        if let Some(promotion_squares) = &mp.promotion_squares {
+            promotion_squares.clone()
         } else {
             Bitboard::zero()
         }

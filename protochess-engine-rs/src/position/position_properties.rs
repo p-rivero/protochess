@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::position::castle_rights::CastleRights;
 use crate::types::{BIndex, Move};
 
-use super::piece::{PieceIdWithPlayer, PieceId};
+use crate::piece::{PieceIdWithPlayer, PieceId};
 
 /// Properties that are hard to recover from a Move
 #[derive(Clone, Debug)]

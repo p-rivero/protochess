@@ -1,6 +1,8 @@
 use crate::types::{Bitboard, BIndex, BCoord};
 use crate::utils::from_index;
 
+// TODO: Make promotion_squares not an Option
+
 /// External variant of MovementPattern for public
 #[derive(Clone, Debug )]
 pub struct MovementPatternExternal {
@@ -31,6 +33,46 @@ pub struct MovementPatternExternal {
     pub translate_northwest: bool,
     pub translate_southeast: bool,
     pub translate_southwest: bool,
+}
+
+impl MovementPatternExternal {
+    pub fn to_internal(self) -> MovementPattern{
+        let promotion_squares = {
+            if let Some(vec) = self.promotion_squares {
+                let mut bb = Bitboard::zero();
+                for (x, y) in vec {
+                    bb.set_bit_at(x, y);
+                }
+                Some(bb)
+            } else {
+                None
+            }
+        };
+        MovementPattern{
+            promotion_squares,
+            promo_vals: self.promo_vals,
+            attack_sliding_deltas: self.attack_sliding_deltas,
+            attack_jump_deltas: self.attack_jump_deltas,
+            attack_north: self.attack_north,
+            attack_south: self.attack_south,
+            attack_east: self.attack_east,
+            attack_west: self.attack_west,
+            attack_northeast: self.attack_northeast,
+            attack_northwest: self.attack_northwest,
+            attack_southeast: self.attack_southeast,
+            attack_southwest: self.attack_southwest,
+            translate_jump_deltas: self.translate_jump_deltas,
+            translate_sliding_deltas: self.translate_sliding_deltas,
+            translate_north: self.translate_north,
+            translate_south: self.translate_south,
+            translate_east: self.translate_east,
+            translate_west: self.translate_west,
+            translate_northeast: self.translate_northeast,
+            translate_northwest: self.translate_northwest,
+            translate_southeast: self.translate_southeast,
+            translate_southwest: self.translate_southwest
+        }
+    }
 }
 
 /// MovementPattern describes how a custom piece can move
@@ -117,84 +159,48 @@ impl MovementPattern {
     }
 }
 
-pub fn external_mp_to_internal(mpe: MovementPatternExternal) -> MovementPattern{
-    let promotion_squares = {
-        if let Some(vec) = mpe.promotion_squares {
-            let mut bb = Bitboard::zero();
-            for (x, y) in vec {
-                bb.set_bit_at(x, y);
-            }
-            Some(bb)
-        } else {
-            None
-        }
-    };
-    MovementPattern{
-        promotion_squares,
-        promo_vals: mpe.promo_vals,
-        attack_sliding_deltas: mpe.attack_sliding_deltas,
-        attack_jump_deltas: mpe.attack_jump_deltas,
-        attack_north: mpe.attack_north,
-        attack_south: mpe.attack_south,
-        attack_east: mpe.attack_east,
-        attack_west: mpe.attack_west,
-        attack_northeast: mpe.attack_northeast,
-        attack_northwest: mpe.attack_northwest,
-        attack_southeast: mpe.attack_southeast,
-        attack_southwest: mpe.attack_southwest,
-        translate_jump_deltas: mpe.translate_jump_deltas,
-        translate_sliding_deltas: mpe.translate_sliding_deltas,
-        translate_north: mpe.translate_north,
-        translate_south: mpe.translate_south,
-        translate_east: mpe.translate_east,
-        translate_west: mpe.translate_west,
-        translate_northeast: mpe.translate_northeast,
-        translate_northwest: mpe.translate_northwest,
-        translate_southeast: mpe.translate_southeast,
-        translate_southwest: mpe.translate_southwest
-    }
-}
-
-pub fn internal_mp_to_external(mp: MovementPattern) -> MovementPatternExternal {
-    let promotion_squares = {
-        let mut sq = Vec::new();
-        if let Some(mut bb) = mp.promotion_squares {
-            while bb.is_zero() {
-                let index = bb.lowest_one().unwrap();
-                sq.push(from_index(index as BIndex));
-                bb.clear_bit(index);
-            }
-            if sq.len() != 0 {
-                Some(sq)
+impl MovementPattern {
+    pub fn to_external(self) -> MovementPatternExternal {
+        let promotion_squares = {
+            let mut sq = Vec::new();
+            if let Some(mut bb) = self.promotion_squares {
+                while bb.is_zero() {
+                    let index = bb.lowest_one().unwrap();
+                    sq.push(from_index(index as BIndex));
+                    bb.clear_bit(index);
+                }
+                if sq.len() != 0 {
+                    Some(sq)
+                } else {
+                    None
+                }
             } else {
                 None
             }
-        } else {
-            None
+        };
+        MovementPatternExternal {
+            promotion_squares,
+            promo_vals: self.promo_vals,
+            attack_sliding_deltas: self.attack_sliding_deltas,
+            attack_jump_deltas: self.attack_jump_deltas,
+            attack_north: self.attack_north,
+            attack_south: self.attack_south,
+            attack_east: self.attack_east,
+            attack_west: self.attack_west,
+            attack_northeast: self.attack_northeast,
+            attack_northwest: self.attack_northwest,
+            attack_southeast: self.attack_southeast,
+            attack_southwest: self.attack_southwest,
+            translate_jump_deltas: self.translate_jump_deltas,
+            translate_sliding_deltas: self.translate_sliding_deltas,
+            translate_north: self.translate_north,
+            translate_south: self.translate_south,
+            translate_east: self.translate_east,
+            translate_west: self.translate_west,
+            translate_northeast: self.translate_northeast,
+            translate_northwest: self.translate_northwest,
+            translate_southeast: self.translate_southeast,
+            translate_southwest: self.translate_southwest
         }
-    };
-    MovementPatternExternal {
-        promotion_squares,
-        promo_vals: mp.promo_vals,
-        attack_sliding_deltas: mp.attack_sliding_deltas,
-        attack_jump_deltas: mp.attack_jump_deltas,
-        attack_north: mp.attack_north,
-        attack_south: mp.attack_south,
-        attack_east: mp.attack_east,
-        attack_west: mp.attack_west,
-        attack_northeast: mp.attack_northeast,
-        attack_northwest: mp.attack_northwest,
-        attack_southeast: mp.attack_southeast,
-        attack_southwest: mp.attack_southwest,
-        translate_jump_deltas: mp.translate_jump_deltas,
-        translate_sliding_deltas: mp.translate_sliding_deltas,
-        translate_north: mp.translate_north,
-        translate_south: mp.translate_south,
-        translate_east: mp.translate_east,
-        translate_west: mp.translate_west,
-        translate_northeast: mp.translate_northeast,
-        translate_northwest: mp.translate_northwest,
-        translate_southeast: mp.translate_southeast,
-        translate_southwest: mp.translate_southwest
     }
 }

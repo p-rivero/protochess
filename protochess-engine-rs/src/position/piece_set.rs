@@ -1,6 +1,6 @@
 //Pieces that a player has
 use crate::types::{Bitboard, BIndex, Player};
-use crate::position::piece::Piece;
+use crate::piece::{Piece, PieceFactory};
 
 /// Represents a set of pieces for a player
 /// custom is a vec of custom piece
@@ -21,12 +21,12 @@ impl PieceSet {
     pub fn new(player_num: Player) -> PieceSet {
         PieceSet {
             occupied: Bitboard::zero(),
-            king: Piece::blank_king(player_num),
-            queen: Piece::blank_queen(player_num),
-            bishop: Piece::blank_bishop(player_num),
-            knight: Piece::blank_knight(player_num),
-            rook: Piece::blank_rook(player_num),
-            pawn: Piece::blank_pawn(player_num),
+            king: PieceFactory::blank_king(player_num),
+            queen: PieceFactory::blank_queen(player_num),
+            bishop: PieceFactory::blank_bishop(player_num),
+            knight: PieceFactory::blank_knight(player_num),
+            rook: PieceFactory::blank_rook(player_num),
+            pawn: PieceFactory::blank_pawn(player_num),
             custom: Vec::new(),
             player_num
         }

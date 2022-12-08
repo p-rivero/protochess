@@ -3,7 +3,7 @@ extern crate protochess_engine_rs;
 #[cfg(test)]
 mod custom_pieces {
     use protochess_engine_rs::MovementPatternExternal;
-    use protochess_engine_rs::position::piece::{PieceId, Piece};
+    use protochess_engine_rs::piece::{PieceId, Piece};
 
     #[test]
     fn custom_pieces() {

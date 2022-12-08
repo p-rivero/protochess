@@ -178,8 +178,7 @@ pub fn parse_fen(fen: String) -> Position {
         pieces: wb_pieces,
         occupied,
         bounds,
-        properties: Arc::new(properties),
-        movement_rules: Default::default()
+        properties: Arc::new(properties)
     };
 
   pos

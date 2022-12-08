@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::position::piece::{PieceId, PieceIdWithPlayer};
+use crate::piece::{Piece, PieceId, PieceIdWithPlayer};
 use crate::position::piece_set::PieceSet;
 use crate::position::Position;
 use crate::move_generator::MoveGenerator;
@@ -41,7 +41,7 @@ impl Evaluator {
         let mut total_material_score: Centipawns = 0;
         
         for ps in position.pieces.iter() {
-            let material_score = self.get_material_score_for_pieceset(position, ps);
+            let material_score = self.get_material_score_for_pieceset(ps);
             
             if ps.player_num == player_num {
                 score += material_score;
@@ -75,7 +75,7 @@ impl Evaluator {
         score
     }
 
-    fn get_material_score_for_pieceset(&mut self, position: &Position, piece_set: &PieceSet) -> Centipawns {
+    fn get_material_score_for_pieceset(&mut self, piece_set: &PieceSet) -> Centipawns {
         let mut material_score = 0;
         material_score += piece_set.king.bitboard.count_ones() as Centipawns * KING_SCORE;
         material_score += piece_set.queen.bitboard.count_ones() as Centipawns * QUEEN_SCORE;
@@ -85,7 +85,7 @@ impl Evaluator {
         material_score += piece_set.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
 
         for piece in &piece_set.custom {
-            let score = self.get_material_score(piece.get_piece_id(), position);
+            let score = self.get_material_score(piece);
             material_score += piece.bitboard.count_ones() as Centipawns * score;
         }
         material_score
@@ -97,11 +97,11 @@ impl Evaluator {
         const CAPTURE_BASE_SCORE: Centipawns = 10000;
         const KILLERMOVE_SCORE: Centipawns = 9000;
         if mv.get_is_capture() {
-            let attacker = position.piece_at(mv.get_from()).unwrap().1.get_piece_id();
-            let victim = position.piece_at(mv.get_target()).unwrap().1.get_piece_id();
+            let attacker = position.piece_at(mv.get_from()).unwrap().1;
+            let victim = position.piece_at(mv.get_target()).unwrap().1;
 
-            let attack_score = self.get_material_score(attacker, position);
-            let victim_score = self.get_material_score(victim, position);
+            let attack_score = self.get_material_score(attacker);
+            let victim_score = self.get_material_score(victim);
 
             return CAPTURE_BASE_SCORE + victim_score - attack_score
         }
@@ -112,8 +112,9 @@ impl Evaluator {
         }
     }
 
-    /// Returns the current material score for a given Position
-    pub fn get_material_score(&mut self, piece_type: PieceId, position: &Position) -> Centipawns {
+    /// Returns the current material score of a piece
+    fn get_material_score(&mut self, piece: &Piece) -> Centipawns {
+        let piece_type = piece.get_piece_id();
         match piece_type {
             ID_PAWN => { PAWN_SCORE }
             ID_KNIGHT => { KNIGHT_SCORE }
@@ -125,13 +126,7 @@ impl Evaluator {
                 if self.custom_piece_value_table.contains_key(&piece_type) {
                     *self.custom_piece_value_table.get(&piece_type).unwrap()
                 } else {
-                    let score = {
-                        if let Some(mp) = position.get_movement_pattern(piece_type) {
-                            score_movement_pattern(mp)
-                        } else {
-                            0
-                        }
-                    };
+                    let score = score_movement_pattern(piece.get_movement());
                     self.custom_piece_value_table.insert(piece_type, score);
                     score
                 }
@@ -140,8 +135,8 @@ impl Evaluator {
     }
 
     /// Determines whether or not null move pruning can be performed for a Position
-    pub fn can_do_null_move(&mut self, position:&Position) -> bool {
-        self.get_material_score_for_pieceset(&position, &position.pieces[position.whos_turn as usize])
+    pub fn can_do_null_move(&mut self, position: &Position) -> bool {
+        self.get_material_score_for_pieceset(&position.pieces[position.whos_turn as usize])
             > KING_SCORE + ROOK_SCORE
     }
 

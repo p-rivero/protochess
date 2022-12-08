@@ -2,27 +2,24 @@ use arrayvec::ArrayVec;
 use std::sync::Arc;
 use std::collections::HashMap;
 
-use crate::constants::piece_scores::{ID_ROOK, ID_PAWN, ID_KING, ID_QUEEN, ID_BISHOP, ID_KNIGHT, BASE_ID_CUSTOM};
+use crate::constants::piece_scores::{ID_ROOK, ID_PAWN, ID_KING, ID_QUEEN, ID_BISHOP, ID_KNIGHT};
 use crate::types::*;
 use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
 use crate::utils::{from_index, to_index};
 
-use movement_pattern::{MovementPattern, MovementPatternExternal, external_mp_to_internal, internal_mp_to_external};
-use piece::Piece;
 use zobrist_table::ZobristTable;
 pub use parse_fen::parse_fen;
 use position_properties::PositionProperties;
 
-use self::piece::{PieceId, PieceIdWithPlayer};
+use crate::piece::{Piece, PieceFactory, PieceId, PieceIdWithPlayer};
+use crate::MovementPatternExternal;
 
 mod position_properties;
 pub mod castle_rights;
 mod zobrist_table;
 pub mod parse_fen;
-pub mod piece;
 pub mod piece_set;
-pub mod movement_pattern;
 
 //No reason to have more than one zobrist table
 lazy_static! {
@@ -37,8 +34,6 @@ pub struct Position {
     pub bounds: Bitboard, //Bitboard representing the boundaries
     pub num_players: Player,
     pub whos_turn: Player,
-    //Map of custom piece types to movement patterns
-    pub movement_rules: HashMap<PieceId, MovementPattern>,
     pub pieces:ArrayVec<[PieceSet;4]>, //pieces[0] = white's pieces, pieces[1] black etc
     pub occupied: Bitboard,
     //Properties relating only to the current position
@@ -54,30 +49,10 @@ impl Position {
 
     /// Registers a new piece type for this position
     pub fn register_piecetype(&mut self, char_rep: char, mpe: MovementPatternExternal) {
-        let mp = external_mp_to_internal(mpe);
-        //Store the movement rule
-        let id = BASE_ID_CUSTOM + char_rep as PieceId;
-        self.movement_rules.insert(id, mp);
         //Insert blank for all players
-        for (i, p) in self.pieces.iter_mut().enumerate() {
-            p.custom.push(Piece::blank_custom(i as Player, char_rep));
+        for (i, piece_set) in self.pieces.iter_mut().enumerate() {
+            piece_set.custom.push(PieceFactory::blank_custom(i as Player, char_rep, mpe.clone()));
         }
-    }
-
-    // TODO: Remove
-    pub fn get_char_movementpattern_map(&self) -> HashMap<char, MovementPatternExternal> {
-        let mut return_map = HashMap::new();
-        for (piece_type, movement_pattern) in self.movement_rules.iter() {
-            if *piece_type >= BASE_ID_CUSTOM {
-                let c = (*piece_type - BASE_ID_CUSTOM) as u8 as char;
-                return_map.insert(c, internal_mp_to_external(movement_pattern.to_owned()));
-            }
-        }
-        return_map
-    }
-
-    pub(crate) fn get_movement_pattern(&self, piece_type: PieceId) -> Option<&MovementPattern> {
-       self.movement_rules.get(&piece_type)
     }
 
     pub(crate) fn set_bounds(&mut self, dims: BDimensions, bounds: Bitboard) {
