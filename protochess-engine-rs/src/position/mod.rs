@@ -49,7 +49,7 @@ impl Position {
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
         //Insert blank for all players
         for (i, piece_set) in self.pieces.iter_mut().enumerate() {
-            piece_set.custom.push(PieceFactory::blank_custom(definition.clone(), i as Player));
+            piece_set.custom.push(PieceFactory::make_custom(definition.clone(), i as Player));
         }
     }
 

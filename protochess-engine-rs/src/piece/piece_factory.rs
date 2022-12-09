@@ -1,7 +1,6 @@
 use super::PieceDefinition;
 use super::{Piece, PieceId};
 use crate::types::{Player, Bitboard};
-use crate::constants::piece_scores::*;
 
 // TODO: Remove this
 fn null_piece_def(id: PieceId, char_rep: char) -> PieceDefinition {
@@ -42,31 +41,31 @@ pub struct PieceFactory { }
 impl PieceFactory {
     
     // TODO: Remove this
-    pub fn blank_custom(definition: PieceDefinition, player_num: Player) -> Piece {
+    pub fn make_custom(definition: PieceDefinition, player_num: Player) -> Piece {
         Piece::new(definition, player_num)
     }
-    pub fn blank_pawn(player_num: Player) -> Piece{
-        let ch = if player_num == 0 { 'P' } else { 'p' };
-        Piece::new(null_piece_def(ID_PAWN, ch), player_num)
+    pub fn make_pawn(id: PieceId, player_num: Player) -> Piece{
+        let ch = { if player_num == 0 { 'P' } else { 'p' } };
+        Piece::new(null_piece_def(id, ch), player_num)
     }
-    pub fn blank_knight(player_num: Player) -> Piece{
-        let ch = if player_num == 0 { 'N' } else { 'n' };
-        Piece::new(null_piece_def(ID_KNIGHT, ch), player_num)
+    pub fn make_knight(id: PieceId, player_num: Player) -> Piece{
+        let ch = { if player_num == 0 { 'N' } else { 'n' } };
+        Piece::new(null_piece_def(id, ch), player_num)
     }
-    pub fn blank_king(player_num: Player) -> Piece{
-        let ch = if player_num == 0 { 'K' } else { 'k' };
-        Piece::new(null_piece_def(ID_KING, ch), player_num)
+    pub fn make_king(id: PieceId, player_num: Player) -> Piece{
+        let ch = { if player_num == 0 { 'K' } else { 'k' } };
+        Piece::new(null_piece_def(id, ch), player_num)
     }
-    pub fn blank_rook(player_num: Player) -> Piece{
-        let ch = if player_num == 0 { 'R' } else { 'r' };
-        Piece::new(null_piece_def(ID_ROOK, ch), player_num)
+    pub fn make_rook(id: PieceId, player_num: Player) -> Piece{
+        let ch = { if player_num == 0 { 'R' } else { 'r' } };
+        Piece::new(null_piece_def(id, ch), player_num)
     }
-    pub fn blank_bishop(player_num: Player) -> Piece{
-        let ch = if player_num == 0 { 'B' } else { 'b' };
-        Piece::new(null_piece_def(ID_BISHOP, ch), player_num)
+    pub fn make_bishop(id: PieceId, player_num: Player) -> Piece{
+        let ch = { if player_num == 0 { 'B' } else { 'b' } };
+        Piece::new(null_piece_def(id, ch), player_num)
     }
-    pub fn blank_queen(player_num: Player) -> Piece{
-        let ch = if player_num == 0 { 'Q' } else { 'q' };
-        Piece::new(null_piece_def(ID_QUEEN, ch), player_num)
+    pub fn make_queen(id: PieceId, player_num: Player) -> Piece{
+        let ch = { if player_num == 0 { 'Q' } else { 'q' } };
+        Piece::new(null_piece_def(id, ch), player_num)
     }
 }
