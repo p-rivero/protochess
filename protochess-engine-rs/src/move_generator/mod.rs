@@ -1,4 +1,4 @@
-use crate::constants::piece_scores::{ID_KING, ID_ROOK};
+use crate::constants::piece_scores::*;
 use crate::types::*;
 use crate::position::Position;
 use crate::position::piece_set::PieceSet;
@@ -63,8 +63,8 @@ impl MoveGenerator {
                     (&enemies).to_owned(),
                     raw_attacks,
                     index,
-                    None,
-                    None,
+                    Bitboard::zero(),
+                    Vec::new(),
                 ));
                 pieceset.clear_bit(index);
             }
@@ -93,12 +93,13 @@ impl MoveGenerator {
             raw_attacks &= &position.bounds;
             let promotion_squares = {
                 if position.whos_turn == 0 {
-                    Some(self.attack_tables.masks.get_rank(position.dimensions.height - 1).to_owned())
+                    self.attack_tables.masks.get_rank(position.dimensions.height - 1).to_owned()
                 } else {
-                    Some(self.attack_tables.masks.get_rank(0).to_owned())
+                    self.attack_tables.masks.get_rank(0).to_owned()
                 }
             };
-            let promo_vals = Some(vec!['r', 'b', 'n', 'q']);
+            // TODO: Store these as IDs in the Piece struct
+            let promo_vals = vec![ID_ROOK, ID_BISHOP, ID_KNIGHT, ID_QUEEN];
             iters.push(BitboardMoves::new(
                 (&enemies).to_owned(),
                 raw_attacks,
@@ -135,8 +136,8 @@ impl MoveGenerator {
             let whos_turn = position.whos_turn;
             if position.properties.castling_rights.can_player_castle_kingside(position.whos_turn) {
                 let rook_index = to_index(position.dimensions.width - 1, ky);
-                if let Some((owner, pt)) = position.piece_at(rook_index) {
-                    if owner == whos_turn && pt.get_piece_id() == ID_ROOK {
+                if let Some(pt) = position.piece_at(rook_index) {
+                    if pt.player_num() == whos_turn && pt.get_piece_id() == ID_ROOK {
                         //See if the space between is clear
                         let east = self.attack_tables.masks.get_east(king_index);
                         let mut occ = east & &position.occupied;
@@ -156,8 +157,8 @@ impl MoveGenerator {
             }
             if position.properties.castling_rights.can_player_castle_queenside(position.whos_turn) {
                 let rook_index = to_index(0 ,ky);
-                if let Some((owner, pt)) = position.piece_at(rook_index) {
-                    if owner == whos_turn && pt.get_piece_id() == ID_ROOK {
+                if let Some(pt) = position.piece_at(rook_index) {
+                    if pt.player_num() == whos_turn && pt.get_piece_id() == ID_ROOK {
                         let west = self.attack_tables.masks.get_west(king_index);
                         let mut occ = west & &position.occupied;
                         occ.clear_bit(rook_index);
@@ -267,7 +268,7 @@ impl MoveGenerator {
                         //Promotion here?
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
-                            for c in movement.promo_vals.as_ref().unwrap() {
+                            for c in &movement.promo_vals {
                                 moves.push(Move::new(index, to, None, MoveType::Promotion, Some(*c)));
                             }
                         } else {
@@ -287,7 +288,7 @@ impl MoveGenerator {
                         //Promotion here?
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
-                            for c in movement.promo_vals.as_ref().unwrap() {
+                            for c in &movement.promo_vals {
                                 moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
                             }
                         } else {
@@ -313,7 +314,7 @@ impl MoveGenerator {
                         if enemies.get_bit(to) {
                             if movement.promotion_at(to) {
                                 //Add all the promotion moves
-                                for c in movement.promo_vals.as_ref().unwrap() {
+                                for c in &movement.promo_vals {
                                     moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
                                 }
                             } else {
@@ -343,7 +344,7 @@ impl MoveGenerator {
                         }
                         if movement.promotion_at(to) {
                             //Add all the promotion moves
-                            for c in movement.promo_vals.as_ref().unwrap() {
+                            for c in &movement.promo_vals {
                                 moves.push(Move::new(index, to, None, MoveType::Quiet, Some(*c)));
                             }
                         } else {
@@ -425,7 +426,7 @@ impl MoveGenerator {
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
             // TODO: Allow custom pieces to capture kings
-            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
+            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().get_piece_id() == ID_KING {
                 in_check = true;
                 break;
             }
@@ -439,7 +440,7 @@ impl MoveGenerator {
         //You cannot capture kings
         // TODO: Allow capturing kings
         if mv.get_move_type() == MoveType::PromotionCapture || mv.get_move_type() == MoveType::Capture {
-            if position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
+            if position.piece_at(mv.get_target()).unwrap().get_piece_id() == ID_KING {
                 return false;
             }
         }
@@ -452,7 +453,7 @@ impl MoveGenerator {
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
             // TODO: Allow custom pieces to capture kings
-            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
+            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().get_piece_id() == ID_KING {
                 legality = false;
                 break;
             }

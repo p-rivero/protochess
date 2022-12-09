@@ -1,67 +1,57 @@
 use crate::types::{Player, Bitboard, BIndex};
 
-use movement_pattern::MovementPattern;
-
 pub type PieceId = u32;
 pub type PieceIdWithPlayer = u64;
 
-mod movement_pattern;
+mod piece_definition;
 mod piece_factory;
 pub mod evaluator;
 
 pub use piece_factory::PieceFactory;
-pub use movement_pattern::MovementPatternExternal;
+pub use piece_definition::PieceDefinition;
 
 // Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
 #[derive(Clone, Debug)]
 pub struct Piece {
-    id: PieceId,
-    char_rep: char,
+    // Info about this piece type
+    type_def: PieceDefinition,
     //Player num for the owner of this piece
     player_num: Player,
     // Zobrist hashes for this piece at each board index
     zobrist_hashes: Vec<u64>,
     // TODO: Make private
     pub bitboard: Bitboard, // Occupancy bitboard
-    movement: MovementPattern,
-    is_leader: bool,
-    can_double_move: bool,
-    can_castle: bool,
 }
 
 impl Piece {
     // Don't use new() directly, use PieceFactory instead
-    fn new(id: PieceId, char_rep: char, player_num: Player, movement: MovementPattern, is_leader: bool, can_double_move: bool, can_castle: bool) -> Piece {
+    fn new(definition: PieceDefinition, player_num: Player) -> Piece {
+        let id = definition.id;
         Piece {
-            id,
-            char_rep,
+            type_def: definition,
             player_num,
             zobrist_hashes: Piece::compute_zobrist(id, player_num),
             bitboard: Bitboard::zero(),
-            movement,
-            is_leader,
-            can_double_move,
-            can_castle,
         }
     }
     
     // Get the full id of this piece (piece type + player_num)
     #[inline(always)]
     pub fn get_full_id(&self) -> PieceIdWithPlayer {
-        self.id as PieceIdWithPlayer | (self.player_num as PieceIdWithPlayer) << 32
+        self.type_def.id as PieceIdWithPlayer | (self.player_num as PieceIdWithPlayer) << 32
     }
     
-    // TODO: Remove this
+    // TODO: Remove this??
     // Get the id of this piece (piece type only)
     #[inline(always)]
     pub fn get_piece_id(&self) -> PieceId {
-        self.id
+        self.type_def.id
     }
     
     // Get a char representation of this piece
     #[inline(always)]
     pub fn char_rep(&self) -> char {
-        self.char_rep
+        self.type_def.char_rep
     }
     
     // Get the player number of this piece
@@ -77,9 +67,10 @@ impl Piece {
     }
     
     // Get the movement pattern for this piece
+    // TODO: Remove this
     #[inline(always)]
-    pub fn get_movement(&self) -> &MovementPattern {
-        &self.movement
+    pub fn get_movement(&self) -> &PieceDefinition {
+        &self.type_def
     }
     
     // Helpers for getting the original id and the player_num from the id
@@ -113,6 +104,6 @@ impl Piece {
 // Print as a string
 impl std::fmt::Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Piece {} (id={}, player={})", self.char_rep, self.id, self.player_num)
+        write!(f, "Piece {} (id={}, player={})", self.type_def.char_rep, self.type_def.id, self.player_num)
     }
 }

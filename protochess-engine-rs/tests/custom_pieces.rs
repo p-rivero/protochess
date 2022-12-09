@@ -2,17 +2,23 @@ extern crate protochess_engine_rs;
 
 #[cfg(test)]
 mod custom_pieces {
-    use protochess_engine_rs::MovementPatternExternal;
+    use protochess_engine_rs::PieceDefinition;
     use protochess_engine_rs::piece::{PieceId, Piece};
+    use protochess_engine_rs::types::Bitboard;
 
     #[test]
     fn custom_pieces() {
         let mut engine = protochess_engine_rs::Engine::default();
 
         // Queen
-        engine.register_piecetype('a', MovementPatternExternal {
-            promotion_squares: None,
-            promo_vals: None,
+        engine.register_piecetype(&PieceDefinition {
+            id: 123,
+            char_rep: 'Q',
+            is_leader: false,
+            can_double_move: false,
+            can_castle: false,
+            promotion_squares: Bitboard::zero(),
+            promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
             attack_north: true,

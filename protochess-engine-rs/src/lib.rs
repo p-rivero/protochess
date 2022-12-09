@@ -21,11 +21,10 @@ mod searcher;
 pub mod utils;
 mod transposition_table;
 mod thread_handler;
-use std::collections::HashMap;
 use crate::piece::evaluator::Evaluator;
 use crate::types::*;
 use crate::searcher::Searcher;
-pub use crate::piece::MovementPatternExternal;
+pub use crate::piece::PieceDefinition;
 
 
 
@@ -67,7 +66,7 @@ impl State {
     
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
     /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
-    pub fn attempt_move(position: &mut Position, movegen: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<char>) -> bool {
+    pub fn attempt_move(position: &mut Position, movegen: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<PieceId>) -> bool {
         let from = to_index(x1, y1);
         let to = to_index(x2, y2);
 
@@ -76,7 +75,7 @@ impl State {
             if !movegen.is_move_legal(&mv, position) {
                 continue;
             }
-            if mv.get_promotion_char() != promotion {
+            if mv.get_promotion_piece() != promotion {
                 continue;
             }
             if mv.get_from() == from && mv.get_to() == to {
@@ -108,9 +107,10 @@ impl Game {
         self.current_position.set_bounds(BDimensions{ width, height }, bounds);
     }
 
-    pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
-                     valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, char)>) {
-        self.current_position = make_custom_position(movement_patterns, valid_squares, pieces);
+    // Set the state to a new custom position. Define the piece types, the valid squares, and the pieces on the board.
+    pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
+                     valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, PieceId)>) {
+        self.current_position = make_custom_position(piece_types, valid_squares, pieces);
     }
 
 
@@ -131,7 +131,7 @@ impl Game {
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn make_move(&mut self, move_generator: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<char>) -> bool {
+    pub fn make_move(&mut self, move_generator: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<PieceId>) -> bool {
         State::attempt_move(&mut self.current_position, move_generator, x1, y1, x2, y2, promotion)
     }
 
@@ -188,13 +188,13 @@ impl Engine {
     }
     
     /// Returns the character representation of the piece at the given coordinates
-    pub fn get_piece_at(&mut self, x: BCoord, y: BCoord) -> Option<char> {
-        self.state.position.piece_at(to_index(x, y)).map(|p| p.1.char_rep())
+    pub fn get_piece_at(&mut self, x: BCoord, y: BCoord) -> Option<PieceId> {
+        self.state.position.piece_at(to_index(x, y)).map(|p| p.get_piece_id())
     }
 
     /// Registers a custom piecetype for the current position
-    pub fn register_piecetype(&mut self, char_rep: char, mpe: MovementPatternExternal) {
-        self.state.position.register_piecetype(char_rep, mpe);
+    pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
+        self.state.position.register_piecetype(definition);
     }
 
     /// Adds a new piece on the board
@@ -209,7 +209,7 @@ impl Engine {
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
     /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
-    pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<char>) -> bool {
+    pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<PieceId>) -> bool {
         State::attempt_move(&mut self.state.position, &self.state.movegen, x1, y1, x2, y2, promotion)
     }
 
@@ -232,7 +232,7 @@ impl Engine {
     }
 
     /// Returns (fromx,fromy,tox,toy,promotion) if there is a move to be made
-    pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<char>)> {
+    pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<PieceId>)> {
         let best_move = Searcher::get_best_move(&self, depth);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, prom, _)) => Some((x1, y1, x2, y2, prom)),
@@ -250,7 +250,7 @@ impl Engine {
     }
 
     ///Returns ((fromX,fromY,toX,toY,promotion), depth)
-    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord, Option<char>), Depth)> {
+    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord, Option<PieceId>), Depth)> {
         let best_move = Searcher::get_best_move_timeout(&self, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, prom, depth)) => Some(((x1, y1, x2, y2, prom), depth)),
@@ -259,13 +259,13 @@ impl Engine {
     }
     
     // Unwraps a SearchResult into basic data types
-    fn process_move(&self, mv: &SearchResult) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<char>, Depth)> {
+    fn process_move(&self, mv: &SearchResult) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<PieceId>, Depth)> {
         match mv {
             // TODO: Use backup
             SearchResult::BestMove(best, depth, _backup) => {
                 let (x1, y1) = from_index(best.get_from());
                 let (x2, y2) = from_index(best.get_to());
-                let prom = best.get_promotion_char();
+                let prom = best.get_promotion_piece();
                 Some((x1, y1, x2, y2, prom, *depth))
             },
             SearchResult::Checkmate(losing_player) => {
@@ -298,9 +298,9 @@ impl Engine {
         self.state.position_in_check()
     }
 
-    pub fn set_state(&mut self, movement_patterns: HashMap<char, MovementPatternExternal>,
-                     valid_squares:Vec<(BCoord, BCoord)>, pieces: Vec<(Player, BCoord, BCoord, char)>) {
-        self.state.position = make_custom_position(movement_patterns, &valid_squares, &pieces)
+    pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
+                     valid_squares:Vec<(BCoord, BCoord)>, pieces: Vec<(Player, BCoord, BCoord, PieceId)>) {
+        self.state.position = make_custom_position(piece_types, &valid_squares, &pieces)
     }
 }
 

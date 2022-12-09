@@ -154,12 +154,7 @@ fn get_promotion_squares(position: &Position, piece: &Piece) -> Bitboard {
         }
         promotion_squares
     } else if piece_id >= BASE_ID_CUSTOM {
-        let mp = piece.get_movement();
-        if let Some(promotion_squares) = &mp.promotion_squares {
-            promotion_squares.clone()
-        } else {
-            Bitboard::zero()
-        }
+        piece.get_movement().promotion_squares.clone()
     } else {
         Bitboard::zero()
     }

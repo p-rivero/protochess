@@ -1,9 +1,8 @@
 use arrayvec::ArrayVec;
 use std::sync::Arc;
-use std::collections::HashMap;
 
-use crate::constants::piece_scores::{ID_ROOK, ID_PAWN, ID_KING, ID_QUEEN, ID_BISHOP, ID_KNIGHT};
-use crate::types::*;
+use crate::constants::piece_scores::*;
+use crate::{types::*, PieceDefinition};
 use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
 use crate::utils::{from_index, to_index};
@@ -13,7 +12,6 @@ pub use parse_fen::parse_fen;
 use position_properties::PositionProperties;
 
 use crate::piece::{Piece, PieceFactory, PieceId, PieceIdWithPlayer};
-use crate::MovementPatternExternal;
 
 mod position_properties;
 pub mod castle_rights;
@@ -48,10 +46,10 @@ impl Position {
     }
 
     /// Registers a new piece type for this position
-    pub fn register_piecetype(&mut self, char_rep: char, mpe: MovementPatternExternal) {
+    pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
         //Insert blank for all players
         for (i, piece_set) in self.pieces.iter_mut().enumerate() {
-            piece_set.custom.push(PieceFactory::blank_custom(i as Player, char_rep, mpe.clone()));
+            piece_set.custom.push(PieceFactory::blank_custom(definition.clone(), i as Player));
         }
     }
 
@@ -93,7 +91,7 @@ impl Position {
         match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt_index = mv.get_target();
-                let (_owner, captured_piece) = self.piece_at(capt_index).unwrap();
+                let captured_piece = self.piece_at(capt_index).unwrap();
                 new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
                 new_props.captured_piece = Some(captured_piece.get_full_id());
                 self.remove_piece(capt_index);
@@ -121,7 +119,7 @@ impl Position {
 
         let from = mv.get_from();
         let to = mv.get_to();
-        let from_piece = self.piece_at(from).unwrap().1;
+        let from_piece = self.piece_at(from).unwrap();
         let from_piece_type = from_piece.get_piece_id();
         let from_piece_new_pos_zobrist = from_piece.get_zobrist(to);
         new_props.zobrist_key ^= from_piece.get_zobrist(from);
@@ -138,7 +136,7 @@ impl Position {
                 new_props.promote_from = Some(from_piece_type);
                 self.remove_piece(to);
                 // Add new piece
-                let promote_to_pt = char_to_pieceid(mv.get_promotion_char().unwrap());
+                let promote_to_pt = mv.get_promotion_piece().unwrap();
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(promote_to_pt, my_player_num, to);
                 self.add_piece(my_player_num, promote_to_pt, to);
             },
@@ -270,13 +268,8 @@ impl Position {
         for y in (0..self.dimensions.height).rev() {
             return_str = format!("{} {} ", return_str, y);
             for x in 0..self.dimensions.width {
-                if let Some((player_num, piece)) = self.piece_at(to_index(x,y)) {
-                    // TODO: no need to check player_num
-                    if player_num == 0 {
-                        return_str.push(piece.char_rep().to_ascii_uppercase());
-                    } else {
-                        return_str.push(piece.char_rep().to_ascii_lowercase());
-                    }
+                if let Some(piece) = self.piece_at(to_index(x,y)) {
+                    return_str.push(piece.char_rep());
                 } else {
                     return_str.push('.');
                 }
@@ -293,7 +286,7 @@ impl Position {
     }
 
     /// Return piece for (owner, x, y, char)
-    pub fn pieces_as_tuples(&self) -> Vec<(Player, BCoord, BCoord, char)>{
+    pub fn pieces_as_tuples(&self) -> Vec<(Player, BCoord, BCoord, PieceId)>{
         let mut tuples = Vec::new();
         for (i, ps) in self.pieces.iter().enumerate() {
             for piece in ps.get_piece_refs() {
@@ -301,7 +294,7 @@ impl Position {
                 while !bb_copy.is_zero() {
                     let indx = bb_copy.lowest_one().unwrap();
                     let (x, y) = from_index(indx as BIndex);
-                    tuples.push((i as Player, x, y, piece.char_rep()));
+                    tuples.push((i as Player, x, y, piece.get_piece_id()));
                     bb_copy.clear_bit(indx);
                 }
             }
@@ -326,14 +319,16 @@ impl Position {
 
     ///pieces(owner, index, PieceType)
     pub(crate) fn custom(dims: BDimensions, bounds: Bitboard,
-                  movement_patterns: HashMap<char, MovementPatternExternal>,
+                  piece_types: &Vec<PieceDefinition>,
                   pieces: Vec<(Player, BIndex, PieceId)>) -> Position
     {
+        Position::assert_all_players_have_leader(piece_types, &pieces);
+        
         let mut pos = parse_fen(String::from(fen::EMPTY));
         pos.dimensions = dims;
         pos.bounds = bounds;
-        for (chr, mpe) in movement_patterns {
-            pos.register_piecetype(chr, mpe);
+        for definition in piece_types {
+            pos.register_piecetype(definition);
         }
 
         for (owner, index, piece_type) in pieces {
@@ -341,16 +336,37 @@ impl Position {
         }
         pos
     }
+    fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) {
+        let mut leader_pieces = Vec::new();
+        for definition in piece_types {
+            if definition.is_leader {
+                leader_pieces.push(definition.id);
+            }
+        }
+        // The number of players is (max player number) + 1
+        let num_players = pieces.iter().map(|(p, _, _)| p).max().unwrap() + 1;
+        let mut player_has_leader = vec![false; num_players as usize];
+        for (owner, _, piece_type) in pieces {
+            if leader_pieces.contains(piece_type) {
+                player_has_leader[*owner as usize] = true;
+            }
+        }
+        for (i, has_leader) in player_has_leader.iter().enumerate() {
+            if !has_leader {
+                panic!("Player {} does not have a leader piece", i);
+            }
+        }
+    }
 
     pub fn get_zobrist(&self) -> u64 {
         self.properties.zobrist_key
     }
 
     /// Returns tuple (player_num, Piece)
-    pub fn piece_at(&self, index: BIndex) -> Option<(Player, &Piece)> {
-        for (i, ps) in self.pieces.iter().enumerate() {
-            if let Some(c) = ps.piece_at(index) {
-                return Some((i as Player, c));
+    pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {
+        for ps in &self.pieces {
+            if let Some(piece) = ps.piece_at(index) {
+                return Some(piece);
             }
         }
         None
@@ -366,7 +382,7 @@ impl Position {
 
     /// Returns bitoard of piece at index
     pub fn piece_bb_at(&self, index: BIndex) -> Option<&Bitboard> {
-        if let Some((_num, piece)) = self.piece_at(index) {
+        if let Some(piece) = self.piece_at(index) {
             return Some(&piece.bitboard)
         }
         None

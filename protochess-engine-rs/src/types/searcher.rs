@@ -1,5 +1,6 @@
 use super::Move;
 
+// Class for storing the value of a position, must allow negative values
 pub type Centipawns = i32;
 
 pub enum SearchError {

@@ -1,4 +1,5 @@
 use std::fmt;
+use crate::piece::PieceId;
 use crate::utils::{to_rank_file, from_index};
 use crate::types::bitboard::BIndex;
 
@@ -25,11 +26,11 @@ pub struct Move {
     ///24-27 : movetype (see MoveType above)
     move_fields: u32, 
     // Promotion piece
-    promotion: Option<char>
+    promotion: Option<PieceId>
 }
 
 impl Move {
-    pub fn new(from: BIndex, to: BIndex, target_loc: Option<BIndex>, move_type: MoveType, promotion: Option<char>) -> Move {
+    pub fn new(from: BIndex, to: BIndex, target_loc: Option<BIndex>, move_type: MoveType, promotion: Option<PieceId>) -> Move {
         let target = target_loc.unwrap_or(0);
         Move {
             move_fields: (from as u32) | (to as u32) << 8 | (target as u32) << 16 | (move_type as u32) << 24,
@@ -76,7 +77,7 @@ impl Move {
         match_move_type!(Quiet, Capture, KingsideCastle, QueensideCastle, Promotion, PromotionCapture, Null)
     }
 
-    pub fn get_promotion_char(&self) -> Option<char> {
+    pub fn get_promotion_piece(&self) -> Option<PieceId> {
         self.promotion
     }
 }

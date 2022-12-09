@@ -97,8 +97,8 @@ impl Evaluator {
         const CAPTURE_BASE_SCORE: Centipawns = 10000;
         const KILLERMOVE_SCORE: Centipawns = 9000;
         if mv.is_capture() {
-            let attacker = position.piece_at(mv.get_from()).unwrap().1;
-            let victim = position.piece_at(mv.get_target()).unwrap().1;
+            let attacker = position.piece_at(mv.get_from()).unwrap();
+            let victim = position.piece_at(mv.get_target()).unwrap();
 
             let attack_score = self.get_material_score(attacker);
             let victim_score = self.get_material_score(victim);

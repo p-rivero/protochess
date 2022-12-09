@@ -1,14 +1,12 @@
-use std::collections::HashMap;
-
-use crate::types::{Player, BCoord, Bitboard, BDimensions, char_to_pieceid};
+use crate::types::{Player, BCoord, Bitboard, BDimensions};
+use crate::piece::PieceId;
 use super::to_index;
-use crate::{Position, MovementPatternExternal};
+use crate::{Position, PieceDefinition};
 
 
-pub fn make_custom_position(movement_patterns: HashMap<char, MovementPatternExternal>,
-    valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, char)>) -> Position
+pub fn make_custom_position(piece_types: &Vec<PieceDefinition>,
+    valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, PieceId)>) -> Position
 {
-    assert!(each_owner_contains_k(&pieces));
     let mut width = 0;
     let mut height = 0;
     let mut bounds = Bitboard::zero();
@@ -19,26 +17,7 @@ pub fn make_custom_position(movement_patterns: HashMap<char, MovementPatternExte
     }
 
     let pieces = pieces.into_iter()
-        .map(|(owner, x, y, pce_chr)| (*owner, to_index(*x, *y), char_to_pieceid(*pce_chr)))
+        .map(|(owner, x, y, piece)| (*owner, to_index(*x, *y), *piece))
         .collect();
-    Position::custom(BDimensions{width, height}, bounds, movement_patterns, pieces)
-}
-
-fn each_owner_contains_k(vec: &Vec<(Player, BCoord, BCoord, char)>) -> bool {
-    let mut num_players = 0;
-    for (owner, _, _, _) in vec {
-        if *owner >= num_players {
-            num_players = owner + 1;
-        }
-    }
-    let mut has_k = vec![false; num_players as usize];
-    for (owner, _, _, pce_char) in vec {
-        if pce_char.to_ascii_lowercase() == 'k' {
-            has_k[*owner as usize] = true;
-        }
-    }
-    for k in has_k {
-        if !k { return false; }
-    }
-    true
+    Position::custom(BDimensions{width, height}, bounds, piece_types, pieces)
 }
