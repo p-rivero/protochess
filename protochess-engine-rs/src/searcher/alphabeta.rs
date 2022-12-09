@@ -242,7 +242,7 @@ impl Searcher {
 
     #[inline]
     fn update_killers(&mut self, depth: Depth, mv: Move) {
-        if !mv.get_is_capture() {
+        if !mv.is_capture() {
             if mv != self.killer_moves[depth as usize][0] && mv != self.killer_moves[depth as usize][1] {
                 self.killer_moves[depth as usize][1] = self.killer_moves[depth as usize][0];
                 self.killer_moves[depth as usize][0] = mv;
@@ -252,7 +252,7 @@ impl Searcher {
 
     #[inline]
     fn update_history_heuristic(&mut self, depth: Depth, mv:&Move) {
-        if !mv.get_is_capture() {
+        if !mv.is_capture() {
             self.history_moves
                 [mv.get_from() as usize]
                 [mv.get_to() as usize] += depth as Centipawns;

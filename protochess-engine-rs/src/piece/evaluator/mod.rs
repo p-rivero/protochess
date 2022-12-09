@@ -96,7 +96,7 @@ impl Evaluator {
     pub fn score_move(&mut self, history_moves: &[[Centipawns;256];256], killer_moves: &[Move;2], position: &mut Position, mv: &Move) -> Centipawns {
         const CAPTURE_BASE_SCORE: Centipawns = 10000;
         const KILLERMOVE_SCORE: Centipawns = 9000;
-        if mv.get_is_capture() {
+        if mv.is_capture() {
             let attacker = position.piece_at(mv.get_from()).unwrap().1;
             let victim = position.piece_at(mv.get_target()).unwrap().1;
 

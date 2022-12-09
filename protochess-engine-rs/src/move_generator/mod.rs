@@ -37,8 +37,8 @@ impl MoveGenerator {
 
     ///Iterator that yields only capture moves
     pub fn get_capture_moves(&self, position:&mut Position) -> impl Iterator<Item=Move> {
-        self.get_classical_pseudo_moves(position).filter(|x| x.get_is_capture())
-            .chain(self.get_custom_psuedo_moves(position).filter(|x| x.get_is_capture()))
+        self.get_classical_pseudo_moves(position).filter(|x| x.is_capture())
+            .chain(self.get_custom_psuedo_moves(position).filter(|x| x.is_capture()))
     }
 
     /// Iterator that yields pseudo-legal moves from a position
@@ -425,7 +425,7 @@ impl MoveGenerator {
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
             // TODO: Allow custom pieces to capture kings
-            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
+            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
                 in_check = true;
                 break;
             }
@@ -452,7 +452,7 @@ impl MoveGenerator {
         //Custom pieces
         for mv in self.get_custom_psuedo_moves(position)  {
             // TODO: Allow custom pieces to capture kings
-            if mv.get_is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
+            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().1.get_piece_id() == ID_KING {
                 legality = false;
                 break;
             }
@@ -472,25 +472,5 @@ impl MoveGenerator {
             nodes += 1;
         }
         nodes
-    }
-}
-
-
-#[cfg(test)]
-mod eval_test {
-    use crate::parse_fen;
-    use crate::move_generator::MoveGenerator;
-
-    #[test]
-    fn capture_moves() {
-        let mut pos = parse_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
-        let movegen = MoveGenerator::new();
-        println!("{}",pos.get_zobrist());
-        println!("{}", movegen.in_check(&mut pos));
-        println!("{}",pos.get_zobrist());
-        for mv in movegen.get_capture_moves(&mut pos) {
-            println!("{}", mv);
-            assert!(mv.get_is_capture());
-        }
     }
 }

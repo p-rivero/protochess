@@ -1,57 +1,40 @@
 use std::fmt;
 use crate::utils::{to_rank_file, from_index};
-
 use crate::types::bitboard::BIndex;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum MoveType {
-    Quiet,
-    Capture,
-    QueensideCastle,
-    KingsideCastle,
-    Promotion,
-    PromotionCapture,
-    Null,
+    // The least significant bit is used to indicate capture
+    Quiet = 0b0000,
+    Capture = 0b0001,
+    KingsideCastle = 0b0010,
+    // Skip 0b0011 because there is no KingsideCastleCapture
+    QueensideCastle = 0b0100,
+    // Skip 0b0101 because there is no QueensideCastleCapture
+    Promotion = 0b0110,
+    PromotionCapture = 0b0111,
+    Null = 0b1000,
 }
 
-/// Stores a move in a u32
-///0-7:   from index:u8
-///8-15:  to index:u8
-///16-23: target index:u8
-///24-26 : movetype
-/// 000 = quiet
-/// 001 = capture
-/// 010 = castle
-/// 011 = promotion
-/// 100 = promotion-capture
 #[derive(PartialEq, Copy, Clone, Debug)]
-pub struct Move(u32, Option<char>);
+pub struct Move {
+    /// Stores a move in a u32
+    ///0-7:   from index:u8
+    ///8-15:  to index:u8
+    ///16-23: target index:u8
+    ///24-27 : movetype (see MoveType above)
+    move_fields: u32, 
+    // Promotion piece
+    promotion: Option<char>
+}
 
 impl Move {
-    pub fn new(from: BIndex, to: BIndex, target_loc: Option<BIndex>, move_type:MoveType, promo:Option<char>) -> Move{
-        Move(
-            (from as u32)
-                | (to as u32) << 8u32
-                |
-                {
-                    if let Some(tl) = target_loc {
-                        (tl as u32) << 16u32
-                    } else {
-                        0
-                    }
-                }
-                |
-                match move_type {
-                    MoveType::Quiet => {0}
-                    MoveType::Capture => {1u32 << 24}
-                    MoveType::KingsideCastle => {2u32 << 24}
-                    MoveType::QueensideCastle => {3u32 << 24}
-                    MoveType::Promotion => {4u32 << 24}
-                    MoveType::PromotionCapture => {5u32 << 24}
-                    MoveType::Null => {6u32 << 24}
-                },
-            promo
-        )
+    pub fn new(from: BIndex, to: BIndex, target_loc: Option<BIndex>, move_type: MoveType, promotion: Option<char>) -> Move {
+        let target = target_loc.unwrap_or(0);
+        Move {
+            move_fields: (from as u32) | (to as u32) << 8 | (target as u32) << 16 | (move_type as u32) << 24,
+            promotion
+        }
     }
 
     pub fn null() -> Move {
@@ -63,36 +46,38 @@ impl Move {
     }
 
     pub fn get_from(&self) -> BIndex{
-        (self.0 & (BIndex::MAX as u32)) as BIndex
+        (self.move_fields & (BIndex::MAX as u32)) as BIndex
     }
 
     pub fn get_to(&self) -> BIndex{
-        ((self.0 >> 8) & (BIndex::MAX as u32)) as BIndex
+        ((self.move_fields >> 8) & (BIndex::MAX as u32)) as BIndex
+    }
+    
+    pub fn get_target(&self) -> BIndex {
+        ((self.move_fields >> 16) & (BIndex::MAX as u32)) as BIndex
     }
 
-    pub fn get_is_capture(&self) -> bool{
-        ((self.0 >> 24) & 1) != 0u32
+    pub fn is_capture(&self) -> bool {
+        // The least significant bit of the move type is used to indicate capture
+        ((self.move_fields >> 24) & 1) != 0
     }
 
     pub fn get_move_type(&self) -> MoveType {
-        match &self.0 >> 24 & 7u32 {
-            0 => { MoveType::Quiet }
-            1 => { MoveType::Capture }
-            2 => { MoveType::KingsideCastle }
-            3 => { MoveType::QueensideCastle }
-            4 => { MoveType::Promotion }
-            5 => { MoveType::PromotionCapture }
-            6 => { MoveType::Null }
-            _ => { MoveType::Quiet }
+        // Output a match statement that maps from "x if x == MoveType::XX as u32" to "MoveType::XX"
+        macro_rules! match_move_type {
+            ($($x:ident),*) => {
+                match self.move_fields >> 24 {
+                    // For each argument x, generate a line of the match
+                    $( x if x == MoveType::$x as u32 => { MoveType::$x } )*
+                    _ => { panic!("Invalid move type") }
+                }
+            }
         }
+        match_move_type!(Quiet, Capture, KingsideCastle, QueensideCastle, Promotion, PromotionCapture, Null)
     }
 
     pub fn get_promotion_char(&self) -> Option<char> {
-        self.1
-    }
-
-    pub fn get_target(&self) -> BIndex {
-        ((self.0 >> 16) & (BIndex::MAX as u32)) as BIndex
+        self.promotion
     }
 }
 

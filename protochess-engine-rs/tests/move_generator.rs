@@ -3,7 +3,7 @@ mod move_generator_test {
     use protochess_engine_rs::move_generator::attack_tables::AttackTables;
     use protochess_engine_rs::move_generator::MoveGenerator;
     use protochess_engine_rs::position::parse_fen;
-    use protochess_engine_rs::types::Bitboard;
+    use protochess_engine_rs::types::{Bitboard, Move, MoveType};
 
     #[test]
     fn capture_moves() {
@@ -14,7 +14,7 @@ mod move_generator_test {
         println!("{}",pos.get_zobrist());
         for mv in movegen.get_capture_moves(&mut pos) {
             println!("{}", mv);
-            assert!(mv.get_is_capture());
+            assert!(mv.is_capture());
         }
     }
 
@@ -28,5 +28,28 @@ mod move_generator_test {
         // let rankatt = _attacktb.get_rank_attack(2,&bb);
         // println!("{}", to_string(&rankatt));
 
+    }
+    
+    #[test]
+    fn test_move_type() {
+        let mv = Move::new(0xAB, 0xCD, Some(0xEF), MoveType::Capture, Some('a'));
+        assert_eq!(mv.get_from(), 0xAB);
+        assert_eq!(mv.get_to(), 0xCD);
+        assert_eq!(mv.get_target(), 0xEF);
+        assert_eq!(mv.get_move_type(), MoveType::Capture);
+        assert_eq!(mv.is_capture(), true);
+        assert_eq!(mv.is_null(), false);
+        assert_eq!(mv.get_promotion_char(), Some('a'));
+        
+        assert!(Move::null().is_null());
+        assert!(Move::null().get_promotion_char().is_none());
+        
+        assert!(Move::new(0, 0, None, MoveType::Quiet, None).is_capture() == false);
+        assert!(Move::new(0, 0, None, MoveType::Capture, None).is_capture() == true);
+        assert!(Move::new(0, 0, None, MoveType::KingsideCastle, None).is_capture() == false);
+        assert!(Move::new(0, 0, None, MoveType::QueensideCastle, None).is_capture() == false);
+        assert!(Move::new(0, 0, None, MoveType::Promotion, None).is_capture() == false);
+        assert!(Move::new(0, 0, None, MoveType::PromotionCapture, None).is_capture() == true);
+        assert!(Move::new(0, 0, None, MoveType::Null, None).is_capture() == false);
     }
 }
