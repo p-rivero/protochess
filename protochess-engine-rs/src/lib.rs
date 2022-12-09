@@ -7,7 +7,7 @@ use thread_handler::ThreadHandler;
 use utils::custom_position::make_custom_position;
 
 pub use crate::position::Position;
-pub use crate::move_generator::MoveGenerator;
+pub use crate::move_generator::MoveGen;
 use crate::position::parse_fen;
 use crate::utils::{to_index, from_index};
 
@@ -27,129 +27,9 @@ use crate::searcher::Searcher;
 pub use crate::piece::PieceDefinition;
 
 
-
-#[derive(Clone)]
-pub struct State {
-    pub position: Position,
-    pub movegen: MoveGenerator,
-    pub(crate) eval: Evaluator,
-}
-
-impl State {
-    pub fn new(position: Position) -> State {
-        State {
-            movegen: MoveGenerator::new(),
-            eval: Evaluator::new(),
-            position,
-        }
-    }
-    
-    #[inline(always)]
-    pub fn get_score(&mut self) -> Centipawns {
-        self.eval.evaluate(&mut self.position, &self.movegen)
-    }
-    
-    #[inline(always)]
-    pub fn position_in_check(&mut self) -> bool {
-        self.movegen.in_check(&mut self.position)
-    }
-    
-    #[inline(always)]
-    fn legal_moves(&mut self) -> Vec<((BCoord, BCoord), (BCoord, BCoord))> {
-        self.movegen.get_legal_moves_as_tuples(&mut self.position)
-    }
-    
-    #[inline(always)]
-    pub fn is_move_legal(&mut self, mv: &Move) -> bool {
-        self.movegen.is_move_legal(mv, &mut self.position)
-    }
-    
-    /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
-    pub fn attempt_move(position: &mut Position, movegen: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<PieceId>) -> bool {
-        let from = to_index(x1, y1);
-        let to = to_index(x2, y2);
-
-        let moves = movegen.get_pseudo_moves(position);
-        for mv in moves {
-            if !movegen.is_move_legal(&mv, position) {
-                continue;
-            }
-            if mv.get_promotion_piece() != promotion {
-                continue;
-            }
-            if mv.get_from() == from && mv.get_to() == to {
-                position.make_move(mv);
-                return true
-            }
-        }
-        false
-    }
-}
-
-
-pub struct Game {
-    pub current_position: Position,
-}
-
-impl Game {
-    pub fn default() -> Game {
-        Game {
-            current_position: Position::default(),
-        }
-    }
-
-    pub fn set_bounds(&mut self, width: BCoord, height: BCoord, valid_squares:Vec<(BCoord, BCoord)>) {
-        let mut bounds = Bitboard::zero();
-        for square in valid_squares {
-            bounds.set_bit_at(square.0, square.1);
-        }
-        self.current_position.set_bounds(BDimensions{ width, height }, bounds);
-    }
-
-    // Set the state to a new custom position. Define the piece types, the valid squares, and the pieces on the board.
-    pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
-                     valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, PieceId)>) {
-        self.current_position = make_custom_position(piece_types, valid_squares, pieces);
-    }
-
-
-    pub fn get_width(&self) -> BCoord {
-        self.current_position.dimensions.width
-    }
-
-    pub fn get_height(&self) -> BCoord {
-        self.current_position.dimensions.height
-    }
-
-    pub fn to_string(&mut self) -> String {
-        self.current_position.to_string()
-    }
-
-    pub fn get_zobrist(&self) -> u64 {
-        self.current_position.get_zobrist()
-    }
-
-    /// Performs a move from (x1, y1) to (x2, y2) on the current board position
-    pub fn make_move(&mut self, move_generator: &MoveGenerator, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<PieceId>) -> bool {
-        State::attempt_move(&mut self.current_position, move_generator, x1, y1, x2, y2, promotion)
-    }
-
-    /// Undoes the most recent move on the current board position
-    pub fn undo(&mut self) {
-        self.current_position.unmake_move();
-    }
-
-    pub fn get_whos_turn(&self) -> Player {
-        self.current_position.whos_turn
-    }
-
-}
-
-
 /// Starting point for the engine
 pub struct Engine{
-    pub state: State,
+    pub position: Position,
     pub thread_handler: ThreadHandler,
 }
 
@@ -157,19 +37,19 @@ impl Engine {
     /// Initializes a new engine
     pub fn default() -> Engine {
         Engine{
-            state: State::new(Position::default()),
+            position: Position::default(),
             thread_handler: ThreadHandler::std_threads(),
         }
     }
     pub fn default_wasm() -> Engine {
         Engine{
-            state: State::new(Position::default()),
+            position: Position::default(),
             thread_handler: ThreadHandler::wasm_threads(),
         }
     }
     pub fn from_fen(fen: String) -> Engine {
         Engine{
-            state: State::new(parse_fen(fen)),
+            position: parse_fen(fen),
             thread_handler: ThreadHandler::std_threads(),
         }
     }
@@ -179,49 +59,77 @@ impl Engine {
 
     /// Returns the zobrist hash key for the current position
     pub fn get_zobrist(&self) -> u64 {
-        self.state.position.get_zobrist()
+        self.position.get_zobrist()
     }
 
     /// Returns the score of the current position for the side to move
     pub fn get_score(&mut self) -> Centipawns {
-        self.state.get_score()
+        Evaluator::evaluate(&mut self.position)
     }
     
     /// Returns the character representation of the piece at the given coordinates
     pub fn get_piece_at(&mut self, x: BCoord, y: BCoord) -> Option<PieceId> {
-        self.state.position.piece_at(to_index(x, y)).map(|p| p.get_piece_id())
+        self.position.piece_at(to_index(x, y)).map(|p| p.get_piece_id())
     }
 
     /// Registers a custom piecetype for the current position
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
-        self.state.position.register_piecetype(definition);
+        self.position.register_piecetype(definition);
     }
 
     /// Adds a new piece on the board
     pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord) {
-        self.state.position.public_add_piece(owner, piece_type, to_index(x,y));
+        self.position.public_add_piece(owner, piece_type, to_index(x,y));
     }
 
     /// Removes a piece on the board, if it exists
     pub fn remove_piece(&mut self, index: BIndex) {
-        self.state.position.public_remove_piece(index);
+        self.position.public_remove_piece(index);
     }
 
     /// Performs a move from (x1, y1) to (x2, y2) on the current board position
     /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
     pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<PieceId>) -> bool {
-        State::attempt_move(&mut self.state.position, &self.state.movegen, x1, y1, x2, y2, promotion)
+        let from = to_index(x1, y1);
+        let to = to_index(x2, y2);
+
+        let moves = MoveGen::get_pseudo_moves(&mut self.position);
+        for mv in moves {
+            if !MoveGen::is_move_legal(&mv, &mut self.position) {
+                continue;
+            }
+            if mv.get_promotion_piece() != promotion {
+                continue;
+            }
+            if mv.get_from() == from && mv.get_to() == to {
+                self.position.make_move(mv);
+                return true
+            }
+        }
+        false
     }
 
     /// Undoes the most recent move on the current board position
     pub fn undo(&mut self) {
-        self.state.position.unmake_move();
+        self.position.unmake_move();
     }
 
     pub fn to_string(&mut self) -> String {
-        self.state.position.to_string()
+        self.position.to_string()
     }
-
+    
+    pub fn get_whos_turn(&self) -> Player {
+        self.position.whos_turn
+    }
+    
+    pub fn get_width(&self) -> BCoord {
+        self.position.dimensions.width
+    }
+    
+    pub fn get_height(&self) -> BCoord {
+        self.position.dimensions.height
+    }
+    
     ///Calculates and plays the best move found up to a given depth
     pub fn play_best_move(&mut self, depth: Depth) -> bool {
         let best_move = Searcher::get_best_move(&self, depth);
@@ -284,7 +192,7 @@ impl Engine {
     }
 
     pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<(BCoord, BCoord)>{
-        let moves = self.state.legal_moves();
+        let moves = MoveGen::get_legal_moves_as_tuples(&mut self.position);
         let mut possible_moves = Vec::new();
         for (from, to) in moves {
             if from == (x, y) {
@@ -295,12 +203,12 @@ impl Engine {
     }
 
     pub fn to_move_in_check(&mut self) -> bool {
-        self.state.position_in_check()
+        MoveGen::in_check(&mut self.position)
     }
 
     pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
                      valid_squares:Vec<(BCoord, BCoord)>, pieces: Vec<(Player, BCoord, BCoord, PieceId)>) {
-        self.state.position = make_custom_position(piece_types, &valid_squares, &pieces)
+        self.position = make_custom_position(piece_types, &valid_squares, &pieces)
     }
 }
 

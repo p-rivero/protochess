@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::sync::atomic::{Ordering::Relaxed};
 use instant::{Instant, Duration};
 
-use crate::{Engine, State};
+use crate::{Engine, Position};
 use crate::types::{Move, Depth, SearchResult, SearchError};
 
 use super::{Searcher, init_globals, GLOBAL_DEPTH, SEARCH_ID, CURRENT_POOL_ID};
@@ -28,11 +28,11 @@ impl Searcher {
         let mut handles = VecDeque::with_capacity(num_threads as usize);
         for thread_id in 0..num_threads {
             // For each thread, create a local copy of the heuristics
-            let mut state_copy = engine.state.clone();
+            let mut pos_copy = engine.position.clone();
             let pool_id = unsafe { CURRENT_POOL_ID };
             let h = engine.thread_handler.spawn(move || {
                 let mut searcher = Searcher::new();
-                searcher.search_thread(thread_id, pool_id, num_threads, &mut state_copy, max_depth, time_sec)
+                searcher.search_thread(thread_id, pool_id, num_threads, &mut pos_copy, max_depth, time_sec)
             });
             handles.push_back(h);
         }
@@ -87,7 +87,7 @@ impl Searcher {
     }
     
     // Run for some time, then return the best move, its score, and the depth
-    fn search_thread(&mut self, thread_id: u32, pool_id: u32, num_threads: u32, state: &mut State, max_depth: Depth, time_sec: u64) -> SearchResult {
+    fn search_thread(&mut self, thread_id: u32, pool_id: u32, num_threads: u32, pos: &mut Position, max_depth: Depth, time_sec: u64) -> SearchResult {
         let end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut best_move: Move = Move::null();
@@ -100,7 +100,7 @@ impl Searcher {
         loop {
             self.nodes_searched = 0;
             self.current_searching_depth = local_depth;
-            match super::alphabeta(self, state, local_depth, &end_time) {
+            match super::alphabeta(self, pos, local_depth, &end_time) {
                 Ok(_) => {
                     // This should not happen, scores are only passad between inner nodes
                     panic!("Search thread returned a score instead of a move");
@@ -124,7 +124,7 @@ impl Searcher {
                 },
                 Err(SearchError::Checkmate) => {
                     assert!(best_depth == 0);
-                    let losing_player = state.position.whos_turn;
+                    let losing_player = pos.whos_turn;
                     return SearchResult::Checkmate(losing_player);
                 },
                 Err(SearchError::Stalemate) => {

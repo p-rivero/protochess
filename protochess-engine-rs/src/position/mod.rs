@@ -1,4 +1,3 @@
-use arrayvec::ArrayVec;
 use std::sync::Arc;
 
 use crate::constants::piece_scores::*;
@@ -29,10 +28,9 @@ lazy_static! {
 #[derive(Clone, Debug)]
 pub struct Position {
     pub dimensions: BDimensions,
-    pub bounds: Bitboard, //Bitboard representing the boundaries
     pub num_players: Player,
     pub whos_turn: Player,
-    pub pieces:ArrayVec<[PieceSet;4]>, //pieces[0] = white's pieces, pieces[1] black etc
+    pub pieces:Vec<PieceSet>, //pieces[0] = white's pieces, pieces[1] black etc
     pub occupied: Bitboard,
     //Properties relating only to the current position
     // Typically hard-to-recover properties, like castling
@@ -48,14 +46,11 @@ impl Position {
     /// Registers a new piece type for this position
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
         //Insert blank for all players
+        let dims_copy = self.dimensions.clone();
         for (i, piece_set) in self.pieces.iter_mut().enumerate() {
-            piece_set.custom.push(PieceFactory::make_custom(definition.clone(), i as Player));
+            let new_piece = PieceFactory::make_custom(definition.clone(), i as Player, &dims_copy);
+            piece_set.custom.push(new_piece);
         }
-    }
-
-    pub(crate) fn set_bounds(&mut self, dims: BDimensions, bounds: Bitboard) {
-        self.dimensions = dims;
-        self.bounds = bounds;
     }
 
 
@@ -306,7 +301,7 @@ impl Position {
         let mut squares = Vec::new();
         for x in 0..self.dimensions.width {
             for y in 0..self.dimensions.height {
-                if self.xy_in_bounds(x, y) {
+                if self.in_bounds(x, y) {
                     let char_rep = if (x + y) % 2 == 0 {'b'} else {'w'};
                     squares.push((x, y, char_rep));
                 } else {
@@ -318,7 +313,7 @@ impl Position {
     }
 
     ///pieces(owner, index, PieceType)
-    pub(crate) fn custom(dims: BDimensions, bounds: Bitboard,
+    pub(crate) fn custom(dims: BDimensions,
                   piece_types: &Vec<PieceDefinition>,
                   pieces: Vec<(Player, BIndex, PieceId)>) -> Position
     {
@@ -326,7 +321,6 @@ impl Position {
         
         let mut pos = parse_fen(String::from(fen::EMPTY));
         pos.dimensions = dims;
-        pos.bounds = bounds;
         for definition in piece_types {
             pos.register_piecetype(definition);
         }
@@ -395,11 +389,8 @@ impl Position {
     }
 
     /// Returns if the point is in bounds
-    pub fn xy_in_bounds(&self, x: BCoord, y: BCoord) -> bool {
-        if x < self.dimensions.width && y < self.dimensions.height {
-            return self.bounds.get_bit_at(x, y)
-        }
-        false
+    pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {
+        return self.dimensions.in_bounds(x, y);
     }
 
     

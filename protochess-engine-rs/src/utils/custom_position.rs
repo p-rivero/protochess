@@ -19,5 +19,5 @@ pub fn make_custom_position(piece_types: &Vec<PieceDefinition>,
     let pieces = pieces.into_iter()
         .map(|(owner, x, y, piece)| (*owner, to_index(*x, *y), *piece))
         .collect();
-    Position::custom(BDimensions{width, height}, bounds, piece_types, pieces)
+    Position::custom(BDimensions{width, height, bounds}, piece_types, pieces)
 }

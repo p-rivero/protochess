@@ -1,5 +1,5 @@
 //Pieces that a player has
-use crate::types::{Bitboard, BIndex, Player};
+use crate::types::{Bitboard, BIndex, Player, BDimensions};
 use crate::piece::{Piece, PieceFactory};
 
 use crate::constants::piece_scores::*;
@@ -20,15 +20,16 @@ pub struct PieceSet {
 }
 
 impl PieceSet {
-    pub fn new(player_num: Player) -> PieceSet {
+    // TODO: Once the hardcoded pieces are removed, remove the BDimensions parameter
+    pub fn new(player_num: Player, dims: &BDimensions) -> PieceSet {
         PieceSet {
             occupied: Bitboard::zero(),
-            king: PieceFactory::make_king(ID_KING, player_num),
-            queen: PieceFactory::make_queen(ID_QUEEN, player_num),
-            bishop: PieceFactory::make_bishop(ID_BISHOP, player_num),
-            knight: PieceFactory::make_knight(ID_KNIGHT, player_num),
-            rook: PieceFactory::make_rook(ID_ROOK, player_num),
-            pawn: PieceFactory::make_pawn(ID_PAWN, player_num),
+            king: PieceFactory::make_king(ID_KING, player_num, dims),
+            queen: PieceFactory::make_queen(ID_QUEEN, player_num, dims),
+            bishop: PieceFactory::make_bishop(ID_BISHOP, player_num, dims),
+            knight: PieceFactory::make_knight(ID_KNIGHT, player_num, dims),
+            rook: PieceFactory::make_rook(ID_ROOK, player_num, dims),
+            pawn: PieceFactory::make_pawn(ID_PAWN, player_num, dims),
             custom: Vec::new(),
             player_num
         }

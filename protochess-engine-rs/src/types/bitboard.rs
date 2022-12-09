@@ -7,10 +7,21 @@ use crate::utils::to_index;
 pub type BIndex = u8; // 256 positions in 16x16 board
 pub type BCoord = u8; // Coordinate the board: [0..15]
 
+// Store bounds of the board (bit set to 1 for valid positions) and dimensions (width and height)
 #[derive(Clone, Debug)]
 pub struct BDimensions {
     pub width: BCoord,
     pub height: BCoord,
+    pub bounds: Bitboard,
+}
+
+impl BDimensions {
+    pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {
+        if x < self.width && y < self.height {
+            return self.bounds.get_bit_at(x, y)
+        }
+        false
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,14 +1,18 @@
-use crate::types::{Player, Bitboard, BIndex};
+use crate::types::{Player, Bitboard, BIndex, Centipawns, BDimensions};
 
 pub type PieceId = u32;
 pub type PieceIdWithPlayer = u64;
 
 mod piece_definition;
 mod piece_factory;
+// TODO: Make private
 pub mod evaluator;
 
 pub use piece_factory::PieceFactory;
 pub use piece_definition::PieceDefinition;
+
+use evaluator::material_score::compute_material_score;
+use evaluator::positional_score::compute_piece_square_table;
 
 // Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
 #[derive(Clone, Debug)]
@@ -19,20 +23,30 @@ pub struct Piece {
     player_num: Player,
     // Zobrist hashes for this piece at each board index
     zobrist_hashes: Vec<u64>,
+    // Material score for this piece
+    material_score: Centipawns,
+    // Table of positional scores for this piece
+    piece_square_table: Vec<Centipawns>,
     // TODO: Make private
     pub bitboard: Bitboard, // Occupancy bitboard
 }
 
 impl Piece {
     // Don't use new() directly, use PieceFactory instead
-    fn new(definition: PieceDefinition, player_num: Player) -> Piece {
-        let id = definition.id;
-        Piece {
+    fn new(definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
+        let material_score = compute_material_score(&definition);
+        let zobrist_hashes = Piece::compute_zobrist(definition.id, player_num);
+        // TODO: Once the hardcoded pieces are removed, the piece_square_table can be computed directly
+        let mut new_piece = Piece {
             type_def: definition,
             player_num,
-            zobrist_hashes: Piece::compute_zobrist(id, player_num),
+            zobrist_hashes,
+            material_score,
+            piece_square_table: Vec::new(),
             bitboard: Bitboard::zero(),
-        }
+        };
+        new_piece.piece_square_table = compute_piece_square_table(&new_piece.type_def, dims, &new_piece);
+        new_piece
     }
     
     // Get the full id of this piece (piece type + player_num)
@@ -60,6 +74,12 @@ impl Piece {
         self.player_num
     }
     
+    // Returns true if this piece is a leader (king)
+    #[inline(always)]
+    pub fn is_leader(&self) -> bool {
+        self.type_def.is_leader
+    }
+    
     // Get the zobrist hash for this piece at the given index
     #[inline(always)]
     pub fn get_zobrist(&self, index: BIndex) -> u64 {
@@ -71,6 +91,34 @@ impl Piece {
     #[inline(always)]
     pub fn get_movement(&self) -> &PieceDefinition {
         &self.type_def
+    }
+    
+    // Get the material score for 1 unit of this piece
+    #[inline(always)]
+    pub fn get_material_score(&self) -> Centipawns {
+        self.material_score
+    }
+    
+    // Get the material score for all current units of this piece
+    pub fn get_material_score_all(&self) -> Centipawns {
+        self.material_score * self.bitboard.count_ones() as Centipawns
+    }
+    
+    // Get the positional score for 1 unit of this piece at the given index
+    pub fn get_positional_score(&self, index: BIndex) -> Centipawns {
+        self.piece_square_table[index as usize]
+    }
+    
+    // Get the positional score for all current units of this piece
+    pub fn get_positional_score_all(&self) -> Centipawns {
+        let mut bb_copy = self.bitboard.clone();
+        let mut score = 0;
+        while !bb_copy.is_zero() {
+            let index = bb_copy.lowest_one().unwrap();
+            score += self.piece_square_table[index as usize];
+            bb_copy.clear_bit(index);
+        }
+        score
     }
     
     // Helpers for getting the original id and the player_num from the id

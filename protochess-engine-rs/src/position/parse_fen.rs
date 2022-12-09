@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use arrayvec::ArrayVec;
-
 use crate::constants::fen;
 use crate::types::*;
 use crate::utils::to_index;
@@ -12,11 +10,16 @@ use super::position_properties::PositionProperties;
 use super::zobrist_table::ZobristTable;
 
 pub fn parse_fen(fen: String) -> Position {
-    let dims = BDimensions{ width: fen::BOARD_WIDTH, height: fen::BOARD_HEIGHT };
-
-    let mut wb_pieces = ArrayVec::<[_;4]>::new();
-    let mut w_pieces = PieceSet::new(0);
-    let mut b_pieces = PieceSet::new(1);
+    let mut bounds = Bitboard::zero();
+    for x in 0..8 {
+        for y in 0..8 {
+            bounds.set_bit_at(x,y);
+        }
+    }
+    let dims = BDimensions{ width: fen::BOARD_WIDTH, height: fen::BOARD_HEIGHT, bounds};
+    
+    let mut w_pieces = PieceSet::new(0, &dims);
+    let mut b_pieces = PieceSet::new(1, &dims);
 
     let mut x: BCoord = 0;
     let mut y: BCoord = 7;
@@ -161,25 +164,12 @@ pub fn parse_fen(fen: String) -> Position {
 
     properties.zobrist_key = zobrist_key;
 
-    wb_pieces.push(w_pieces);
-    wb_pieces.push(b_pieces);
-
-    let mut bounds = Bitboard::zero();
-    for x in 0..8 {
-        for y in 0..8 {
-            bounds.set_bit_at(x,y);
-        }
-    }
-
-    let pos = Position{
+    Position {
         whos_turn,
         num_players: 2,
         dimensions: dims,
-        pieces: wb_pieces,
+        pieces: vec![w_pieces, b_pieces],
         occupied,
-        bounds,
         properties: Arc::new(properties)
-    };
-
-  pos
+    }
 }

@@ -1,7 +1,7 @@
 use crate::constants::piece_scores::*;
-use crate::types::{Centipawns, BIndex, Bitboard, BCoord};
+use crate::types::{Centipawns, BIndex, Bitboard, BCoord, BDimensions};
 use crate::utils::{from_index, to_index, distance_to_one};
-use crate::{Position, MoveGenerator};
+use crate::{MoveGen, PieceDefinition};
 use crate::piece::Piece;
 
 const POSITION_BASE_MULT: Centipawns = 5;
@@ -9,26 +9,27 @@ const POSITION_EDGE_DIST_MULT: Centipawns = 5;
 const POSITION_PROMOTION_DIST_MULT: Centipawns = 7;
 
 /// Returns Vec of size 256, each with an integer representing # of moves possible at that location
-pub fn compute_piece_square_table(position: &Position, piece: &Piece, movegen: &MoveGenerator) -> Vec<Centipawns> {
+// TODO: Once the hardcoded pieces are removed, delete the Piece parameter
+pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions, piece: &Piece) -> Vec<Centipawns> {
     let mut return_vec = Vec::with_capacity(256);
-    let center_squares_bb = get_center_squares(position.dimensions.width, position.dimensions.height);
-    let promotion_squares_bb = get_promotion_squares(position, piece);
+    let center_squares_bb = get_center_squares(dims.width, dims.height);
+    let promotion_squares_bb = get_promotion_squares(mp, dims, piece);
     
     for index in 0..=BIndex::MAX {
         let (x, y) = from_index(index);
-        if !position.xy_in_bounds(x, y) {
+        if !dims.in_bounds(x, y) {
             return_vec.push(0);
             continue;
         }
-        let mut moves = get_moves_on_empty_board(movegen, index, position, piece, &position.bounds);
+        let mut moves = get_moves_on_empty_board(mp, index, dims, piece);
         moves = moves & center_squares_bb.to_owned();
         
         // 1 point for each move that lands on a center square
         let mut score = moves.count_ones() as Centipawns * POSITION_BASE_MULT;
         
         // 1 point for being 1 square away from the edge (prefer to occupy the center)
-        let delta_x = std::cmp::min(x, position.dimensions.width - x - 1);
-        let delta_y = std::cmp::min(y, position.dimensions.height - y - 1);
+        let delta_x = std::cmp::min(x, dims.width - x - 1);
+        let delta_y = std::cmp::min(y, dims.height - y - 1);
         
         let distance_from_edge = std::cmp::min(delta_x, delta_y);
         score += distance_from_edge as Centipawns * POSITION_EDGE_DIST_MULT;
@@ -72,31 +73,30 @@ fn get_center_squares(width: BCoord, height: BCoord) -> Bitboard {
 
 
 /// Returns the number of moves of a piecetype on an otherwise empty board
-/// Useful for evaluation
-fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &Position, piece: &Piece, bounds: &Bitboard) -> Bitboard {
+// TODO: Once the hardcoded pieces are removed, delete the Piece parameter
+fn get_moves_on_empty_board(mp: &PieceDefinition, index: BIndex, dims: &BDimensions, piece: &Piece) -> Bitboard {
     let (x, y) = from_index(index);
-    if !position.xy_in_bounds(x, y) {
+    if !dims.in_bounds(x, y) {
         return Bitboard::zero();
     }
     let zero = Bitboard::zero();
-    let walls = !&position.bounds;
+    let walls = !&dims.bounds;
     let mut moves = match piece.get_piece_id() {
-        ID_QUEEN => {movegen.attack_tables.get_queen_attack(index, &walls, &zero)}
-        ID_BISHOP => {movegen.attack_tables.get_bishop_attack(index, &walls, &zero)}
-        ID_ROOK => {movegen.attack_tables.get_rook_attack(index, &walls, &zero)}
-        ID_KNIGHT => {movegen.attack_tables.get_knight_attack(index, &walls, &zero)}
-        ID_KING => {movegen.attack_tables.get_king_attack(index, &walls, &zero)}
+        ID_QUEEN => {MoveGen::attack_tables().get_queen_attack(index, &walls, &zero)}
+        ID_BISHOP => {MoveGen::attack_tables().get_bishop_attack(index, &walls, &zero)}
+        ID_ROOK => {MoveGen::attack_tables().get_rook_attack(index, &walls, &zero)}
+        ID_KNIGHT => {MoveGen::attack_tables().get_knight_attack(index, &walls, &zero)}
+        ID_KING => {MoveGen::attack_tables().get_king_attack(index, &walls, &zero)}
         ID_PAWN => {
             if piece.player_num() == 0 {
-                movegen.attack_tables.get_north_pawn_attack(index, &walls, &Bitboard::all_ones())
+                MoveGen::attack_tables().get_north_pawn_attack(index, &walls, &Bitboard::all_ones())
             } else {
-                movegen.attack_tables.get_south_pawn_attack(index, &walls, &Bitboard::all_ones())
+                MoveGen::attack_tables().get_south_pawn_attack(index, &walls, &Bitboard::all_ones())
             }
         }
         _ => {
-            let mp = piece.get_movement();
 
-            let mut slides = movegen.attack_tables.get_sliding_moves_bb(
+            let mut slides = MoveGen::attack_tables().get_sliding_moves_bb(
                 index,
                 &walls,
                 mp.translate_north || mp.attack_north,
@@ -118,7 +118,7 @@ fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &P
                 }
 
                 let to = to_index(x2 as BCoord, y2 as BCoord);
-                if bounds.get_bit(to) {
+                if dims.bounds.get_bit(to) {
                     slides.set_bit(to);
                 }
             }
@@ -130,7 +130,7 @@ fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &P
                     }
                     let to = to_index(x2 as BCoord, y2 as BCoord);
                     //Out of bounds, next sliding moves can be ignored
-                    if !bounds.get_bit(to) {
+                    if !dims.bounds.get_bit(to) {
                         break;
                     }
                     slides.set_bit(to);
@@ -140,21 +140,23 @@ fn get_moves_on_empty_board(movegen: &MoveGenerator, index: BIndex, position: &P
         }
     };
     //Keep only in bounds
-    moves &= bounds;
+    moves &= &dims.bounds;
     moves
 }
 
-fn get_promotion_squares(position: &Position, piece: &Piece) -> Bitboard {
+// TODO: Once the hardcoded pieces are removed, delete the Piece parameter
+fn get_promotion_squares(mp: &PieceDefinition, dims: &BDimensions, piece: &Piece) -> Bitboard {
     let piece_id = piece.get_piece_id();
     if piece_id == ID_PAWN {
         let mut promotion_squares = Bitboard::zero();
-        let y = if piece.player_num() == 0 { position.dimensions.height - 1 } else { 0 };
-        for x in 0..position.dimensions.width {
+        let y = if piece.player_num() == 0 { dims.height - 1 } else { 0 };
+        for x in 0..dims.width {
             promotion_squares.set_bit_at(x, y);
         }
         promotion_squares
     } else if piece_id >= BASE_ID_CUSTOM {
-        piece.get_movement().promotion_squares.clone()
+        // Keep promotion squares in bounds
+        (&mp.promotion_squares) & (&dims.bounds)
     } else {
         Bitboard::zero()
     }

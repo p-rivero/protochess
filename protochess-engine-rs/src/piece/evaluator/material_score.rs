@@ -2,7 +2,7 @@ use super::super::PieceDefinition;
 use crate::types::Centipawns;
 
 /// Returns a score value for a piece, given its movement pattern
-pub fn score_movement_pattern(mp: &PieceDefinition) -> Centipawns {
+pub fn compute_material_score(mp: &PieceDefinition) -> Centipawns {
     // https://www.chessprogramming.org/Point_Value
     
     // This function is called only once, so it's worth it to implement a more complex scoring system

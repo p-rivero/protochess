@@ -44,7 +44,7 @@ mod custom_pieces {
         // Initial score should be 0
         assert_eq!(engine.get_score(), 0);
         // Add a queen to the board
-        engine.add_piece(0, 100 + 'a' as PieceId, 0, 3);
+        engine.add_piece(0, 123 as PieceId, 0, 3);
         let queen_material = 1040;
         let queen_position = 10;
         assert_eq!(engine.get_score(), queen_material + queen_position);

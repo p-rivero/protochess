@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod position_test {
     use protochess_engine_rs::Position;
-    use protochess_engine_rs::MoveGenerator;
+    use protochess_engine_rs::MoveGen;
     use protochess_engine_rs::position::castle_rights::CastleRights;
     use protochess_engine_rs::types::Move;
     
@@ -38,13 +38,12 @@ mod position_test {
     #[test]
     fn zobrist_equality() {
         let mut pos = Position::default();
-        let movegen = MoveGenerator::new();
         let zob_0 = pos.get_zobrist();
-        for mv in movegen.get_pseudo_moves(&mut pos) {
+        for mv in MoveGen::get_pseudo_moves(&mut pos) {
             pos.make_move(mv);
-            for mv in movegen.get_pseudo_moves(&mut pos) {
+            for mv in MoveGen::get_pseudo_moves(&mut pos) {
                 pos.make_move(mv);
-                for mv in movegen.get_pseudo_moves(&mut pos) {
+                for mv in MoveGen::get_pseudo_moves(&mut pos) {
                     pos.make_move(mv);
                     pos.unmake_move();
                 }
