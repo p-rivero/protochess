@@ -3,21 +3,17 @@ use instant::Instant;
 use crate::{Position, MoveGen};
 use crate::piece::evaluator::Evaluator;
 use crate::types::{Move, MoveType, Depth, SearchError, Centipawns};
-use crate::transposition_table::{Entry, EntryFlag};
 
 use super::Searcher;
+use super::transposition_table::{Entry, EntryFlag};
 
-
-// This file contains the single-threaded alpha-beta search algorithm, with its extensions and heuristics
-
-
-// Interface between lazy SMP algorithm and alphabeta
-pub(crate) fn alphabeta(searcher: &mut Searcher, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchError> {
-    // Use -MAX instead of MIN to avoid overflow when negating
-    searcher.alphabeta(pos, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
-}
 
 impl Searcher {
+    pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchError> {
+        // Use -MAX instead of MIN to avoid overflow when negating
+        self.alphabeta(pos, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
+    }
+    
     fn alphabeta(&mut self, pos: &mut Position, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearchError> {
         
         if depth <= 0 {

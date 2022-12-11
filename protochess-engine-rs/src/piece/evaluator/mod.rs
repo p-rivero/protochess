@@ -1,4 +1,3 @@
-use crate::piece::Piece;
 use crate::position::piece_set::PieceSet;
 use crate::position::Position;
 use crate::types::{Move, Centipawns};
@@ -22,7 +21,7 @@ impl Evaluator {
         let mut total_material_score: Centipawns = 0;
         
         for ps in position.pieces.iter() {
-            let material_score = Evaluator::get_material_score_for_pieceset(ps);
+            let material_score = ps.get_material_score();
             
             if ps.player_num == player_num {
                 score += material_score;
@@ -57,21 +56,6 @@ impl Evaluator {
         score
     }
 
-    fn get_material_score_for_pieceset(piece_set: &PieceSet) -> Centipawns {
-        let mut material_score = 0;
-        material_score += piece_set.king.bitboard.count_ones() as Centipawns * KING_SCORE;
-        material_score += piece_set.queen.bitboard.count_ones() as Centipawns * QUEEN_SCORE;
-        material_score += piece_set.rook.bitboard.count_ones() as Centipawns * ROOK_SCORE;
-        material_score += piece_set.knight.bitboard.count_ones() as Centipawns * KNIGHT_SCORE;
-        material_score += piece_set.bishop.bitboard.count_ones() as Centipawns * BISHOP_SCORE;
-        material_score += piece_set.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
-
-        for piece in &piece_set.custom {
-            let score = Evaluator::get_material_score(piece);
-            material_score += piece.bitboard.count_ones() as Centipawns * score;
-        }
-        material_score
-    }
 
     /// Scores a move on a position
     /// This is used for move ordering in order to search the moves with the most potential first
@@ -82,8 +66,8 @@ impl Evaluator {
             let attacker = position.piece_at(mv.get_from()).unwrap();
             let victim = position.piece_at(mv.get_target()).unwrap();
 
-            let attack_score = Evaluator::get_material_score(attacker);
-            let victim_score = Evaluator::get_material_score(victim);
+            let attack_score = attacker.get_material_score();
+            let victim_score = victim.get_material_score();
 
             return CAPTURE_BASE_SCORE + victim_score - attack_score
         }
@@ -94,24 +78,10 @@ impl Evaluator {
         }
     }
 
-    /// Returns the current material score of a piece
-    fn get_material_score(piece: &Piece) -> Centipawns {
-        let piece_type = piece.get_piece_id();
-        match piece_type {
-            ID_PAWN => { PAWN_SCORE }
-            ID_KNIGHT => { KNIGHT_SCORE }
-            ID_BISHOP => { BISHOP_SCORE }
-            ID_ROOK => { ROOK_SCORE }
-            ID_QUEEN => { QUEEN_SCORE }
-            ID_KING => { KING_SCORE }
-            _ => { piece.get_material_score() }
-        }
-    }
-
     /// Determines whether or not null move pruning can be performed for a Position
     pub fn can_do_null_move(position: &Position) -> bool {
-        Evaluator::get_material_score_for_pieceset(&position.pieces[position.whos_turn as usize])
-            > KING_SCORE + ROOK_SCORE
+        let piece_set = &position.pieces[position.whos_turn as usize];
+        piece_set.get_material_score() > KING_SCORE + ROOK_SCORE
     }
 
     fn get_positional_score(is_endgame: bool, piece_set: &PieceSet) -> Centipawns {

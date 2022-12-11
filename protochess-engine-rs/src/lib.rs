@@ -18,7 +18,6 @@ pub mod types;
 pub mod position;
 mod searcher;
 pub mod utils;
-mod transposition_table;
 use crate::piece::evaluator::Evaluator;
 use crate::types::*;
 use crate::searcher::Searcher;

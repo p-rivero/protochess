@@ -1,3 +1,4 @@
+use crate::constants::piece_scores::*;
 use crate::types::{Player, Bitboard, BIndex, Centipawns, BDimensions};
 
 pub type PieceId = u32;
@@ -96,7 +97,16 @@ impl Piece {
     // Get the material score for 1 unit of this piece
     #[inline(always)]
     pub fn get_material_score(&self) -> Centipawns {
-        self.material_score
+        // TODO: Remove this. First add an assert that the material score is correct
+        match self.type_def.id {
+            ID_PAWN => { PAWN_SCORE }
+            ID_KNIGHT => { KNIGHT_SCORE }
+            ID_BISHOP => { BISHOP_SCORE }
+            ID_ROOK => { ROOK_SCORE }
+            ID_QUEEN => { QUEEN_SCORE }
+            ID_KING => { KING_SCORE }
+            _ => { self.material_score }
+        }
     }
     
     // Get the material score for all current units of this piece

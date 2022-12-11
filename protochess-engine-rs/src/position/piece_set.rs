@@ -1,5 +1,5 @@
 //Pieces that a player has
-use crate::types::{Bitboard, BIndex, Player, BDimensions};
+use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns};
 use crate::piece::{Piece, PieceFactory};
 
 use crate::constants::piece_scores::*;
@@ -107,5 +107,20 @@ impl PieceSet {
         for p in &self.custom {
             self.occupied |= &p.bitboard;
         }
+    }
+    
+    pub fn get_material_score(&self) -> Centipawns {
+        let mut material_score = 0;
+        material_score += self.king.bitboard.count_ones() as Centipawns * KING_SCORE;
+        material_score += self.queen.bitboard.count_ones() as Centipawns * QUEEN_SCORE;
+        material_score += self.rook.bitboard.count_ones() as Centipawns * ROOK_SCORE;
+        material_score += self.knight.bitboard.count_ones() as Centipawns * KNIGHT_SCORE;
+        material_score += self.bishop.bitboard.count_ones() as Centipawns * BISHOP_SCORE;
+        material_score += self.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
+
+        for piece in &self.custom {
+            material_score += piece.get_material_score_all();
+        }
+        material_score
     }
 }
