@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use crate::types::Depth;
 
 pub mod entry;
@@ -14,12 +12,6 @@ const ENTRIES_PER_CLUSTER: usize = 4;
 
 
 pub struct Cluster {
-    // Use a separate mutex (instead of wrapping the cluster in a mutex) so that we can implement
-    // a more relaxed locking strategy. All threads can read the cluster while another thread is writing,
-    // but 2 threads can't write at the same time.
-    // In the worst case, a thread will read an old value, but that's fine.
-    // TODO: Remove mutex
-    mutex: std::sync::Mutex<()>,
     entries: [Entry; ENTRIES_PER_CLUSTER]
 }
 
@@ -32,7 +24,6 @@ impl TranspositionTable {
         let mut data = Vec::with_capacity(TABLE_SIZE);
         for _ in 0..TABLE_SIZE {
             data.push(Cluster { 
-                mutex:Mutex::new(()),
                 entries: [Entry::null(); ENTRIES_PER_CLUSTER]
             })
         }
@@ -44,8 +35,6 @@ impl TranspositionTable {
     /// Inserts a new Entry item into the transposition table
     pub fn insert(&mut self, zobrist_key:u64, entry: Entry) {
         let cluster = &mut self.data[zobrist_key as usize % TABLE_SIZE];
-        // Prevent multiple threads from writing to the same cluster at the same time (don't protect reads)
-        let _guard = cluster.mutex.lock();
         // As a first option, replace the first exact match for this key that has lower depth
         for i in 0..ENTRIES_PER_CLUSTER {
             let tentry = cluster.entries[i];

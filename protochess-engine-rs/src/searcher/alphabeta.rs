@@ -5,7 +5,7 @@ use crate::piece::evaluator::Evaluator;
 use crate::types::{Move, MoveType, Depth, SearchError, Centipawns};
 use crate::transposition_table::{Entry, EntryFlag};
 
-use super::{Searcher, transposition_table};
+use super::Searcher;
 
 
 // This file contains the single-threaded alpha-beta search algorithm, with its extensions and heuristics
@@ -34,7 +34,7 @@ impl Searcher {
         }
 
         let is_pv = alpha != beta - 1;
-        if let Some(entry) = transposition_table().retrieve(pos.get_zobrist()) {
+        if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {
             if entry.depth >= depth {
                 match entry.flag {
                     EntryFlag::EXACT => {
@@ -135,7 +135,7 @@ impl Searcher {
                         // Record new killer moves
                         self.update_killers(depth, (&mv).to_owned());
                         // Beta cutoff, store in transpositon table
-                        transposition_table().insert(pos.get_zobrist(), Entry{
+                        self.transposition_table.insert(pos.get_zobrist(), Entry{
                             key: pos.get_zobrist(),
                             flag: EntryFlag::BETA,
                             value: beta,
@@ -177,7 +177,7 @@ impl Searcher {
 
         if alpha != old_alpha {
             //Alpha improvement, record PV
-            transposition_table().insert(pos.get_zobrist(), Entry{
+            self.transposition_table.insert(pos.get_zobrist(), Entry{
                 key: pos.get_zobrist(),
                 flag: EntryFlag::EXACT,
                 value: best_score,
@@ -185,7 +185,7 @@ impl Searcher {
                 depth,
             })
         } else {
-            transposition_table().insert(pos.get_zobrist(), Entry{
+            self.transposition_table.insert(pos.get_zobrist(), Entry{
                 key: pos.get_zobrist(),
                 flag: EntryFlag::ALPHA,
                 value: alpha,
@@ -268,7 +268,7 @@ impl Searcher {
             .collect();
 
         // Assign PV/hash moves to Centipawns::MAX (search first in the PV)
-        if let Some(entry) = transposition_table().retrieve(pos.get_zobrist()) {
+        if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {
             let best_move = &entry.mv;
             for (score, mv) in &mut moves_and_score {
                 if mv == best_move {

@@ -3,7 +3,6 @@ extern crate lazy_static;
 extern crate impl_ops;
 
 use crate::piece::PieceId;
-use thread_handler::ThreadHandler;
 use utils::custom_position::make_custom_position;
 
 pub use crate::position::Position;
@@ -20,7 +19,6 @@ pub mod position;
 mod searcher;
 pub mod utils;
 mod transposition_table;
-mod thread_handler;
 use crate::piece::evaluator::Evaluator;
 use crate::types::*;
 use crate::searcher::Searcher;
@@ -29,8 +27,7 @@ pub use crate::piece::PieceDefinition;
 
 /// Starting point for the engine
 pub struct Engine{
-    pub position: Position,
-    pub thread_handler: ThreadHandler,
+    position: Position,
 }
 
 impl Engine {
@@ -38,23 +35,12 @@ impl Engine {
     pub fn default() -> Engine {
         Engine{
             position: Position::default(),
-            thread_handler: ThreadHandler::std_threads(),
-        }
-    }
-    pub fn default_wasm() -> Engine {
-        Engine{
-            position: Position::default(),
-            thread_handler: ThreadHandler::wasm_threads(),
         }
     }
     pub fn from_fen(fen: String) -> Engine {
         Engine{
             position: parse_fen(fen),
-            thread_handler: ThreadHandler::std_threads(),
         }
-    }
-    pub fn set_num_threads(&mut self, num_threads: u32) {
-        self.thread_handler.set_num_threads(num_threads);
     }
 
     /// Returns the zobrist hash key for the current position
@@ -132,7 +118,7 @@ impl Engine {
     
     ///Calculates and plays the best move found up to a given depth
     pub fn play_best_move(&mut self, depth: Depth) -> bool {
-        let best_move = Searcher::get_best_move(&self, depth);
+        let best_move = Searcher::get_best_move(&self.position, depth);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, prom, _)) => self.make_move(x1, y1, x2, y2, prom),
             None => false
@@ -141,7 +127,7 @@ impl Engine {
 
     /// Returns (fromx,fromy,tox,toy,promotion) if there is a move to be made
     pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<PieceId>)> {
-        let best_move = Searcher::get_best_move(&self, depth);
+        let best_move = Searcher::get_best_move(&self.position, depth);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, prom, _)) => Some((x1, y1, x2, y2, prom)),
             None => None
@@ -150,7 +136,7 @@ impl Engine {
 
     ///Calculates and plays the best move found
     pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, Depth) {
-        let best_move = Searcher::get_best_move_timeout(&self, max_sec);
+        let best_move = Searcher::get_best_move_timeout(&self.position, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, prom, depth)) => (self.make_move(x1, y1, x2, y2, prom), depth),
             None => return (false, 0)
@@ -159,7 +145,7 @@ impl Engine {
 
     ///Returns ((fromX,fromY,toX,toY,promotion), depth)
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord, Option<PieceId>), Depth)> {
-        let best_move = Searcher::get_best_move_timeout(&self, max_sec);
+        let best_move = Searcher::get_best_move_timeout(&self.position, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, prom, depth)) => Some(((x1, y1, x2, y2, prom), depth)),
             None => None

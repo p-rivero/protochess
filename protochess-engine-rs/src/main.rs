@@ -15,8 +15,8 @@ pub fn main() {
     // "rnbqkbnr/pppppppp/8/8/8/8/8/RNBQKBNR w KQkq - 0 1"
     
     
-    // Usage: cargo run -- <threads> <fen>
-    // By default, <threads> is 1 and <fen> is the starting position.
+    // Usage: cargo run -- <depth> <fen>
+    // By default, <depth> is 12 and <fen> is the starting position.
     // Example: cargo run -- 4 "1Q6/5pk1/2p3p1/1pbbN2p/4n2P/8/r5P1/5K2 b - - 0 1"
     
     let mut engine = protochess_engine_rs::Engine::default();
@@ -25,13 +25,13 @@ pub fn main() {
 
     
     let args: Vec<String> = std::env::args().collect();
+    let mut depth = 12;
     if args.len() > 2 {
         let fen = args[2].to_owned();
         engine = protochess_engine_rs::Engine::from_fen(fen);
     }
     if args.len() > 1 {
-        let num_threads = args[1].parse::<u32>().unwrap();
-        engine.set_num_threads(num_threads);
+        depth = args[1].parse::<u8>().unwrap();
     }
     
     println!("{}", engine.to_string());
@@ -40,7 +40,7 @@ pub fn main() {
     let mut ply = 0;
     loop {
 
-        if let Some(mv) = engine.get_best_move(9) {
+        if let Some(mv) = engine.get_best_move(depth) {
             engine.make_move(mv.0, mv.1, mv.2, mv.3, mv.4);
             print_pgn(&mut pgn_file, ply, mv, engine.get_piece_at(mv.2, mv.3).unwrap());
         } else {
@@ -74,7 +74,6 @@ const ID_KNIGHT: PieceId = 4;
 const ID_PAWN: PieceId = 5;
 const BASE_ID_CUSTOM: PieceId = 100;
 fn pieceid_to_char(piece_id: PieceId) -> char {
-    println!("piece_id: {}", piece_id);
     match piece_id {
         ID_KING => {'K'}
         ID_QUEEN => {'Q'}
