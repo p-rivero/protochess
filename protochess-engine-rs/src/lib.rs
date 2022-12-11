@@ -16,11 +16,10 @@ pub mod piece;
 pub mod move_generator;
 pub mod types;
 pub mod position;
-mod searcher;
+pub mod searcher;
 pub mod utils;
-use crate::piece::evaluator::Evaluator;
 use crate::types::*;
-use crate::searcher::Searcher;
+use crate::searcher::{Searcher, eval};
 pub use crate::piece::PieceDefinition;
 
 
@@ -49,7 +48,7 @@ impl Engine {
 
     /// Returns the score of the current position for the side to move
     pub fn get_score(&mut self) -> Centipawns {
-        Evaluator::evaluate(&mut self.position)
+        eval::evaluate(&mut self.position)
     }
     
     /// Returns the character representation of the piece at the given coordinates

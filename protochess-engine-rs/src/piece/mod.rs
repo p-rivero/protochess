@@ -6,14 +6,14 @@ pub type PieceIdWithPlayer = u64;
 
 mod piece_definition;
 mod piece_factory;
-// TODO: Make private
-pub mod evaluator;
+mod material_score;
+mod positional_score;
 
 pub use piece_factory::PieceFactory;
 pub use piece_definition::PieceDefinition;
 
-use evaluator::material_score::compute_material_score;
-use evaluator::positional_score::compute_piece_square_table;
+use material_score::compute_material_score;
+use positional_score::compute_piece_square_table;
 
 // Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
 #[derive(Clone, Debug)]

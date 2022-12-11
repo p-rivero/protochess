@@ -1,10 +1,10 @@
 use instant::Instant;
 
 use crate::{Position, MoveGen};
-use crate::piece::evaluator::Evaluator;
 use crate::types::{Move, MoveType, Depth, SearchError, Centipawns};
 
 use super::Searcher;
+use super::eval;
 use super::transposition_table::{Entry, EntryFlag};
 
 
@@ -59,7 +59,7 @@ impl Searcher {
 
         //Null move pruning
         if !is_pv && do_null {
-            if depth > 3 && Evaluator::can_do_null_move(pos) && !MoveGen::in_check(pos) {
+            if depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
                 pos.make_move(Move::null());
                 let nscore = -self.alphabeta(pos, depth - 3, -beta, -beta + 1, false, end_time)?;
                 pos.unmake_move();
@@ -207,7 +207,7 @@ impl Searcher {
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
     fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns) -> Centipawns {
-        let score = Evaluator::evaluate(pos);
+        let score = eval::evaluate(pos);
         
         if score >= beta {
             return beta;
@@ -261,7 +261,7 @@ impl Searcher {
     fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, pos: &mut Position, moves: I, depth: Depth) -> Vec<(Centipawns, Move)> {
         let killer_moves_at_depth = &self.killer_moves[depth as usize];
         let mut moves_and_score: Vec<(Centipawns, Move)> = moves.map(|mv| 
-            (Evaluator::score_move(&self.history_moves, killer_moves_at_depth, pos, &mv), mv))
+            (eval::score_move(&self.history_moves, killer_moves_at_depth, pos, &mv), mv))
             .collect();
 
         // Assign PV/hash moves to Centipawns::MAX (search first in the PV)

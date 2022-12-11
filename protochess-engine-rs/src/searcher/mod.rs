@@ -5,6 +5,7 @@ use crate::Position;
 
 mod alphabeta;
 mod transposition_table;
+pub mod eval;
 
 use transposition_table::TranspositionTable;
 

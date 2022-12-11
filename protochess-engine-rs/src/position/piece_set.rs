@@ -109,18 +109,26 @@ impl PieceSet {
         }
     }
     
-    pub fn get_material_score(&self) -> Centipawns {
-        let mut material_score = 0;
-        material_score += self.king.bitboard.count_ones() as Centipawns * KING_SCORE;
-        material_score += self.queen.bitboard.count_ones() as Centipawns * QUEEN_SCORE;
-        material_score += self.rook.bitboard.count_ones() as Centipawns * ROOK_SCORE;
-        material_score += self.knight.bitboard.count_ones() as Centipawns * KNIGHT_SCORE;
-        material_score += self.bishop.bitboard.count_ones() as Centipawns * BISHOP_SCORE;
-        material_score += self.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
+    // Returns the material score of all pieces in the set, and of only the leader pieces
+    pub fn get_material_score(&self) -> (Centipawns, Centipawns) {
+        let mut score = 0;
+        let mut leader_score = 0;
+        let king_score = self.king.bitboard.count_ones() as Centipawns * KING_SCORE;
+        score += king_score;
+        leader_score += king_score;
+        score += self.queen.bitboard.count_ones() as Centipawns * QUEEN_SCORE;
+        score += self.rook.bitboard.count_ones() as Centipawns * ROOK_SCORE;
+        score += self.knight.bitboard.count_ones() as Centipawns * KNIGHT_SCORE;
+        score += self.bishop.bitboard.count_ones() as Centipawns * BISHOP_SCORE;
+        score += self.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
 
         for piece in &self.custom {
-            material_score += piece.get_material_score_all();
+            let piece_total_score = piece.get_material_score_all();
+            score += piece_total_score;
+            if piece.is_leader() {
+                leader_score += piece_total_score;
+            }
         }
-        material_score
+        (score, leader_score)
     }
 }
