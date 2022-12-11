@@ -155,7 +155,7 @@ impl Engine {
     // Unwraps a SearchResult into basic data types
     fn process_move(&self, mv: &SearchResult) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<PieceId>, Depth)> {
         match mv {
-            // TODO: Use backup
+            // TODO: Use backup move
             SearchResult::BestMove(best, depth, _backup) => {
                 let (x1, y1) = from_index(best.get_from());
                 let (x2, y2) = from_index(best.get_to());
@@ -195,6 +195,10 @@ impl Engine {
     pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
                      valid_squares:Vec<(BCoord, BCoord)>, pieces: Vec<(Player, BCoord, BCoord, PieceId)>) {
         self.position = make_custom_position(piece_types, &valid_squares, &pieces)
+    }
+    
+    pub fn perft(&mut self, depth: Depth) -> u64 {
+        utils::perft::perft(&mut self.position, depth)
     }
 }
 

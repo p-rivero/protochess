@@ -21,7 +21,7 @@ impl Searcher {
     fn alphabeta(&mut self, pos: &mut Position, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearchError> {
         
         if depth <= 0 {
-            return self.quiesce(pos, 0, alpha, beta);
+            return Ok(self.quiesce(pos, alpha, beta));
         }
         
         let is_root = self.nodes_searched == 0;
@@ -209,11 +209,12 @@ impl Searcher {
     }
 
 
-    fn quiesce(&mut self, pos: &mut Position, depth: Depth, mut alpha: Centipawns, beta: Centipawns) -> Result<Centipawns, SearchError> {
+    // Keep seaching, but only consider capture moves (avoid horizon effect)
+    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns) -> Centipawns {
         let score = Evaluator::evaluate(pos);
         
-        if score >= beta{
-            return Ok(beta);
+        if score >= beta {
+            return beta;
         }
         if score > alpha {
             alpha = score;
@@ -221,24 +222,24 @@ impl Searcher {
 
         // Get only captures, sorted by move ordering heuristics (try the most promising moves first)
         let moves = MoveGen::get_capture_moves(pos);
-        for (_move_score, mv) in self.sort_moves_by_score(pos, moves, depth) {
+        for (_move_score, mv) in self.sort_moves_by_score(pos, moves, 0) {
             if !MoveGen::is_move_legal(&mv, pos) {
                 continue;
             }
 
             pos.make_move((&mv).to_owned());
-            let score = -self.quiesce(pos, depth, -beta, -alpha)?;
+            let score = -self.quiesce(pos, -beta, -alpha);
             pos.unmake_move();
 
             if score >= beta {
-                return Ok(beta);
+                return beta;
             }
             if score > alpha {
                 alpha = score;
                 // best_move = mv;
             }
         }
-        Ok(alpha)
+        alpha
     }
 
     #[inline]

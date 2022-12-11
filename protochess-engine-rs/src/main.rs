@@ -15,8 +15,8 @@ pub fn main() {
     // "rnbqkbnr/pppppppp/8/8/8/8/8/RNBQKBNR w KQkq - 0 1"
     
     
-    // Usage: cargo run -- <depth> <fen>
-    // By default, <depth> is 12 and <fen> is the starting position.
+    // Usage: cargo run -- <depth> <fen> <num_ply>
+    // By default, <depth> is 12, <fen> is the starting position, and <num_ply> is 500
     // Example: cargo run -- 4 "1Q6/5pk1/2p3p1/1pbbN2p/4n2P/8/r5P1/5K2 b - - 0 1"
     
     let mut engine = protochess_engine_rs::Engine::default();
@@ -26,6 +26,10 @@ pub fn main() {
     
     let args: Vec<String> = std::env::args().collect();
     let mut depth = 12;
+    let mut max_ply = 500;
+    if args.len() > 3 {
+        max_ply = args[3].parse::<u32>().unwrap();
+    }
     if args.len() > 2 {
         let fen = args[2].to_owned();
         engine = protochess_engine_rs::Engine::from_fen(fen);
@@ -38,7 +42,7 @@ pub fn main() {
 
     let start = instant::Instant::now();
     let mut ply = 0;
-    loop {
+    for _ in 0..max_ply {
 
         if let Some(mv) = engine.get_best_move(depth) {
             engine.make_move(mv.0, mv.1, mv.2, mv.3, mv.4);

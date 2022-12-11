@@ -115,7 +115,7 @@ impl Piece {
         let mut score = 0;
         while !bb_copy.is_zero() {
             let index = bb_copy.lowest_one().unwrap();
-            score += self.piece_square_table[index as usize];
+            score += self.get_positional_score(index);
             bb_copy.clear_bit(index);
         }
         score

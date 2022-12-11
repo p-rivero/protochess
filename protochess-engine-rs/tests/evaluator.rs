@@ -6,6 +6,7 @@ mod eval_test {
     #[test]
     fn test() {
         let mut pos = parse_fen("rnbqkbnr/pppppppp/8/8/8/3PP3/PPP2PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
-        println!("{}", Evaluator::evaluate(&mut pos));
+        // TODO: Make more tests
+        assert_eq!(Evaluator::evaluate(&mut pos), 20);
     }
 }

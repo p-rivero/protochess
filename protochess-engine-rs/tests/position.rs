@@ -7,15 +7,37 @@ mod position_test {
     
     
     #[test]
-    fn print_pieces() {
+    fn pieces_tiles_as_tuples() {
         let pos = Position::default();
+        let pieces = pos.pieces_as_tuples();
+        assert!(pieces.len() == 32);
+        let mut white_pieces = 0;
+        let mut black_pieces = 0;
         for pce in pos.pieces_as_tuples() {
-            println!("{:?}", pce);
+            if pce.0 == 0 {
+                white_pieces += 1;
+            } else {
+                black_pieces += 1;
+            }
         }
+        assert!(white_pieces == 16);
+        assert!(black_pieces == 16);
 
+        let tiles = pos.tiles_as_tuples();
+        assert!(tiles.len() == 64);
+        let mut white_tiles = 0;
+        let mut black_tiles = 0;
         for pce in pos.tiles_as_tuples() {
-            println!("{:?}", pce);
+            if pce.2 == 'w' {
+                white_tiles += 1;
+            } else if pce.2 == 'b' {
+                black_tiles += 1;
+            } else {
+                assert!(false);
+            }
         }
+        assert!(white_tiles == 32);
+        assert!(black_tiles == 32);
 
     }
 
@@ -57,13 +79,12 @@ mod position_test {
     #[test]
     fn castle_rights() {
         let mut test_rights = CastleRights::new();
-        println!("{}",test_rights.can_player_castle_queenside(0));
+        assert!(test_rights.can_player_castle_queenside(0));
         test_rights.disable_queenside_castle(0);
-        println!("{}",test_rights.can_player_castle_queenside(0));
-        println!("{}",test_rights.can_player_castle_kingside(0));
+        assert!(test_rights.can_player_castle_queenside(0) == false);
+        assert!(test_rights.can_player_castle_kingside(0));
         test_rights.disable_kingside_castle(0);
-        println!("{}",test_rights.can_player_castle_kingside(0));
-
+        assert!(test_rights.can_player_castle_kingside(0) == false);
     }
 }
 

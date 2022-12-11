@@ -8,9 +8,10 @@ mod move_generator_test {
     #[test]
     fn capture_moves() {
         let mut pos = parse_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
-        println!("{}",pos.get_zobrist());
-        println!("{}", MoveGen::in_check(&mut pos));
-        println!("{}",pos.get_zobrist());
+        let z1 = pos.get_zobrist();
+        assert!(MoveGen::in_check(&mut pos));
+        let z2 = pos.get_zobrist();
+        assert_eq!(z1, z2);
         for mv in MoveGen::get_capture_moves(&mut pos) {
             println!("{}", mv);
             assert!(mv.is_capture());

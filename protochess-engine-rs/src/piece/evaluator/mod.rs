@@ -16,9 +16,9 @@ impl Evaluator {
     /// Retrieves the score for the player to move (position.whos_turn)
     pub fn evaluate(position: &mut Position) -> Centipawns {
         let player_num = position.whos_turn;
-        // Material score (black pieces are negative)
+        // Material score (opponent pieces are negative)
         let mut score: Centipawns = 0;
-        //Material score of both players (black pieces are positive)
+        //Material score of both players (opponent pieces are positive)
         let mut total_material_score: Centipawns = 0;
         
         for ps in position.pieces.iter() {
@@ -38,6 +38,7 @@ impl Evaluator {
         for ps in position.pieces.iter() {
             let positional_score = Evaluator::get_positional_score(is_endgame, ps);
             //Castling bonus
+            // TODO: Keep castling bonus also in the endgame?
             if position.properties.castling_rights.did_player_castle(ps.player_num) && !is_endgame {
                 if ps.player_num == player_num {
                     score += CASTLING_BONUS;
