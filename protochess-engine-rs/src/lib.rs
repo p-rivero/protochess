@@ -2,6 +2,8 @@
 extern crate lazy_static;
 extern crate impl_ops;
 
+use std::fmt;
+
 use crate::piece::PieceId;
 use utils::custom_position::make_custom_position;
 
@@ -97,10 +99,6 @@ impl Engine {
     pub fn undo(&mut self) {
         self.position.unmake_move();
     }
-
-    pub fn to_string(&mut self) -> String {
-        self.position.to_string()
-    }
     
     pub fn get_whos_turn(&self) -> Player {
         self.position.whos_turn
@@ -126,10 +124,8 @@ impl Engine {
     /// Returns (fromx,fromy,tox,toy,promotion) if there is a move to be made
     pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<PieceId>)> {
         let best_move = Searcher::get_best_move(&self.position, depth);
-        match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, prom, _)) => Some((x1, y1, x2, y2, prom)),
-            None => None
-        }
+        self.process_move(&best_move)
+            .map(|(x1, y1, x2, y2, prom, _)| (x1, y1, x2, y2, prom))
     }
 
     ///Calculates and plays the best move found
@@ -137,17 +133,15 @@ impl Engine {
         let best_move = Searcher::get_best_move_timeout(&self.position, max_sec);
         match self.process_move(&best_move) {
             Some((x1, y1, x2, y2, prom, depth)) => (self.make_move(x1, y1, x2, y2, prom), depth),
-            None => return (false, 0)
+            None => (false, 0)
         }
     }
 
     ///Returns ((fromX,fromY,toX,toY,promotion), depth)
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord, Option<PieceId>), Depth)> {
         let best_move = Searcher::get_best_move_timeout(&self.position, max_sec);
-        match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, prom, depth)) => Some(((x1, y1, x2, y2, prom), depth)),
-            None => None
-        }
+        self.process_move(&best_move)
+            .map(|(x1, y1, x2, y2, prom, depth)| ((x1, y1, x2, y2, prom), depth))
     }
     
     // Unwraps a SearchResult into basic data types
@@ -197,6 +191,12 @@ impl Engine {
     
     pub fn perft(&mut self, depth: Depth) -> u64 {
         utils::perft::perft(&mut self.position, depth)
+    }
+}
+
+impl fmt::Display for Engine {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.position)
     }
 }
 

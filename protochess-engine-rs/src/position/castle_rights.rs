@@ -43,3 +43,9 @@ impl CastleRights {
         self.1 &= !(1 << playernum)
     }
 }
+
+impl Default for CastleRights {
+    fn default() -> Self {
+        Self::new()
+    }
+}

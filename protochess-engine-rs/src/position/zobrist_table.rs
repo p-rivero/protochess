@@ -21,17 +21,16 @@ impl ZobristTable {
             ep_zobrist.push(rng.gen::<u64>());
         }
 
-        let table = ZobristTable{
+        //Initialize the table with the default piece set in a repeatable way
+        //Mostly for easier testing
+        ZobristTable{
             ep_zobrist,
             white_to_move: rng.gen::<u64>(),
             w_q_castle: rng.gen::<u64>(),
             b_q_castle: rng.gen::<u64>(),
             w_k_castle: rng.gen::<u64>(),
             b_k_castle: rng.gen::<u64>(),
-        };
-        //Initialize the table with the default piece set in a repeatable way
-        //Mostly for easier testing
-        table
+        }
     }
 
     /// Zobrist for the player to move

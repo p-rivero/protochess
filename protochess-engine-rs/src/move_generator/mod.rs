@@ -66,7 +66,7 @@ impl MoveGen {
                 //Keep only in bounds
                 raw_attacks &= &position.dimensions.bounds;
                 iters.push(BitboardMoves::new(
-                    (&enemies).to_owned(),
+                    enemies.to_owned(),
                     raw_attacks,
                     index,
                     Bitboard::zero(),
@@ -76,14 +76,14 @@ impl MoveGen {
             }
         };
 
-        apply_to_each((&my_pieces.king.bitboard).to_owned(), AttackTables::get_king_attack);
-        apply_to_each((&my_pieces.queen.bitboard).to_owned(), AttackTables::get_queen_attack);
-        apply_to_each((&my_pieces.rook.bitboard).to_owned(), AttackTables::get_rook_attack);
-        apply_to_each((&my_pieces.bishop.bitboard).to_owned(), AttackTables::get_bishop_attack);
-        apply_to_each((&my_pieces.knight.bitboard).to_owned(), AttackTables::get_knight_attack);
+        apply_to_each(my_pieces.king.bitboard.to_owned(), AttackTables::get_king_attack);
+        apply_to_each(my_pieces.queen.bitboard.to_owned(), AttackTables::get_queen_attack);
+        apply_to_each(my_pieces.rook.bitboard.to_owned(), AttackTables::get_rook_attack);
+        apply_to_each(my_pieces.bishop.bitboard.to_owned(), AttackTables::get_bishop_attack);
+        apply_to_each(my_pieces.knight.bitboard.to_owned(), AttackTables::get_knight_attack);
 
         let mut extra_moves = Vec::new();
-        let mut p_copy = (&my_pieces.pawn.bitboard).to_owned();
+        let mut p_copy = my_pieces.pawn.bitboard.to_owned();
         while !p_copy.is_zero() {
             let index = p_copy.lowest_one().unwrap();
             let mut raw_attacks = {
@@ -107,7 +107,7 @@ impl MoveGen {
             // TODO: Store these as IDs in the Piece struct
             let promo_vals = vec![ID_ROOK, ID_BISHOP, ID_KNIGHT, ID_QUEEN];
             iters.push(BitboardMoves::new(
-                (&enemies).to_owned(),
+                enemies.to_owned(),
                 raw_attacks,
                 index,
                 promotion_squares,
@@ -198,7 +198,7 @@ impl MoveGen {
         let mut moves = Vec::new();
 
         //Return early if there are no custom pieces
-        if my_pieces.custom.len() == 0 {
+        if my_pieces.custom.is_empty() {
             return iters.into_iter().flatten().chain(moves.into_iter());
         }
 
@@ -231,7 +231,7 @@ impl MoveGen {
                 //Keep only in bounds
                 raw_attacks &= &position.dimensions.bounds;
                 iters.push(BitboardMoves::new(
-                    (&enemies).to_owned(),
+                    enemies.to_owned(),
                     raw_attacks,
                     index,
                     movement.promotion_squares.to_owned(),
@@ -254,7 +254,7 @@ impl MoveGen {
                 //Keep only in bounds
                 raw_moves &= &position.dimensions.bounds;
                 iters.push(BitboardMoves::new(
-                    (&enemies).to_owned(),
+                    enemies.to_owned(),
                     raw_moves,
                     index,
                     movement.promotion_squares.to_owned(),

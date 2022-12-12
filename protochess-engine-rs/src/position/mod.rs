@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::Arc;
 
 use crate::constants::piece_scores::*;
@@ -63,7 +64,7 @@ impl Position {
         // Remove zobrist hash of the old player
         new_props.zobrist_key ^= zobrist_table.get_player_zobrist(self.whos_turn);
         // Update the player
-        self.whos_turn = self.whos_turn + 1;
+        self.whos_turn += 1;
         if self.whos_turn == self.num_players {
             self.whos_turn = 0;
         }
@@ -258,34 +259,12 @@ impl Position {
         self.update_occupied();
     }
 
-    pub fn to_string(&mut self) -> String {
-        let mut return_str= String::new();
-        for y in (0..self.dimensions.height).rev() {
-            return_str = format!("{} {} ", return_str, y);
-            for x in 0..self.dimensions.width {
-                if let Some(piece) = self.piece_at(to_index(x,y)) {
-                    return_str.push(piece.char_rep());
-                } else {
-                    return_str.push('.');
-                }
-                return_str.push(' ');
-            }
-            return_str.push('\n');
-        }
-        return_str = format!("{}  ", return_str);
-        for x in 0..self.dimensions.width {
-            return_str = format!("{} {}", return_str, x);
-        }
-
-        format!("{} \nZobrist Key: {}", return_str, self.properties.zobrist_key)
-    }
-
     /// Return piece for (owner, x, y, char)
     pub fn pieces_as_tuples(&self) -> Vec<(Player, BCoord, BCoord, PieceId)>{
         let mut tuples = Vec::new();
         for (i, ps) in self.pieces.iter().enumerate() {
             for piece in ps.get_piece_refs() {
-                let mut bb_copy = (&piece.bitboard).to_owned();
+                let mut bb_copy = piece.bitboard.to_owned();
                 while !bb_copy.is_zero() {
                     let indx = bb_copy.lowest_one().unwrap();
                     let (x, y) = from_index(indx as BIndex);
@@ -390,7 +369,7 @@ impl Position {
 
     /// Returns if the point is in bounds
     pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {
-        return self.dimensions.in_bounds(x, y);
+        self.dimensions.in_bounds(x, y)
     }
 
     
@@ -459,5 +438,26 @@ impl Position {
             ps.update_occupied();
             self.occupied |= &ps.occupied;
         }
+    }
+}
+
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for y in (0..self.dimensions.height).rev() {
+            write!(f, "{} ", y)?;
+            for x in 0..self.dimensions.width {
+                if let Some(piece) = self.piece_at(to_index(x,y)) {
+                    write!(f, "{} ", piece.char_rep())?;
+                } else {
+                    write!(f, ". ")?;
+                }
+            }
+            writeln!(f)?;
+        }
+        write!(f, "  ")?;
+        for x in 0..self.dimensions.width {
+            write!(f, "{} ", x)?;
+        }
+        write!(f, "\nZobrist Key: {}", self.properties.zobrist_key)
     }
 }

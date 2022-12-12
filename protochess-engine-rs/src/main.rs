@@ -38,7 +38,7 @@ pub fn main() {
         depth = args[1].parse::<u8>().unwrap();
     }
     
-    println!("{}", engine.to_string());
+    println!("{}", engine);
 
     let start = instant::Instant::now();
     let mut ply = 0;
@@ -53,7 +53,7 @@ pub fn main() {
         ply += 1;
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
-        println!("{}", engine.to_string());
+        println!("{}", engine);
         println!("\n========================================\n");
 
     }
@@ -64,7 +64,7 @@ fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, mv: (u8, u8, u8, u8, Option
         let round = format!("{}. ", ply/2 + 1);
         pgn_file.write_all(round.as_bytes()).expect("write failed");
     }
-    let prom = mv.4.map(|x| pieceid_to_char(x));
+    let prom = mv.4.map(pieceid_to_char);
     let move_str = to_long_algebraic_notation(mv.0, mv.1, mv.2, mv.3, pieceid_to_char(piece), prom);
     pgn_file.write_all(move_str.as_bytes()).expect("write failed");
 }

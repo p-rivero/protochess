@@ -45,7 +45,7 @@ pub struct PieceDefinition {
 
 impl PieceDefinition {
     pub fn promotion_at(&self, index: BIndex) -> bool {
-        return self.promotion_squares.get_bit(index)
+        self.promotion_squares.get_bit(index)
     }
     pub fn can_slide_north(&self) -> bool {
         self.translate_north || self.attack_north

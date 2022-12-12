@@ -5,7 +5,7 @@ use crate::{Position, PieceDefinition};
 
 
 pub fn make_custom_position(piece_types: &Vec<PieceDefinition>,
-    valid_squares: &Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, PieceId)>) -> Position
+    valid_squares: &Vec<(BCoord, BCoord)>, pieces: &[(Player, BCoord, BCoord, PieceId)]) -> Position
 {
     let mut width = 0;
     let mut height = 0;
@@ -16,7 +16,7 @@ pub fn make_custom_position(piece_types: &Vec<PieceDefinition>,
         bounds.set_bit_at(sq.0, sq.1);
     }
 
-    let pieces = pieces.into_iter()
+    let pieces = pieces.iter()
         .map(|(owner, x, y, piece)| (*owner, to_index(*x, *y), *piece))
         .collect();
     Position::custom(BDimensions{width, height, bounds}, piece_types, pieces)

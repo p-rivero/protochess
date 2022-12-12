@@ -71,12 +71,12 @@ impl MaskHandler {
             antidiagonals.push(Bitboard::zero());
         }
 
-        for x in 0..16 as i8 {
-            for y in 0..16 as i8 {
+        for x in 0..16_i8 {
+            for y in 0..16_i8 {
                 let index: usize = to_index(x as BCoord, y as BCoord) as usize;
 
                 //NORTH LOOKUP TABLE
-                for j in y + 1..16 as i8 {
+                for j in y + 1..16 {
                     north[index].set_bit_at(x as BCoord, j as BCoord);
                 }
                 //SOUTH LOOKUP TABLE
@@ -84,7 +84,7 @@ impl MaskHandler {
                     south[index].set_bit_at(x as BCoord, j as BCoord);
                 }
                 //EAST LOOKUP TABLE
-                for j in x + 1..16 as i8 {
+                for j in x + 1..16 {
                     east[index].set_bit_at(j as BCoord, y as BCoord);
                 }
                 //WEST LOOKUP TABLE
@@ -92,33 +92,33 @@ impl MaskHandler {
                     west[index].set_bit_at(j as BCoord, y as BCoord);
                 }
                 //NORTHEAST LOOKUP TABLE
-                let mut x2:i8 = (x + 1) as i8;
-                let mut y2:i8 = (y + 1) as i8;
-                while x2 < 16 as i8 && y2 < 16 as i8 {
+                let mut x2 = x + 1;
+                let mut y2 = y + 1;
+                while x2 < 16 && y2 < 16 {
                     northeast[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 +=1;
                     y2 +=1;
                 }
 
                 //NORTHWEST LOOKUP TABLE
-                x2 = (x - 1) as i8;
-                y2 = (y + 1) as i8;
-                while x2 >= 0 && y2 < 16 as i8 {
+                x2 = x - 1;
+                y2 = y + 1;
+                while x2 >= 0 && y2 < 16 {
                     northwest[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 -= 1;
                     y2 += 1;
                 }
                 //SOUTHEAST LOOKUP TABLE
-                x2 = (x + 1) as i8;
-                y2 = (y - 1) as i8;
-                while x2 < 16 as i8 && y2 >= 0 {
+                x2 = x + 1;
+                y2 = y - 1;
+                while x2 < 16 && y2 >= 0 {
                     southeast[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 += 1;
                     y2 -= 1;
                 }
                 //SOUTHWEST LOOKUP TABLE
-                x2 = (x - 1) as i8;
-                y2 = (y - 1) as i8;
+                x2 = x - 1;
+                y2 = y - 1;
                 while x2 >= 0 && y2 >= 0 {
                     southwest[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     x2 -= 1;
@@ -254,4 +254,10 @@ impl MaskHandler {
         (bitboard >> amt) & (!self.get_right_mask(amt as usize))
     }
 
+}
+
+impl Default for MaskHandler {
+    fn default() -> Self {
+        Self::new()
+    }
 }

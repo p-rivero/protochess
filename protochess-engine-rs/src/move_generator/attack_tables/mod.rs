@@ -42,8 +42,8 @@ impl AttackTables {
             south_pawn_double_push.push(Bitboard::zero());
         }
 
-        for x in 0..16 as i8 {
-            for y in 0..16 as i8 {
+        for x in 0..16_i8 {
+            for y in 0..16_i8 {
                 let index:usize = to_index(x as BCoord, y as BCoord) as usize;
                 //PAWN
                 if y != 15 {
@@ -81,7 +81,7 @@ impl AttackTables {
                 for delta in &king_deltas {
                     let x2 = delta.0 + x;
                     let y2 = delta.1 + y;
-                    if x2 >= 0 && x2 < 16 as i8 && y2 >=0 && y2 < 16 as i8 {
+                    if (0..16).contains(&x2) && (0..16).contains(&y2) {
                         king_attacks[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     }
                 }
@@ -92,7 +92,7 @@ impl AttackTables {
                 for delta in &knight_deltas {
                     let x2 = delta.0 + x;
                     let y2 = delta.1 + y;
-                    if x2 >= 0 && x2 < 16 as i8 && y2 >=0 && y2 < 16 as i8 {
+                    if (0..16).contains(&x2) && (0..16).contains(&y2) {
                         knight_attacks[index].set_bit_at(x2 as BCoord, y2 as BCoord);
                     }
                 }
@@ -216,11 +216,11 @@ impl AttackTables {
     }
 
     pub fn get_knight_attack(&self, loc_index: BIndex, _occ: &Bitboard, _enemies: &Bitboard) -> Bitboard {
-        (&self.knight_attacks[loc_index as usize]).to_owned()
+        self.knight_attacks[loc_index as usize].to_owned()
     }
 
     pub fn get_king_attack(&self, loc_index: BIndex, _occ: &Bitboard, _enemies: &Bitboard) -> Bitboard {
-        (&self.king_attacks[loc_index as usize]).to_owned()
+        self.king_attacks[loc_index as usize].to_owned()
     }
 
     pub fn get_north_pawn_attack(&self, loc_index: BIndex, occ: &Bitboard, enemies: &Bitboard) -> Bitboard {
@@ -333,4 +333,10 @@ impl AttackTables {
             ^ self.get_bishop_attack(loc_index, occ, enemies)
     }
 
+}
+
+impl Default for AttackTables {
+    fn default() -> Self {
+        Self::new()
+    }
 }

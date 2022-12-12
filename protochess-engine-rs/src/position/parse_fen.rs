@@ -152,7 +152,7 @@ pub fn parse_fen(fen: String) -> Position {
 
 
     for piece in w_pieces.get_piece_refs().into_iter().chain(b_pieces.get_piece_refs().into_iter()) {
-        let mut bb_copy = (&piece.bitboard).to_owned();
+        let mut bb_copy = piece.bitboard.to_owned();
         while !bb_copy.is_zero() {
             let indx = bb_copy.lowest_one().unwrap();
             zobrist_key ^= piece.get_zobrist(indx);

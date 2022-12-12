@@ -59,7 +59,7 @@ impl Iterator for BitboardMoves {
                     //Unwrap intentionally here; want to panic if this goes wrong
                     let next_promo = promo_options.pop().unwrap();
                     //If we run out of promo options, we can go to the next square
-                    if promo_options.len() == 0 {
+                    if promo_options.is_empty() {
                         //Reset current_promo_vals for the next time
                         self.current_promo_vals = None;
                         self.moves.clear_bit(to);

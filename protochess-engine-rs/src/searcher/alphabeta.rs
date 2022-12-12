@@ -16,7 +16,7 @@ impl Searcher {
     
     fn alphabeta(&mut self, pos: &mut Position, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearchError> {
         
-        if depth <= 0 {
+        if depth == 0 {
             return Ok(self.quiesce(pos, alpha, beta));
         }
         
@@ -33,7 +33,7 @@ impl Searcher {
         if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {
             if entry.depth >= depth {
                 match entry.flag {
-                    EntryFlag::EXACT => {
+                    EntryFlag::Exact => {
                         if entry.value < alpha {
                             return Ok(alpha);
                         }
@@ -42,30 +42,28 @@ impl Searcher {
                         }
                         return Ok(entry.value);
                     }
-                    EntryFlag::BETA => {
+                    EntryFlag::Beta => {
                         if !is_pv && beta <= entry.value {
                             return Ok(beta);
                         }
                     }
-                    EntryFlag::ALPHA => {
+                    EntryFlag::Alpha => {
                         if !is_pv && alpha >= entry.value {
                             return Ok(alpha);
                         }
                     }
-                    EntryFlag::NULL => {}
+                    EntryFlag::Null => {}
                 }
             }
         }
 
         //Null move pruning
-        if !is_pv && do_null {
-            if depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
-                pos.make_move(Move::null());
-                let nscore = -self.alphabeta(pos, depth - 3, -beta, -beta + 1, false, end_time)?;
-                pos.unmake_move();
-                if nscore >= beta {
-                    return Ok(beta);
-                }
+        if !is_pv && do_null && depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
+            pos.make_move(Move::null());
+            let nscore = -self.alphabeta(pos, depth - 3, -beta, -beta + 1, false, end_time)?;
+            pos.unmake_move();
+            if nscore >= beta {
+                return Ok(beta);
             }
         }
 
@@ -85,7 +83,7 @@ impl Searcher {
             }
 
             num_legal_moves += 1;
-            pos.make_move((&mv).to_owned());
+            pos.make_move(mv.to_owned());
             let mut score: Centipawns;
             if num_legal_moves == 1 {
                 score = -self.alphabeta(pos, depth - 1, -beta, -alpha, true, end_time)?;
@@ -129,11 +127,11 @@ impl Searcher {
                 if score > alpha {
                     if score >= beta {
                         // Record new killer moves
-                        self.update_killers(depth, (&mv).to_owned());
+                        self.update_killers(depth, mv.to_owned());
                         // Beta cutoff, store in transpositon table
                         self.transposition_table.insert(pos.get_zobrist(), Entry{
                             key: pos.get_zobrist(),
-                            flag: EntryFlag::BETA,
+                            flag: EntryFlag::Beta,
                             value: beta,
                             mv,
                             depth,
@@ -175,15 +173,15 @@ impl Searcher {
             //Alpha improvement, record PV
             self.transposition_table.insert(pos.get_zobrist(), Entry{
                 key: pos.get_zobrist(),
-                flag: EntryFlag::EXACT,
+                flag: EntryFlag::Exact,
                 value: best_score,
-                mv: (&best_move).to_owned(),
+                mv: best_move.to_owned(),
                 depth,
             })
         } else {
             self.transposition_table.insert(pos.get_zobrist(), Entry{
                 key: pos.get_zobrist(),
-                flag: EntryFlag::ALPHA,
+                flag: EntryFlag::Alpha,
                 value: alpha,
                 mv: best_move,
                 depth,
@@ -223,7 +221,7 @@ impl Searcher {
                 continue;
             }
 
-            pos.make_move((&mv).to_owned());
+            pos.make_move(mv.to_owned());
             let score = -self.quiesce(pos, -beta, -alpha);
             pos.unmake_move();
 
@@ -240,11 +238,9 @@ impl Searcher {
 
     #[inline]
     fn update_killers(&mut self, depth: Depth, mv: Move) {
-        if !mv.is_capture() {
-            if mv != self.killer_moves[depth as usize][0] && mv != self.killer_moves[depth as usize][1] {
-                self.killer_moves[depth as usize][1] = self.killer_moves[depth as usize][0];
-                self.killer_moves[depth as usize][0] = mv;
-            }
+        if !mv.is_capture() && mv != self.killer_moves[depth as usize][0] && mv != self.killer_moves[depth as usize][1] {
+            self.killer_moves[depth as usize][1] = self.killer_moves[depth as usize][0];
+            self.killer_moves[depth as usize][0] = mv;
         }
     }
 

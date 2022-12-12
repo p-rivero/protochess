@@ -2,20 +2,20 @@ use crate::types::{Move, Depth, Centipawns};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum EntryFlag{
-    EXACT = 0,
-    ALPHA = 1,
-    BETA = 2,
-    NULL = 3,
+    Exact = 0,
+    Alpha = 1,
+    Beta = 2,
+    Null = 3,
 }
 impl EntryFlag {
     #[inline(always)]
     pub fn equal_or_better_than(self, other: EntryFlag) -> bool {
         // Values are ordered so that EXACT < ALPHA <= BETA < NULL (ALPHA and BETA are worth the same)
-        (self as u8) <= (other as u8) || (self == EntryFlag::BETA && other == EntryFlag::ALPHA)
+        (self as u8) <= (other as u8) || (self == EntryFlag::Beta && other == EntryFlag::Alpha)
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Entry {
     pub key: u64,
     pub flag: EntryFlag,
@@ -27,7 +27,7 @@ impl Entry {
     pub fn null() -> Entry {
         Entry {
             key: 0,
-            flag: EntryFlag::NULL,
+            flag: EntryFlag::Null,
             value: 0,
             mv: Move::null(),
             depth: 0,

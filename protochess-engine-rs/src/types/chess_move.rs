@@ -3,7 +3,7 @@ use crate::piece::PieceId;
 use crate::utils::{to_rank_file, from_index};
 use crate::types::bitboard::BIndex;
 
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum MoveType {
     // The least significant bit is used to indicate capture
     Quiet = 0b0000,
@@ -17,7 +17,7 @@ pub enum MoveType {
     Null = 0b1000,
 }
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub struct Move {
     /// Stores a move in a u32
     ///0-7:   from index:u8

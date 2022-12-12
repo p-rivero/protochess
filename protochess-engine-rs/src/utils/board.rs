@@ -56,7 +56,7 @@ fn to_xy(rank_file:String) -> (u8, u8) {
 /// Ex: to_rank_file(0, 1) = a2
 pub fn to_rank_file(x: BCoord, y: BCoord) -> String {
     let mut return_string = String::new();
-    let ascii_a = 'a' as u8;
+    let ascii_a = b'a';
     return_string.push((ascii_a + x) as char);
     return_string.push_str(format!("{}", (y + 1)).as_ref());
     return_string
