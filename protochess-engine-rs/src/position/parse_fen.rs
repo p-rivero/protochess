@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::constants::fen;
+use crate::piece::Piece;
 use crate::types::*;
 use crate::utils::to_index;
 
@@ -57,17 +58,17 @@ pub fn parse_fen(fen: String) -> Position {
                 } else {
                     &mut b_pieces
                 };
-                let bitboard: &mut Bitboard = match c.to_ascii_lowercase() {
-                    'k' => { &mut pieces.king.bitboard },
-                    'q' => { &mut pieces.queen.bitboard },
-                    'r' => { &mut pieces.rook.bitboard },
-                    'b' => { &mut pieces.bishop.bitboard },
-                    'n' => { &mut pieces.knight.bitboard },
-                    'p' => { &mut pieces.pawn.bitboard },
+                let p: &mut Piece = match c.to_ascii_lowercase() {
+                    'k' => { &mut pieces.king },
+                    'q' => { &mut pieces.queen },
+                    'r' => { &mut pieces.rook },
+                    'b' => { &mut pieces.bishop },
+                    'n' => { &mut pieces.knight },
+                    'p' => { &mut pieces.pawn },
                     _ => continue,
                 };
-
-                bitboard.set_bit(index);
+                p.add_piece(index);
+                
                 if c.is_uppercase() {
                     w_pieces.occupied.set_bit(index)
                 } else {

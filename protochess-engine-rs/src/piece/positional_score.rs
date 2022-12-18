@@ -21,7 +21,7 @@ pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions, piec
             return_vec.push(0);
             continue;
         }
-        let mut moves = get_moves_on_empty_board(mp, index, dims, piece);
+        let mut moves = get_moves_on_empty_board(mp, index, dims, true, piece);
         moves &= center_squares_bb.to_owned();
         
         // 1 point for each move that lands on a center square
@@ -36,8 +36,21 @@ pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions, piec
         
         // Extra points for being close to promotion
         if !promotion_squares_bb.is_zero() {
-            let distance = distance_to_one(x, y, &promotion_squares_bb) as isize;
-            let promotion_points = std::cmp::max(0, 4 - distance) as Centipawns;
+            let get_neighbors = |x: BCoord, y: BCoord| {
+                let mut neighbors = Vec::new();
+                let mut moves = get_moves_on_empty_board(mp, to_index(x, y), dims, false, piece);
+                // Get the coordinates of all the 1s in the bitboard
+                while !moves.is_zero() {
+                    let index = moves.lowest_one().unwrap();
+                    neighbors.push(from_index(index));
+                    moves.clear_bit(index);
+                }
+                neighbors
+            };
+            let distance = distance_to_one(x, y, &promotion_squares_bb, get_neighbors);
+            // Extend promotion bonus until half of the average board length
+            let half_board = ((dims.width + dims.height) / 4) as isize; 
+            let promotion_points = std::cmp::max(0, half_board - distance) as Centipawns;
             score += promotion_points * POSITION_PROMOTION_DIST_MULT;
         }
         
@@ -74,7 +87,7 @@ fn get_center_squares(width: BCoord, height: BCoord) -> Bitboard {
 
 /// Returns the number of moves of a piecetype on an otherwise empty board
 // TODO: Once the hardcoded pieces are removed, delete the Piece parameter
-fn get_moves_on_empty_board(mp: &PieceDefinition, index: BIndex, dims: &BDimensions, piece: &Piece) -> Bitboard {
+fn get_moves_on_empty_board(mp: &PieceDefinition, index: BIndex, dims: &BDimensions, include_attacks: bool, piece: &Piece) -> Bitboard {
     let (x, y) = from_index(index);
     if !dims.in_bounds(x, y) {
         return Bitboard::zero();
@@ -99,19 +112,26 @@ fn get_moves_on_empty_board(mp: &PieceDefinition, index: BIndex, dims: &BDimensi
             let mut slides = MoveGen::attack_tables().get_sliding_moves_bb(
                 index,
                 &walls,
-                mp.translate_north || mp.attack_north,
-                mp.translate_east || mp.attack_east,
-                mp.translate_south || mp.attack_south,
-                mp.translate_west || mp.attack_west,
-                mp.translate_northeast || mp.attack_northeast,
-                mp.translate_northwest || mp.attack_northwest,
-                mp.translate_southeast || mp.attack_southeast,
-                mp.translate_southwest || mp.attack_southwest
+                mp.translate_north || (mp.attack_north && include_attacks),
+                mp.translate_east || (mp.attack_east && include_attacks),
+                mp.translate_south || (mp.attack_south && include_attacks),
+                mp.translate_west || (mp.attack_west && include_attacks),
+                mp.translate_northeast || (mp.attack_northeast && include_attacks),
+                mp.translate_northwest || (mp.attack_northwest && include_attacks),
+                mp.translate_southeast || (mp.attack_southeast && include_attacks),
+                mp.translate_southwest || (mp.attack_southwest && include_attacks),
             );
 
             // Delta based moves (sliding, non sliding)
             let (x, y) = from_index(index);
-            for (dx, dy) in mp.translate_jump_deltas.iter().chain(mp.attack_jump_deltas.iter()) {
+            let jumps = {
+                if include_attacks {
+                    mp.translate_jump_deltas.iter().chain(mp.attack_jump_deltas.iter()).collect()
+                } else {
+                    mp.translate_jump_deltas.iter().collect::<Vec<_>>()
+                }
+            };
+            for (dx, dy) in jumps {
                 let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
                 if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
                     continue;
@@ -122,7 +142,15 @@ fn get_moves_on_empty_board(mp: &PieceDefinition, index: BIndex, dims: &BDimensi
                     slides.set_bit(to);
                 }
             }
-            for run in mp.attack_sliding_deltas.iter().chain(mp.translate_sliding_deltas.iter()) {
+            
+            let sliding_delta_groups = {
+                if include_attacks {
+                    mp.translate_sliding_deltas.iter().chain(mp.attack_sliding_deltas.iter()).collect()
+                } else {
+                    mp.translate_sliding_deltas.iter().collect::<Vec<_>>()
+                }
+            };
+            for run in sliding_delta_groups {
                 for (dx, dy) in run {
                     let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
                     if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {

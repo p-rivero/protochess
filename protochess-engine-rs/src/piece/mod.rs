@@ -34,7 +34,11 @@ pub struct Piece {
 
 impl Piece {
     // Don't use new() directly, use PieceFactory instead
-    fn new(definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
+    fn new(mut definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
+        // Make sure that all promotion squares are in bounds
+        definition.promotion_squares &= &dims.bounds;
+        assert!(&definition.promotion_squares & !&dims.bounds == Bitboard::zero());
+        
         let material_score = compute_material_score(&definition);
         let zobrist_hashes = Piece::compute_zobrist(definition.id, player_num);
         // TODO: Once the hardcoded pieces are removed, the piece_square_table can be computed directly
@@ -107,6 +111,19 @@ impl Piece {
             ID_KING => { KING_SCORE }
             _ => { self.material_score }
         }
+    }
+    
+    pub fn move_piece(&mut self, from: BIndex, to: BIndex) {
+        self.bitboard.clear_bit(from);
+        self.bitboard.set_bit(to);
+    }
+    
+    pub fn add_piece(&mut self, index: BIndex) {
+        self.bitboard.set_bit(index);
+    }
+    
+    pub fn remove_piece(&mut self, index: BIndex) {
+        self.bitboard.clear_bit(index);
     }
     
     // Get the material score for all current units of this piece

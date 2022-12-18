@@ -29,7 +29,7 @@ impl PieceSet {
             bishop: PieceFactory::make_bishop(ID_BISHOP, player_num, dims),
             knight: PieceFactory::make_knight(ID_KNIGHT, player_num, dims),
             rook: PieceFactory::make_rook(ID_ROOK, player_num, dims),
-            pawn: PieceFactory::make_pawn(ID_PAWN, player_num, dims),
+            pawn: PieceFactory::make_pawn(ID_PAWN, player_num, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]),
             custom: Vec::new(),
             player_num
         }

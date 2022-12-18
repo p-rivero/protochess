@@ -12,33 +12,29 @@ pub fn from_index(index: BIndex) -> (BCoord, BCoord) {
     ((index % 16) as BCoord , (index / 16) as BCoord)
 }
 
-// DFS to find distance to nearest 1
-pub fn distance_to_one(x_start: BCoord, y_start: BCoord, board: &Bitboard) -> u8 {
+// DFS to find distance to nearest 1, using a callback function to get neighbors
+pub fn distance_to_one<F>(x_start: BCoord, y_start: BCoord, board: &Bitboard, get_neighbors: F) -> isize 
+    where F: Fn(BCoord, BCoord) -> Vec<(BCoord, BCoord)>
+{
     let mut visited = Bitboard::zero();
     let mut queue = VecDeque::new();
     queue.push_back((x_start, y_start, 0));
-    while let Some((x, y, dist)) = queue.pop_front() {
-        if visited.get_bit_at(x, y) {
+    while !queue.is_empty() {
+        let (x, y, dist) = queue.pop_front().unwrap();
+        if x >= 16 || y >= 16 {
             continue;
         }
-        visited.set_bit_at(x, y);
         if board.get_bit_at(x, y) {
-            return dist;
+            return dist as isize;
         }
-        if x > 0 {
-            queue.push_back((x - 1, y, dist + 1));
-        }
-        if x < 15 {
-            queue.push_back((x + 1, y, dist + 1));
-        }
-        if y > 0 {
-            queue.push_back((x, y - 1, dist + 1));
-        }
-        if y < 15 {
-            queue.push_back((x, y + 1, dist + 1));
+        visited.set_bit_at(x, y);
+        for (x2, y2) in get_neighbors(x, y) {
+            if !visited.get_bit_at(x2, y2) {
+                queue.push_back((x2, y2, dist + 1));
+            }
         }
     }
-    u8::MAX
+    isize::MAX
 }
 
 

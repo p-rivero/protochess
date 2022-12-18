@@ -5,7 +5,6 @@ extern crate impl_ops;
 use std::fmt;
 
 use crate::piece::PieceId;
-use utils::custom_position::make_custom_position;
 
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGen;
@@ -185,8 +184,15 @@ impl Engine {
     }
 
     pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
-                     valid_squares:Vec<(BCoord, BCoord)>, pieces: Vec<(Player, BCoord, BCoord, PieceId)>) {
-        self.position = make_custom_position(piece_types, &valid_squares, &pieces)
+                     valid_squares: Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, PieceId)>) {
+        let dims = BDimensions::from_valid_squares(&valid_squares);
+        
+        // For each piece, convert coordnates to index
+        let pieces = pieces.iter()
+            .map(|(owner, x, y, piece)| (*owner, to_index(*x, *y), *piece))
+            .collect();
+
+        self.position = Position::custom(dims, piece_types, pieces)
     }
     
     pub fn perft(&mut self, depth: Depth) -> u64 {

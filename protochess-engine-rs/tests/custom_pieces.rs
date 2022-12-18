@@ -3,8 +3,9 @@ extern crate protochess_engine_rs;
 #[cfg(test)]
 mod custom_pieces {
     use protochess_engine_rs::PieceDefinition;
-    use protochess_engine_rs::piece::{PieceId, Piece};
-    use protochess_engine_rs::types::Bitboard;
+    use protochess_engine_rs::piece::{PieceId, Piece, PieceFactory};
+    use protochess_engine_rs::types::{Bitboard, BDimensions};
+    use protochess_engine_rs::utils::to_index;
 
     #[test]
     fn custom_pieces() {
@@ -65,6 +66,43 @@ mod custom_pieces {
         assert_ne!(h2, h3);
         assert_ne!(h2, h4);
         assert_ne!(h3, h4);
+    }
+    
+    #[test]
+    fn piece_factory_pawn() {
+        let dims = BDimensions::new_without_walls(8, 8);
+        let white_pawn = PieceFactory::make_pawn(123, 0, &dims, vec![1, 2, 3]);
+        
+        assert_eq!(white_pawn.get_piece_id(), 123);
+        assert_eq!(white_pawn.player_num(), 0);
+        assert_eq!(white_pawn.get_material_score(), 100);
+        assert_eq!(white_pawn.get_material_score_all(), 0); // No pieces on the board
+        assert_eq!(white_pawn.get_positional_score_all(), 0); // No pieces on the board
+        
+        println!("White pawn positional scores:");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", white_pawn.get_positional_score(to_index(x, y)));
+            }
+            println!();
+        }
+        println!();
+        
+        let black_pawn = PieceFactory::make_pawn(123, 1, &dims, vec![1, 2, 3]);
+        
+        assert_eq!(black_pawn.get_piece_id(), 123);
+        assert_eq!(black_pawn.player_num(), 1);
+        assert_eq!(black_pawn.get_material_score(), 100);
+        assert_eq!(black_pawn.get_material_score_all(), 0); // No pieces on the board
+        assert_eq!(black_pawn.get_positional_score_all(), 0); // No pieces on the board
+        
+        println!("Black pawn positional scores:");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", black_pawn.get_positional_score(to_index(x, y)));
+            }
+            println!();
+        }
     }
 
 }

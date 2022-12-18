@@ -352,21 +352,7 @@ impl Position {
         }
         None
     }
-
-    /// Returns bitoard of piece at index
-    pub fn piece_bb_at(&self, index: BIndex) -> Option<&Bitboard> {
-        if let Some(piece) = self.piece_at(index) {
-            return Some(&piece.bitboard)
-        }
-        None
-    }
-    pub fn piece_bb_at_mut(&mut self, index: BIndex) -> Option<&mut Bitboard> {
-        if let Some((_num, piece)) = self.piece_at_mut(index) {
-            return Some(&mut piece.bitboard)
-        }
-        None
-    }
-
+    
     /// Returns if the point is in bounds
     pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {
         self.dimensions.in_bounds(x, y)
@@ -392,8 +378,8 @@ impl Position {
     
     /// Adds a piece to the position, assuming the piecetype already exists
     /// Does nothing if a custom piece isn't registered yet
-    fn add_piece(&mut self, owner: Player, pt: PieceId, index: BIndex) {
-        match pt {
+    fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex) {
+        match piece_id {
             ID_KING => {self.pieces[owner as usize].king.bitboard.set_bit(index);},
             ID_QUEEN => {self.pieces[owner as usize].queen.bitboard.set_bit(index);},
             ID_ROOK => {self.pieces[owner as usize].rook.bitboard.set_bit(index);},
@@ -403,8 +389,8 @@ impl Position {
             _ => {
                 // TODO: Change
                 for c in self.pieces[owner as usize].custom.iter_mut() {
-                    if pt == c.get_piece_id() {
-                        c.bitboard.set_bit(index);
+                    if piece_id == c.get_piece_id() {
+                        c.add_piece(index);
                         break;
                     }
                 }
@@ -414,14 +400,13 @@ impl Position {
     
     /// Removes a piece from the position, assuming the piece is there
     fn remove_piece(&mut self, index: BIndex) {
-        let capd_bb = self.piece_bb_at_mut(index).unwrap();
-        capd_bb.clear_bit(index);
+        let piece = self.piece_at_mut(index).unwrap().1;
+        piece.remove_piece(index);
     }
     
     fn move_piece(&mut self, from: BIndex, to: BIndex) {
-        if let Some(source_bb) = self.piece_bb_at_mut(from) {
-            source_bb.clear_bit(from);
-            source_bb.set_bit(to);
+        if let Some(piece) = self.piece_at_mut(from) {
+            piece.1.move_piece(from, to);
         } else {
             println!("nothing to move??");
             println!("from {} {}", from_index(from).0, from_index(from).1);
