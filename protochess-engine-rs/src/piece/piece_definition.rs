@@ -92,4 +92,10 @@ impl PieceDefinition {
         assert!(has_promotion_squares == has_promo_vals);
         has_promotion_squares
     }
+    pub fn can_jump(&self) -> bool {
+        !self.translate_jump_deltas.is_empty() || !self.attack_jump_deltas.is_empty()
+    }
+    pub fn has_sliding_deltas(&self) -> bool {
+        !self.translate_sliding_deltas.is_empty() || !self.attack_sliding_deltas.is_empty()
+    }
 }

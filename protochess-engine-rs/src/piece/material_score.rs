@@ -28,23 +28,25 @@ pub fn compute_material_score(mp: &PieceDefinition) -> Centipawns {
     if mp.attack_southwest {score += 80}
     if mp.translate_southwest {score += 50}
     
+    let only_able_to_slide = !mp.can_promote() && !mp.can_jump() && !mp.has_sliding_deltas();
+    
     // Debuff for being limited to a single color of squares
-    if !mp.can_slide_main_direction() && !mp.can_promote() {
+    if !mp.can_slide_main_direction() && only_able_to_slide {
         // Bishop is 4*130 - 150 = 370 centipawns
         score -= 150;
     }
     
     // Debuff for being limited to a single direction
-    if mp.can_slide_north_indirectly() && !mp.can_slide_south_indirectly() && !mp.can_promote() {
+    if mp.can_slide_north_indirectly() && !mp.can_slide_south_indirectly() && only_able_to_slide {
         score -= 200;
     }
-    if mp.can_slide_south_indirectly() && !mp.can_slide_north_indirectly() && !mp.can_promote() {
+    if mp.can_slide_south_indirectly() && !mp.can_slide_north_indirectly() && only_able_to_slide {
         score -= 200;
     }
-    if mp.can_slide_east_indirectly() && !mp.can_slide_west_indirectly() && !mp.can_promote() {
+    if mp.can_slide_east_indirectly() && !mp.can_slide_west_indirectly() && only_able_to_slide {
         score -= 200;
     }
-    if mp.can_slide_west_indirectly() && !mp.can_slide_east_indirectly() && !mp.can_promote() {
+    if mp.can_slide_west_indirectly() && !mp.can_slide_east_indirectly() && only_able_to_slide {
         score -= 200;
     }
     
@@ -60,6 +62,11 @@ pub fn compute_material_score(mp: &PieceDefinition) -> Centipawns {
     if mp.can_promote() {
         // Pawn is 20*3 + 40 = 100 centipawns
         score += 40;
+    }
+    
+    if mp.is_leader {
+        // Leader piece is 2x the value of the regular piece
+        score *= 2;
     }
     
     // Minimum score is 10

@@ -104,5 +104,105 @@ mod custom_pieces {
             println!();
         }
     }
+    
+    #[test]
+    fn piece_factory_knight() {
+        let dims = BDimensions::new_without_walls(8, 8);
+        let knight = PieceFactory::make_knight(123, 0, &dims);
+        
+        assert_eq!(knight.get_piece_id(), 123);
+        assert_eq!(knight.player_num(), 0);
+        assert_eq!(knight.get_material_score(), 320);
+        assert_eq!(knight.get_material_score_all(), 0); // No pieces on the board
+        assert_eq!(knight.get_positional_score_all(), 0); // No pieces on the board
+        
+        println!("Knight positional scores:");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", knight.get_positional_score(to_index(x, y)));
+            }
+            println!();
+        }
+    }
+    
+    #[test]
+    fn piece_factory_bishop() {
+        let dims = BDimensions::new_without_walls(8, 8);
+        let bishop = PieceFactory::make_bishop(123, 0, &dims);
+        
+        assert_eq!(bishop.get_piece_id(), 123);
+        assert_eq!(bishop.player_num(), 0);
+        assert_eq!(bishop.get_material_score(), 370);
+        assert_eq!(bishop.get_material_score_all(), 0); // No pieces on the board
+        assert_eq!(bishop.get_positional_score_all(), 0); // No pieces on the board
+        
+        println!("Bishop positional scores:");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", bishop.get_positional_score(to_index(x, y)));
+            }
+            println!();
+        }
+    }
+    
+    #[test]
+    fn piece_factory_rook() {
+        let dims = BDimensions::new_without_walls(8, 8);
+        let rook = PieceFactory::make_rook(123, 0, &dims);
+        
+        assert_eq!(rook.get_piece_id(), 123);
+        assert_eq!(rook.player_num(), 0);
+        assert_eq!(rook.get_material_score(), 520);
+        assert_eq!(rook.get_material_score_all(), 0); // No pieces on the board
+        assert_eq!(rook.get_positional_score_all(), 0); // No pieces on the board
+        
+        println!("Rook positional scores:");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", rook.get_positional_score(to_index(x, y)));
+            }
+            println!();
+        }
+    }
+    
+    #[test]
+    fn piece_factory_queen() {
+        let dims = BDimensions::new_without_walls(8, 8);
+        let queen = PieceFactory::make_queen(123, 0, &dims);
+        
+        assert_eq!(queen.get_piece_id(), 123);
+        assert_eq!(queen.player_num(), 0);
+        assert_eq!(queen.get_material_score(), 1040);
+        assert_eq!(queen.get_material_score_all(), 0); // No pieces on the board
+        assert_eq!(queen.get_positional_score_all(), 0); // No pieces on the board
+        
+        println!("Queen positional scores:");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", queen.get_positional_score(to_index(x, y)));
+            }
+            println!();
+        }
+    }
+    
+    #[test]
+    fn piece_factory_king() {
+        let dims = BDimensions::new_without_walls(8, 8);
+        let king = PieceFactory::make_king(123, 0, &dims);
+        
+        assert_eq!(king.get_piece_id(), 123);
+        assert_eq!(king.player_num(), 0);
+        assert_eq!(king.get_material_score(), 320 * 2);
+        assert_eq!(king.get_material_score_all(), 0); // No pieces on the board
+        assert_eq!(king.get_positional_score_all(), 0); // No pieces on the board
+        
+        println!("King positional scores:");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", king.get_positional_score(to_index(x, y)));
+            }
+            println!();
+        }
+    }
 
 }
