@@ -16,6 +16,11 @@ impl Searcher {
     
     fn alphabeta(&mut self, pos: &mut Position, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearchError> {
         
+        // If there is repetition, the result is always a draw
+        if pos.num_repetitions() >= 3 {
+            return Ok(0);
+        }
+        
         if depth == 0 {
             return Ok(self.quiesce(pos, alpha, beta));
         }
@@ -68,7 +73,6 @@ impl Searcher {
         }
 
         let mut best_move = Move::null();
-        let mut second_best_move = Move::null();
         let mut num_legal_moves = 0;
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
@@ -121,7 +125,6 @@ impl Searcher {
 
             if score > best_score {
                 best_score = score;
-                second_best_move = best_move;
                 best_move = mv;
 
                 if score > alpha {
@@ -149,23 +152,13 @@ impl Searcher {
         if num_legal_moves == 0 {
             return if in_check {
                 // No legal moves and in check: Checkmate
-                if is_root {
-                    Err(SearchError::Checkmate)
-                } else {
-                    // Keep playing until checkmate
-                    // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
-                    // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
-                    let current_depth = self.current_searching_depth - depth;
-                    Ok(-99999 + current_depth as Centipawns)
-                }
+                // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
+                // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
+                let current_depth = self.current_searching_depth - depth;
+                Ok(-99999 + current_depth as Centipawns)
             } else {
                 // No legal moves but also not in check: Stalemate
-                if is_root {
-                    Err(SearchError::Stalemate)
-                } else {
-                    // Keep playing until stalemate
-                    Ok(0)
-                }
+                Ok(0)
             };
         }
 
@@ -191,12 +184,8 @@ impl Searcher {
         if is_root {
             assert!(!best_move.is_null());
             assert!(depth == self.current_searching_depth);
-            let backup_move = {
-                if second_best_move.is_null() { None }
-                else { Some(second_best_move) }
-            };
             // This is not an error, but we use the error type to return the best move
-            return Err(SearchError::BestMove(best_move, best_score, backup_move));
+            return Err(SearchError::BestMove(best_move, best_score));
         }
         
         Ok(alpha)

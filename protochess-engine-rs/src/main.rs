@@ -2,7 +2,9 @@
 
 use std::io::Write;
 
-use protochess_engine_rs::{utils::to_long_algebraic_notation, piece::PieceId};
+use protochess_engine_rs::{MoveInfo, MakeMoveResult};
+use protochess_engine_rs::piece::PieceId;
+use protochess_engine_rs::utils::to_long_algebraic_notation;
 
 pub fn main() {
     
@@ -43,12 +45,29 @@ pub fn main() {
     let start = instant::Instant::now();
     let mut ply = 0;
     for _ in 0..max_ply {
-
-        if let Some(mv) = engine.get_best_move(depth) {
-            engine.make_move(mv.0, mv.1, mv.2, mv.3, mv.4);
-            print_pgn(&mut pgn_file, ply, mv, engine.get_piece_at(mv.2, mv.3).unwrap());
-        } else {
-            break;
+        let mv = engine.get_best_move(depth);
+        print_pgn(&mut pgn_file, ply, &mv, engine.get_piece_at(mv.from).unwrap());
+        match engine.make_move(mv) {
+            MakeMoveResult::Ok => {},
+            MakeMoveResult::IllegalMove => {
+                assert!(false, "An illegal move was made");
+            },
+            MakeMoveResult::Checkmate(losing_player) => {
+                if losing_player == 0 {
+                    println!("CHECKMATE! Black wins!");
+                } else {
+                    println!("CHECKMATE! White wins!");
+                }
+                break;
+            },
+            MakeMoveResult::Stalemate => {
+                println!("STALEMATE!");
+                break;
+            },
+            MakeMoveResult::Repetition => {
+                println!("DRAW BY REPETITION!");
+                break;
+            },
         }
         ply += 1;
         println!("(Time since start: {:?})", start.elapsed());
@@ -59,13 +78,13 @@ pub fn main() {
     }
 }
 
-fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, mv: (u8, u8, u8, u8, Option<PieceId>), piece: PieceId) {
+fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, mv: &MoveInfo, piece: PieceId) {
     if (ply % 2) == 0 {
         let round = format!("{}. ", ply/2 + 1);
         pgn_file.write_all(round.as_bytes()).expect("write failed");
     }
-    let prom = mv.4.map(pieceid_to_char);
-    let move_str = to_long_algebraic_notation(mv.0, mv.1, mv.2, mv.3, pieceid_to_char(piece), prom);
+    let prom = mv.promotion.map(pieceid_to_char);
+    let move_str = to_long_algebraic_notation(mv.from, mv.to, pieceid_to_char(piece), prom);
     pgn_file.write_all(move_str.as_bytes()).expect("write failed");
 }
 

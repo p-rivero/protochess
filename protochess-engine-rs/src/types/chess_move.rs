@@ -3,6 +3,8 @@ use crate::piece::PieceId;
 use crate::utils::{to_rank_file, from_index};
 use crate::types::bitboard::BIndex;
 
+use super::BCoord;
+
 #[derive(Eq, PartialEq, Debug)]
 pub enum MoveType {
     // The least significant bit is used to indicate capture
@@ -54,6 +56,7 @@ impl Move {
         ((self.move_fields >> 8) & (BIndex::MAX as u32)) as BIndex
     }
     
+    // Get the index of the victim piece, if any. Usually the same as get_to(), except for en passant
     pub fn get_target(&self) -> BIndex {
         ((self.move_fields >> 16) & (BIndex::MAX as u32)) as BIndex
     }
@@ -87,5 +90,29 @@ impl fmt::Display for Move {
         let (x1, y1) = from_index(self.get_from());
         let (x2, y2) = from_index(self.get_to());
         write!(f, "({} -> {})", to_rank_file(x1, y1),to_rank_file(x2, y2))
+    }
+}
+
+
+pub struct MoveInfo {
+    pub from: (BCoord, BCoord),
+    pub to: (BCoord, BCoord),
+    pub promotion: Option<PieceId>,
+}
+
+impl MoveInfo {
+    pub fn from_move(m: Move) -> MoveInfo {
+        let (from_x, from_y) = from_index(m.get_from());
+        let (to_x, to_y) = from_index(m.get_to());
+        MoveInfo {
+            from: (from_x, from_y),
+            to: (to_x, to_y),
+            promotion: m.get_promotion_piece()
+        }
+    }
+    pub fn matches_move(&self, m: Move) -> bool {
+        let (from_x, from_y) = from_index(m.get_from());
+        let (to_x, to_y) = from_index(m.get_to());
+        self.from == (from_x, from_y) && self.to == (to_x, to_y) && self.promotion == m.get_promotion_piece()
     }
 }

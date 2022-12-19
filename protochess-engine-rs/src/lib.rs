@@ -9,7 +9,7 @@ use crate::piece::PieceId;
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGen;
 use crate::position::parse_fen;
-use crate::utils::{to_index, from_index};
+use crate::utils::to_index;
 
 //Private modules
 mod constants;
@@ -22,7 +22,16 @@ pub mod utils;
 use crate::types::*;
 use crate::searcher::{Searcher, eval};
 pub use crate::piece::PieceDefinition;
+pub use crate::types::MoveInfo;
 
+
+pub enum MakeMoveResult {
+    Ok,
+    IllegalMove,
+    Checkmate(Player), // Checkmated player
+    Stalemate,
+    Repetition,
+}
 
 /// Starting point for the engine
 pub struct Engine{
@@ -53,8 +62,8 @@ impl Engine {
     }
     
     /// Returns the character representation of the piece at the given coordinates
-    pub fn get_piece_at(&mut self, x: BCoord, y: BCoord) -> Option<PieceId> {
-        self.position.piece_at(to_index(x, y)).map(|p| p.get_piece_id())
+    pub fn get_piece_at(&mut self, position: (BCoord, BCoord)) -> Option<PieceId> {
+        self.position.piece_at(to_index(position.0, position.1)).map(|p| p.get_piece_id())
     }
 
     /// Registers a custom piecetype for the current position
@@ -72,26 +81,35 @@ impl Engine {
         self.position.public_remove_piece(index);
     }
 
-    /// Performs a move from (x1, y1) to (x2, y2) on the current board position
+    /// Attempts a move on the current board position
     /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
-    pub fn make_move(&mut self, x1: BCoord, y1: BCoord, x2: BCoord, y2: BCoord, promotion: Option<PieceId>) -> bool {
-        let from = to_index(x1, y1);
-        let to = to_index(x2, y2);
-
+    pub fn make_move(&mut self, target_move: MoveInfo) -> MakeMoveResult {
         let moves = MoveGen::get_pseudo_moves(&mut self.position);
         for mv in moves {
+            if !target_move.matches_move(mv) {
+                continue;
+            }
             if !MoveGen::is_move_legal(&mv, &mut self.position) {
                 continue;
             }
-            if mv.get_promotion_piece() != promotion {
-                continue;
+            // Found the move, try to play it
+            self.position.make_move(mv);
+            
+            // Check if the game is over
+            if MoveGen::count_legal_moves(&mut self.position) == 0 {
+                if MoveGen::in_check(&mut self.position) {
+                    return MakeMoveResult::Checkmate(self.position.whos_turn);
+                } else {
+                    return MakeMoveResult::Stalemate;
+                }
             }
-            if mv.get_from() == from && mv.get_to() == to {
-                self.position.make_move(mv);
-                return true
+            if self.position.num_repetitions() >= 3 {
+                // Threefold Repetition
+                return MakeMoveResult::Repetition;
             }
+            return MakeMoveResult::Ok;
         }
-        false
+        MakeMoveResult::IllegalMove
     }
 
     /// Undoes the most recent move on the current board position
@@ -111,61 +129,25 @@ impl Engine {
         self.position.dimensions.height
     }
     
-    ///Calculates and plays the best move found up to a given depth
-    pub fn play_best_move(&mut self, depth: Depth) -> bool {
-        let best_move = Searcher::get_best_move(&self.position, depth);
-        match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, prom, _)) => self.make_move(x1, y1, x2, y2, prom),
-            None => false
-        }
-    }
-
     /// Returns (fromx,fromy,tox,toy,promotion) if there is a move to be made
-    pub fn get_best_move(&mut self, depth: Depth) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<PieceId>)> {
-        let best_move = Searcher::get_best_move(&self.position, depth);
-        self.process_move(&best_move)
-            .map(|(x1, y1, x2, y2, prom, _)| (x1, y1, x2, y2, prom))
-    }
-
-    ///Calculates and plays the best move found
-    pub fn play_best_move_timeout(&mut self, max_sec:u64) -> (bool, Depth) {
-        let best_move = Searcher::get_best_move_timeout(&self.position, max_sec);
-        match self.process_move(&best_move) {
-            Some((x1, y1, x2, y2, prom, depth)) => (self.make_move(x1, y1, x2, y2, prom), depth),
-            None => (false, 0)
-        }
+    pub fn get_best_move(&mut self, depth: Depth) -> MoveInfo {
+        let old_zobrist = self.position.get_zobrist();
+        let (mv, search_depth) = Searcher::get_best_move(&self.position, depth);
+        let new_zobrist = self.position.get_zobrist();
+        assert!(search_depth == depth);
+        assert!(old_zobrist == new_zobrist);
+        
+        MoveInfo::from_move(mv)
     }
 
     ///Returns ((fromX,fromY,toX,toY,promotion), depth)
-    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> Option<((BCoord, BCoord, BCoord, BCoord, Option<PieceId>), Depth)> {
-        let best_move = Searcher::get_best_move_timeout(&self.position, max_sec);
-        self.process_move(&best_move)
-            .map(|(x1, y1, x2, y2, prom, depth)| ((x1, y1, x2, y2, prom), depth))
-    }
-    
-    // Unwraps a SearchResult into basic data types
-    fn process_move(&self, mv: &SearchResult) -> Option<(BCoord, BCoord, BCoord, BCoord, Option<PieceId>, Depth)> {
-        match mv {
-            // TODO: Use backup move
-            SearchResult::BestMove(best, depth, _backup) => {
-                let (x1, y1) = from_index(best.get_from());
-                let (x2, y2) = from_index(best.get_to());
-                let prom = best.get_promotion_piece();
-                Some((x1, y1, x2, y2, prom, *depth))
-            },
-            SearchResult::Checkmate(losing_player) => {
-                if *losing_player == 0 {
-                    println!("CHECKMATE! Black wins!");
-                } else {
-                    println!("CHECKMATE! White wins!");
-                } 
-                None
-            }
-            SearchResult::Stalemate => {
-                println!("STALEMATE!");
-                None
-            }
-        }
+    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> (MoveInfo, Depth) {
+        let old_zobrist = self.position.get_zobrist();
+        let (mv, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec);
+        let new_zobrist = self.position.get_zobrist();
+        assert!(old_zobrist == new_zobrist);
+        
+        (MoveInfo::from_move(mv), search_depth)
     }
 
     pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<(BCoord, BCoord)>{

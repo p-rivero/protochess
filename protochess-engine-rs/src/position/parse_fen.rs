@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::constants::fen;
 use crate::piece::Piece;
 use crate::types::*;
@@ -109,9 +107,6 @@ pub fn parse_fen(fen: String) -> Position {
         }
     }
 
-    let mut occupied = Bitboard::zero();
-    occupied |= &w_pieces.occupied;
-    occupied |= &b_pieces.occupied;
     
     // TODO: Remove this
     let zobrist_table = ZobristTable::new();
@@ -164,13 +159,7 @@ pub fn parse_fen(fen: String) -> Position {
     zobrist_key ^= zobrist_table.get_player_zobrist(whos_turn);
 
     properties.zobrist_key = zobrist_key;
+    
 
-    Position {
-        whos_turn,
-        num_players: 2,
-        dimensions: dims,
-        pieces: vec![w_pieces, b_pieces],
-        occupied,
-        properties: Arc::new(properties)
-    }
+    Position::new(dims, vec![w_pieces, b_pieces], whos_turn, properties)
 }
