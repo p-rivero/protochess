@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::position::castle_rights::CastleRights;
-use crate::types::{BIndex, Move};
+use crate::types::{BIndex, Move, Player};
 
-use crate::piece::{PieceIdWithPlayer, PieceId};
+use crate::piece::PieceId;
 
 /// Properties that are hard to recover from a Move
 #[derive(Clone, Debug)]
@@ -16,7 +16,7 @@ pub struct PositionProperties {
     //EP square (square behind a double pawn push)
     pub ep_square: Option<BIndex>,
     // Full id (piece type + player num) of the captured piece, if any
-    pub captured_piece: Option<PieceIdWithPlayer>,
+    pub captured_piece: Option<(PieceId, Player)>,
     pub prev_properties: Option<Arc<PositionProperties>>,
 }
 

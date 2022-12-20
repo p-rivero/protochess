@@ -24,4 +24,3 @@ pub const ID_ROOK: PieceId = 2;
 pub const ID_BISHOP: PieceId = 3;
 pub const ID_KNIGHT: PieceId = 4;
 pub const ID_PAWN: PieceId = 5;
-pub const BASE_ID_CUSTOM: PieceId = 100;

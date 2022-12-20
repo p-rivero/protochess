@@ -7,7 +7,7 @@ use crate::move_generator::bitboard_moves::BitboardMoves;
 use crate::utils::{from_index, to_index};
 
 pub mod attack_tables;
-mod bitboard_moves;
+pub mod bitboard_moves;
 
 
 lazy_static! {
@@ -49,7 +49,7 @@ impl MoveGen {
 
     /// Iterator that yields pseudo-legal moves from a position
     /// Considering only the classical piece set
-    pub fn get_classical_pseudo_moves(position:&mut Position) -> impl Iterator<Item=Move> {
+    fn get_classical_pseudo_moves(position:&mut Position) -> impl Iterator<Item=Move> {
         let my_pieces: &PieceSet = &position.pieces[position.whos_turn as usize];
         let enemies = &position.occupied & !&my_pieces.occupied;
 
@@ -143,7 +143,7 @@ impl MoveGen {
             if position.properties.castling_rights.can_player_castle_kingside(position.whos_turn) {
                 let rook_index = to_index(position.dimensions.width - 1, ky);
                 if let Some(pt) = position.piece_at(rook_index) {
-                    if pt.player_num() == whos_turn && pt.get_piece_id() == ID_ROOK {
+                    if pt.get_player() == whos_turn && pt.get_piece_id() == ID_ROOK {
                         //See if the space between is clear
                         let east = ATTACK_TABLES.masks.get_east(king_index);
                         let mut occ = east & &position.occupied;
@@ -164,7 +164,7 @@ impl MoveGen {
             if position.properties.castling_rights.can_player_castle_queenside(position.whos_turn) {
                 let rook_index = to_index(0 ,ky);
                 if let Some(pt) = position.piece_at(rook_index) {
-                    if pt.player_num() == whos_turn && pt.get_piece_id() == ID_ROOK {
+                    if pt.get_player() == whos_turn && pt.get_piece_id() == ID_ROOK {
                         let west = ATTACK_TABLES.masks.get_west(king_index);
                         let mut occ = west & &position.occupied;
                         occ.clear_bit(rook_index);
@@ -194,177 +194,19 @@ impl MoveGen {
     fn get_custom_psuedo_moves(position: &Position) -> impl Iterator<Item=Move> {
         let my_pieces: &PieceSet = &position.pieces[position.whos_turn as usize];
 
-        let mut iters:Vec<BitboardMoves> = Vec::new();
-        let mut moves = Vec::new();
-
-        //Return early if there are no custom pieces
-        if my_pieces.custom.is_empty() {
-            return iters.into_iter().flatten().chain(moves.into_iter());
-        }
+        let mut out_bb_moves: Vec<BitboardMoves> = Vec::with_capacity(50);
+        let mut out_moves = Vec::with_capacity(50);
 
         let enemies = &position.occupied & !&my_pieces.occupied;
         let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
 
         for p in &my_pieces.custom {
-            let movement = p.get_movement();
-
-            let bb = &p.bitboard;
-            let mut bb_copy = bb.to_owned();
-            while !bb_copy.is_zero() {
-                let index = bb_copy.lowest_one().unwrap();
-                // Sliding moves along ranks or files
-                //Attacks!
-                let mut raw_attacks = ATTACK_TABLES.get_sliding_moves_bb(
-                    index,
-                    &occ_or_not_in_bounds,
-                    movement.attack_north,
-                    movement.attack_east,
-                    movement.attack_south,
-                    movement.attack_west,
-                    movement.attack_northeast,
-                    movement.attack_northwest,
-                    movement.attack_southeast,
-                    movement.attack_southwest
-                );
-                //Attacks ONLY
-                raw_attacks &= &enemies;
-                //Keep only in bounds
-                raw_attacks &= &position.dimensions.bounds;
-                iters.push(BitboardMoves::new(
-                    enemies.to_owned(),
-                    raw_attacks,
-                    index,
-                    movement.promotion_squares.to_owned(),
-                    movement.promo_vals.to_owned(),
-                ));
-                //Movements!
-                let mut raw_moves = ATTACK_TABLES.get_sliding_moves_bb(index,
-                                                                            &occ_or_not_in_bounds,
-                                                                            movement.translate_north,
-                                                                            movement.translate_east,
-                                                                            movement.translate_south,
-                                                                            movement.translate_west,
-                                                                            movement.translate_northeast,
-                                                                            movement.translate_northwest,
-                                                                            movement.translate_southeast,
-                                                                            movement.translate_southwest
-                );
-                //Non-attacks ONLY
-                raw_moves &= !&position.occupied;
-                //Keep only in bounds
-                raw_moves &= &position.dimensions.bounds;
-                iters.push(BitboardMoves::new(
-                    enemies.to_owned(),
-                    raw_moves,
-                    index,
-                    movement.promotion_squares.to_owned(),
-                    movement.promo_vals.to_owned(),
-                ));
-
-
-                // Delta based moves (sliding, non sliding)
-                let (x, y) = from_index(index);
-                for (dx, dy) in &movement.translate_jump_deltas {
-                    let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                    if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                        continue;
-                    }
-                    let to = to_index(x2 as BCoord, y2 as BCoord);
-                    if position.in_bounds(x2 as BCoord, y2 as BCoord) && !position.occupied.get_bit(to) {
-                        //Promotion here?
-                        if movement.promotion_at(to) {
-                            //Add all the promotion moves
-                            for c in &movement.promo_vals {
-                                moves.push(Move::new(index, to, None, MoveType::Promotion, Some(*c)));
-                            }
-                        } else {
-                            moves.push(Move::new(index, to, None, MoveType::Quiet, None));
-                        }
-                    }
-                }
-
-                for (dx, dy) in &movement.attack_jump_deltas {
-
-                    let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                    if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                        continue;
-                    }
-                    let to = to_index(x2 as BCoord, y2 as BCoord);
-                    if enemies.get_bit(to) {
-                        //Promotion here?
-                        if movement.promotion_at(to) {
-                            //Add all the promotion moves
-                            for c in &movement.promo_vals {
-                                moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
-                            }
-                        } else {
-                            moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
-                        }
-                    }
-                }
-
-                for run in &movement.attack_sliding_deltas {
-                    for (dx, dy) in run {
-
-                        let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                        if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                            break;
-                        }
-
-                        let to = to_index(x2 as BCoord, y2 as BCoord);
-                        //Out of bounds, next sliding moves can be ignored
-                        if !position.in_bounds(x2 as BCoord, y2 as BCoord) {
-                            break;
-                        }
-                        //If there is an enemy here, we can add an attack move
-                        if enemies.get_bit(to) {
-                            if movement.promotion_at(to) {
-                                //Add all the promotion moves
-                                for c in &movement.promo_vals {
-                                    moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
-                                }
-                            } else {
-                                moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
-                            }
-                            break;
-                        }
-                        //Occupied by own team
-                        if position.occupied.get_bit(to) {
-                            break;
-                        }
-                    }
-                }
-
-
-                for run in &movement.translate_sliding_deltas {
-                    for (dx, dy) in run {
-                        let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                        if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                            break;
-                        }
-                        let to = to_index(x2 as BCoord, y2 as BCoord);
-                        //If the point is out of bounds or there is another piece here, we cannot go any
-                        //farther
-                        if !position.in_bounds(x2 as BCoord, y2 as BCoord) || position.occupied.get_bit(to) {
-                            break;
-                        }
-                        if movement.promotion_at(to) {
-                            //Add all the promotion moves
-                            for c in &movement.promo_vals {
-                                moves.push(Move::new(index, to, None, MoveType::Quiet, Some(*c)));
-                            }
-                        } else {
-                            moves.push(Move::new(index, to, None, MoveType::Quiet, None));
-                        }
-                    }
-                }
-
-                bb_copy.clear_bit(index);
-            }
+            p.output_moves(&position.dimensions, &position.occupied, &enemies, &occ_or_not_in_bounds, &mut out_bb_moves, &mut out_moves);
         }
-        iters.into_iter().flatten().chain(moves.into_iter())
+        out_bb_moves.into_iter().flatten().chain(out_moves.into_iter())
     }
 
+    // TODO: Remove this function
     /// Returns whether or not a player is in check for a given position
     fn is_in_check_from_king(position: &Position, my_player_num: Player) -> bool {
         let my_pieces: &PieceSet = &position.pieces[my_player_num as usize];
@@ -425,14 +267,14 @@ impl MoveGen {
     pub fn in_check(position:&mut Position) -> bool {
         let my_player_num = position.whos_turn;
         let mut in_check = false;
+        // Pass turn
         position.make_move(Move::null());
         if MoveGen::is_in_check_from_king(position, my_player_num) {
             in_check = true;
         }
-        //Custom pieces
-        for mv in MoveGen::get_custom_psuedo_moves(position)  {
-            // TODO: Allow custom pieces to capture kings
-            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().get_piece_id() == ID_KING {
+        // See if the opponent has a move that captures our last leader
+        for mv in MoveGen::get_custom_psuedo_moves(position) {
+            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().potential_checkmate() {
                 in_check = true;
                 break;
             }
@@ -443,23 +285,16 @@ impl MoveGen {
 
     ///Checks if a move is legal
     pub fn is_move_legal(mv:&Move, position:&mut Position) -> bool{
-        //You cannot capture kings
-        // TODO: Allow capturing kings
-        if mv.get_move_type() == MoveType::PromotionCapture || mv.get_move_type() == MoveType::Capture {
-            if position.piece_at(mv.get_target()).unwrap().get_piece_id() == ID_KING {
-                return false;
-            }
-        }
         let my_player_num = position.whos_turn;
         let mut legality = true;
+        // Try the move
         position.make_move(mv.to_owned());
         if MoveGen::is_in_check_from_king(position, my_player_num) {
             legality = false;
         }
-        //Custom pieces
+        // See if the opponent has a move that captures our last leader
         for mv in MoveGen::get_custom_psuedo_moves(position)  {
-            // TODO: Allow custom pieces to capture kings
-            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().get_piece_id() == ID_KING {
+            if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().potential_checkmate() {
                 legality = false;
                 break;
             }

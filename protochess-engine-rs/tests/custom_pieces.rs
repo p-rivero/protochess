@@ -74,7 +74,7 @@ mod custom_pieces {
         let white_pawn = PieceFactory::make_pawn(123, 0, &dims, vec![1, 2, 3]);
         
         assert_eq!(white_pawn.get_piece_id(), 123);
-        assert_eq!(white_pawn.player_num(), 0);
+        assert_eq!(white_pawn.get_player(), 0);
         assert_eq!(white_pawn.get_material_score(), 100);
         assert_eq!(white_pawn.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(white_pawn.get_positional_score_all(), 0); // No pieces on the board
@@ -91,7 +91,7 @@ mod custom_pieces {
         let black_pawn = PieceFactory::make_pawn(123, 1, &dims, vec![1, 2, 3]);
         
         assert_eq!(black_pawn.get_piece_id(), 123);
-        assert_eq!(black_pawn.player_num(), 1);
+        assert_eq!(black_pawn.get_player(), 1);
         assert_eq!(black_pawn.get_material_score(), 100);
         assert_eq!(black_pawn.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(black_pawn.get_positional_score_all(), 0); // No pieces on the board
@@ -111,7 +111,7 @@ mod custom_pieces {
         let knight = PieceFactory::make_knight(123, 0, &dims);
         
         assert_eq!(knight.get_piece_id(), 123);
-        assert_eq!(knight.player_num(), 0);
+        assert_eq!(knight.get_player(), 0);
         assert_eq!(knight.get_material_score(), 320);
         assert_eq!(knight.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(knight.get_positional_score_all(), 0); // No pieces on the board
@@ -131,7 +131,7 @@ mod custom_pieces {
         let bishop = PieceFactory::make_bishop(123, 0, &dims);
         
         assert_eq!(bishop.get_piece_id(), 123);
-        assert_eq!(bishop.player_num(), 0);
+        assert_eq!(bishop.get_player(), 0);
         assert_eq!(bishop.get_material_score(), 370);
         assert_eq!(bishop.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(bishop.get_positional_score_all(), 0); // No pieces on the board
@@ -151,7 +151,7 @@ mod custom_pieces {
         let rook = PieceFactory::make_rook(123, 0, &dims);
         
         assert_eq!(rook.get_piece_id(), 123);
-        assert_eq!(rook.player_num(), 0);
+        assert_eq!(rook.get_player(), 0);
         assert_eq!(rook.get_material_score(), 520);
         assert_eq!(rook.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(rook.get_positional_score_all(), 0); // No pieces on the board
@@ -171,7 +171,7 @@ mod custom_pieces {
         let queen = PieceFactory::make_queen(123, 0, &dims);
         
         assert_eq!(queen.get_piece_id(), 123);
-        assert_eq!(queen.player_num(), 0);
+        assert_eq!(queen.get_player(), 0);
         assert_eq!(queen.get_material_score(), 1040);
         assert_eq!(queen.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(queen.get_positional_score_all(), 0); // No pieces on the board
@@ -191,7 +191,7 @@ mod custom_pieces {
         let king = PieceFactory::make_king(123, 0, &dims);
         
         assert_eq!(king.get_piece_id(), 123);
-        assert_eq!(king.player_num(), 0);
+        assert_eq!(king.get_player(), 0);
         assert_eq!(king.get_material_score(), 320 * 2);
         assert_eq!(king.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(king.get_positional_score_all(), 0); // No pieces on the board

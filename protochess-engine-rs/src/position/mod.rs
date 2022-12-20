@@ -12,7 +12,7 @@ use zobrist_table::ZobristTable;
 pub use parse_fen::parse_fen;
 use position_properties::PositionProperties;
 
-use crate::piece::{Piece, PieceFactory, PieceId, PieceIdWithPlayer};
+use crate::piece::{Piece, PieceFactory, PieceId};
 
 mod position_properties;
 pub mod castle_rights;
@@ -116,7 +116,7 @@ impl Position {
                 let capt_index = mv.get_target();
                 let captured_piece = self.piece_at(capt_index).unwrap();
                 new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
-                new_props.captured_piece = Some(captured_piece.get_full_id());
+                new_props.captured_piece = Some((captured_piece.get_piece_id(), captured_piece.get_player()));
                 self.remove_piece(capt_index);
             },
             MoveType::KingsideCastle => {
@@ -266,10 +266,8 @@ impl Position {
         match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt = mv.get_target();
-                let full_id: PieceIdWithPlayer = self.properties.captured_piece.unwrap();
-                let owner = Piece::get_player_from_id(full_id);
-                let pt = Piece::get_piecetype_from_id(full_id);
-                self.add_piece(owner, pt, capt);
+                let (piece_id, owner) = self.properties.captured_piece.unwrap();
+                self.add_piece(owner, piece_id, capt);
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
@@ -426,14 +424,14 @@ impl Position {
     /// Does nothing if a custom piece isn't registered yet
     fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex) {
         match piece_id {
-            ID_KING => {self.pieces[owner as usize].king.bitboard.set_bit(index);},
-            ID_QUEEN => {self.pieces[owner as usize].queen.bitboard.set_bit(index);},
-            ID_ROOK => {self.pieces[owner as usize].rook.bitboard.set_bit(index);},
-            ID_BISHOP => {self.pieces[owner as usize].bishop.bitboard.set_bit(index);},
-            ID_KNIGHT => {self.pieces[owner as usize].knight.bitboard.set_bit(index);},
-            ID_PAWN => {self.pieces[owner as usize].pawn.bitboard.set_bit(index);},
+            ID_KING => {self.pieces[owner as usize].king.add_piece(index);},
+            ID_QUEEN => {self.pieces[owner as usize].queen.add_piece(index);},
+            ID_ROOK => {self.pieces[owner as usize].rook.add_piece(index);},
+            ID_BISHOP => {self.pieces[owner as usize].bishop.add_piece(index);},
+            ID_KNIGHT => {self.pieces[owner as usize].knight.add_piece(index);},
+            ID_PAWN => {self.pieces[owner as usize].pawn.add_piece(index);},
             _ => {
-                // TODO: Change
+                // TODO: Use hashmap to store pieces?
                 for c in self.pieces[owner as usize].custom.iter_mut() {
                     if piece_id == c.get_piece_id() {
                         c.add_piece(index);
