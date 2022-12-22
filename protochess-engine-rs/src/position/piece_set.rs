@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 //Pieces that a player has
 use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns};
 use crate::piece::{Piece, PieceFactory};
@@ -9,14 +11,9 @@ use crate::constants::piece_scores::*;
 #[derive(Clone, Debug)]
 pub struct PieceSet {
     pub occupied: Bitboard,
-    pub king: Piece,
-    pub queen: Piece,
-    pub bishop: Piece,
-    pub knight: Piece,
-    pub rook: Piece,
-    pub pawn: Piece,
+    // TODO: Treemap
     pub custom: Vec<Piece>,
-    pub player_num: Player
+    pub player_num: Player,
 }
 
 impl PieceSet {
@@ -24,86 +21,38 @@ impl PieceSet {
     pub fn new(player_num: Player, dims: &BDimensions) -> PieceSet {
         PieceSet {
             occupied: Bitboard::zero(),
-            king: PieceFactory::make_king(ID_KING, player_num, dims),
-            queen: PieceFactory::make_queen(ID_QUEEN, player_num, dims),
-            bishop: PieceFactory::make_bishop(ID_BISHOP, player_num, dims),
-            knight: PieceFactory::make_knight(ID_KNIGHT, player_num, dims),
-            rook: PieceFactory::make_rook(ID_ROOK, player_num, dims),
-            pawn: PieceFactory::make_pawn(ID_PAWN, player_num, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]),
-            custom: Vec::new(),
-            player_num
+            // TODO: Remove hardcoded pieces
+            custom: vec![
+                PieceFactory::make_king(ID_KING, player_num, dims),
+                PieceFactory::make_queen(ID_QUEEN, player_num, dims),
+                PieceFactory::make_bishop(ID_BISHOP, player_num, dims),
+                PieceFactory::make_knight(ID_KNIGHT, player_num, dims),
+                PieceFactory::make_rook(ID_ROOK, player_num, dims),
+                PieceFactory::make_pawn(ID_PAWN, player_num, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]),
+            ],
+            player_num,
         }
     }
 
-    // TODO: Adapt this to use the new PieceSet
     pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {
-        if self.king.bitboard.get_bit(index) {
-            Some(&self.king)
-        } else if self.queen.bitboard.get_bit(index)  {
-            Some(&self.queen)
-        } else if self.bishop.bitboard.get_bit(index)  {
-            Some(&self.bishop)
-        } else if self.knight.bitboard.get_bit(index)  {
-            Some(&self.knight)
-        } else if self.rook.bitboard.get_bit(index)  {
-            Some(&self.rook)
-        } else if self.pawn.bitboard.get_bit(index)  {
-            Some(&self.pawn)
-        } else {
-            for p in self.custom.iter() {
-                if p.bitboard.get_bit(index)  {
-                    return Some(p);
-                }
-            }
-            None
-        }
+        self.custom.iter().find(|&p| p.bitboard.get_bit(index))
     }
     pub fn piece_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
-        if self.king.bitboard.get_bit(index) {
-            Some(&mut self.king)
-        } else if self.queen.bitboard.get_bit(index)  {
-            Some(&mut self.queen)
-        } else if self.bishop.bitboard.get_bit(index)  {
-            Some(&mut self.bishop)
-        } else if self.knight.bitboard.get_bit(index)  {
-            Some(&mut self.knight)
-        } else if self.rook.bitboard.get_bit(index)  {
-            Some(&mut self.rook)
-        } else if self.pawn.bitboard.get_bit(index)  {
-            Some(&mut self.pawn)
-        } else {
-            for p in self.custom.iter_mut() {
-                if p.bitboard.get_bit(index)  {
-                    return Some(p);
-                }
-            }
-            None
-        }
+        self.custom.iter_mut().find(|p| p.bitboard.get_bit(index))
+    }
+    
+    pub fn search_by_char(&mut self, c: char) -> Option<&mut Piece> {
+        self.custom.iter_mut().find(|p| p.char_rep() == c)
     }
 
-    pub fn get_piece_refs(&self) -> Vec<&Piece> {
-        let mut return_vec = Vec::with_capacity(6);
-        return_vec.push(&self.king);
-        return_vec.push(&self.queen);
-        return_vec.push(&self.bishop);
-        return_vec.push(&self.knight);
-        return_vec.push(&self.rook);
-        return_vec.push(&self.pawn);
-        for p in &self.custom {
-            return_vec.push(p);
-        }
-        return_vec
+    // Returns an iterator over all pieces in the set
+    pub fn get_piece_refs(&self) -> Iter<Piece> {
+        self.custom.iter()
     }
 
     //Recomputes occupied bb
     pub fn update_occupied(&mut self) {
         self.occupied = Bitboard::zero();
-        self.occupied |= &self.king.bitboard;
-        self.occupied |= &self.queen.bitboard;
-        self.occupied |= &self.bishop.bitboard;
-        self.occupied |= &self.knight.bitboard;
-        self.occupied |= &self.rook.bitboard;
-        self.occupied |= &self.pawn.bitboard;
         for p in &self.custom {
             self.occupied |= &p.bitboard;
         }
@@ -113,15 +62,6 @@ impl PieceSet {
     pub fn get_material_score(&self) -> (Centipawns, Centipawns) {
         let mut score = 0;
         let mut leader_score = 0;
-        let king_score = self.king.bitboard.count_ones() as Centipawns * KING_SCORE;
-        score += king_score;
-        leader_score += king_score;
-        score += self.queen.bitboard.count_ones() as Centipawns * QUEEN_SCORE;
-        score += self.rook.bitboard.count_ones() as Centipawns * ROOK_SCORE;
-        score += self.knight.bitboard.count_ones() as Centipawns * KNIGHT_SCORE;
-        score += self.bishop.bitboard.count_ones() as Centipawns * BISHOP_SCORE;
-        score += self.pawn.bitboard.count_ones() as Centipawns * PAWN_SCORE;
-
         for piece in &self.custom {
             let piece_total_score = piece.get_material_score_all();
             score += piece_total_score;
@@ -130,5 +70,20 @@ impl PieceSet {
             }
         }
         (score, leader_score)
+    }
+    
+    pub fn get_positional_score(&self, is_endgame: bool, ) -> Centipawns {
+        let mut score = 0;
+        for piece in &self.custom {
+            // TODO: Inverting the leader score may not always be the best option
+            // For each piece, get the positional score.
+            // Invert the leader so that it stays away from the center, except in the endgame
+            if piece.is_leader() && !is_endgame {
+                score -= piece.get_positional_score_all();
+            } else {
+                score += piece.get_positional_score_all();
+            }
+        }
+        score
     }
 }

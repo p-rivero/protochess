@@ -1,7 +1,7 @@
 use instant::Instant;
 
 use crate::{Position, MoveGen};
-use crate::types::{Move, MoveType, Depth, SearchError, Centipawns};
+use crate::types::{Move, Depth, SearchError, Centipawns};
 
 use super::Searcher;
 use super::eval;
@@ -93,11 +93,7 @@ impl Searcher {
                 score = -self.alphabeta(pos, depth - 1, -beta, -alpha, true, end_time)?;
             } else {
                 //Try late move reduction
-                if num_legal_moves > 4
-                    && mv.get_move_type() == MoveType::Quiet
-                    && !is_pv
-                    && depth >= 5
-                    && !in_check {
+                if num_legal_moves > 4 && mv.is_quiet() && !is_pv && depth >= 5 && !in_check {
                     //Null window search with depth - 2
                     let mut reduced_depth = depth - 2;
                     if num_legal_moves > 10 {

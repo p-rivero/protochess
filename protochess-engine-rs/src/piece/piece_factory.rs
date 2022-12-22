@@ -14,9 +14,12 @@ impl PieceFactory {
     pub fn make_pawn(id: PieceId, player_num: Player, dims: &BDimensions, promotions: Vec<PieceId>) -> Piece {
         let is_white = player_num == 0;
         let promotion_rank = { if is_white { dims.height - 1 } else { 0 } };
+        let double_move_rank = { if is_white { 1 } else { dims.height - 2 } };
         let mut promotion_squares = Bitboard::zero();
+        let mut double_move_squares = Bitboard::zero();
         for i in 0..dims.width {
             promotion_squares.set_bit_at(i, promotion_rank);
+            double_move_squares.set_bit_at(i, double_move_rank);
         }
         let move_dir = { if is_white { 1 } else { -1 } };
         
@@ -24,9 +27,10 @@ impl PieceFactory {
             id,
             char_rep: if is_white { 'P' } else { 'p' },
             is_leader: false,
-            can_double_move: true,
             can_castle: false,
+            is_castle_rook: false,
             promotion_squares,
+            double_move_squares,
             promo_vals: promotions,
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(-1, move_dir), (1, move_dir)],
@@ -59,9 +63,10 @@ impl PieceFactory {
             id,
             char_rep: if player_num == 0 { 'N' } else { 'n' },
             is_leader: false,
-            can_double_move: false,
             can_castle: false,
+            is_castle_rook: false,
             promotion_squares: Bitboard::zero(),
+            double_move_squares: Bitboard::zero(),
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(1, 2), (1, -2), (-1, 2), (-1, -2), (2, 1), (2, -1), (-2, 1), (-2, -1)],
@@ -93,9 +98,10 @@ impl PieceFactory {
             id,
             char_rep: if player_num == 0 { 'B' } else { 'b' },
             is_leader: false,
-            can_double_move: false,
             can_castle: false,
+            is_castle_rook: false,
             promotion_squares: Bitboard::zero(),
+            double_move_squares: Bitboard::zero(),
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
@@ -127,9 +133,10 @@ impl PieceFactory {
             id,
             char_rep: if player_num == 0 { 'R' } else { 'r' },
             is_leader: false,
-            can_double_move: false,
             can_castle: false,
+            is_castle_rook: true,
             promotion_squares: Bitboard::zero(),
+            double_move_squares: Bitboard::zero(),
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
@@ -161,9 +168,10 @@ impl PieceFactory {
             id,
             char_rep: if player_num == 0 { 'K' } else { 'k' },
             is_leader: true,
-            can_double_move: false,
-            can_castle: false,
+            can_castle: true,
+            is_castle_rook: false,
             promotion_squares: Bitboard::zero(),
+            double_move_squares: Bitboard::zero(),
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)],
@@ -195,9 +203,10 @@ impl PieceFactory {
             id,
             char_rep: if player_num == 0 { 'Q' } else { 'q' },
             is_leader: false,
-            can_double_move: false,
             can_castle: false,
+            is_castle_rook: false,
             promotion_squares: Bitboard::zero(),
+            double_move_squares: Bitboard::zero(),
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],

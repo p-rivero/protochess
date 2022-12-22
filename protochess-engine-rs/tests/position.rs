@@ -2,7 +2,6 @@
 mod position_test {
     use protochess_engine_rs::Position;
     use protochess_engine_rs::MoveGen;
-    use protochess_engine_rs::position::castle_rights::CastleRights;
     use protochess_engine_rs::types::Move;
     
     
@@ -76,15 +75,5 @@ mod position_test {
         assert_eq!(zob_0, pos.get_zobrist())
     }
     
-    #[test]
-    fn castle_rights() {
-        let mut test_rights = CastleRights::new();
-        assert!(test_rights.can_player_castle_queenside(0));
-        test_rights.disable_queenside_castle(0);
-        assert!(test_rights.can_player_castle_queenside(0) == false);
-        assert!(test_rights.can_player_castle_kingside(0));
-        test_rights.disable_kingside_castle(0);
-        assert!(test_rights.can_player_castle_kingside(0) == false);
-    }
 }
 

@@ -35,7 +35,7 @@ pub enum MakeMoveResult {
 
 /// Starting point for the engine
 pub struct Engine{
-    position: Position,
+    pub position: Position,
 }
 
 impl Engine {
@@ -166,7 +166,7 @@ impl Engine {
     }
 
     pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
-                     valid_squares: Vec<(BCoord, BCoord)>, pieces: &Vec<(Player, BCoord, BCoord, PieceId)>) {
+                     valid_squares: Vec<(BCoord, BCoord)>, pieces: &[(Player, BCoord, BCoord, PieceId)]) {
         let dims = BDimensions::from_valid_squares(&valid_squares);
         
         // For each piece, convert coordnates to index
@@ -179,6 +179,9 @@ impl Engine {
     
     pub fn perft(&mut self, depth: Depth) -> u64 {
         utils::perft::perft(&mut self.position, depth)
+    }
+    pub fn perft_divide(&mut self, depth: Depth) -> u64 {
+        utils::perft::perft_divide(&mut self.position, depth)
     }
 }
 

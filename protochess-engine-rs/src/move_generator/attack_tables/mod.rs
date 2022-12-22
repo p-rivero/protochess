@@ -1,104 +1,19 @@
 mod mask_handler;
 
-use arrayvec::ArrayVec;
-use crate::types::{Bitboard, BIndex, BCoord};
+use crate::types::{Bitboard, BIndex};
 use crate::move_generator::attack_tables::mask_handler::MaskHandler;
-use crate::utils::{to_index, from_index};
+use crate::utils::{from_index};
 
 /// Holds pre-calculated attack tables for the pieces, assuming a 16x16 size board
 /// Only for classical set of pieces
 #[derive(Clone, Debug)]
 pub struct AttackTables {
     slider_attacks: Vec<Vec<u16>>,
-    knight_attacks: ArrayVec<[Bitboard;256]>,
-    king_attacks: ArrayVec<[Bitboard;256]>,
-    north_pawn_attacks: ArrayVec<[Bitboard;256]>,
-    north_pawn_single_push: ArrayVec<[Bitboard;256]>,
-    north_pawn_double_push: ArrayVec<[Bitboard;256]>,
-    south_pawn_attacks: ArrayVec<[Bitboard;256]>,
-    south_pawn_single_push: ArrayVec<[Bitboard;256]>,
-    south_pawn_double_push: ArrayVec<[Bitboard;256]>,
     pub masks: MaskHandler
 }
 
 impl AttackTables {
     pub fn new() -> AttackTables {
-        let mut knight_attacks = ArrayVec::<[Bitboard;256]>::new();
-        let mut king_attacks = ArrayVec::<[Bitboard;256]>::new();
-        let mut north_pawn_attacks = ArrayVec::<[Bitboard;256]>::new();
-        let mut north_pawn_single_push = ArrayVec::<[Bitboard;256]>::new();
-        let mut north_pawn_double_push = ArrayVec::<[Bitboard;256]>::new();
-        let mut south_pawn_attacks = ArrayVec::<[Bitboard;256]>::new();
-        let mut south_pawn_single_push = ArrayVec::<[Bitboard;256]>::new();
-        let mut south_pawn_double_push = ArrayVec::<[Bitboard;256]>::new();
-        for _i in 0..256 {
-            knight_attacks.push(Bitboard::zero());
-            king_attacks.push(Bitboard::zero());
-            north_pawn_attacks.push(Bitboard::zero());
-            north_pawn_single_push.push(Bitboard::zero());
-            north_pawn_double_push.push(Bitboard::zero());
-            south_pawn_attacks.push(Bitboard::zero());
-            south_pawn_single_push.push(Bitboard::zero());
-            south_pawn_double_push.push(Bitboard::zero());
-        }
-
-        for x in 0..16_i8 {
-            for y in 0..16_i8 {
-                let index:usize = to_index(x as BCoord, y as BCoord) as usize;
-                //PAWN
-                if y != 15 {
-                    north_pawn_single_push[index].set_bit_at(x as BCoord, (y + 1) as BCoord);
-                    north_pawn_double_push[index].set_bit_at(x as BCoord, (y + 1) as BCoord);
-                    if y + 2 < 16 {
-                        north_pawn_double_push[index].set_bit_at(x as BCoord ,(y + 2) as BCoord);
-                    }
-                    if x + 1 < 16 {
-                        north_pawn_attacks[index].set_bit_at((x + 1) as BCoord, (y + 1) as BCoord);
-                    }
-                    if x - 1 >= 0 {
-                        north_pawn_attacks[index].set_bit_at((x - 1) as BCoord, (y + 1) as BCoord);
-                    }
-                }
-
-                if y != 0 {
-                    south_pawn_single_push[index].set_bit_at(x as BCoord, (y - 1) as BCoord);
-                    south_pawn_double_push[index].set_bit_at(x as BCoord, (y - 1) as BCoord);
-                    if y - 2 >= 0 {
-                        south_pawn_double_push[index].set_bit_at(x as BCoord, (y - 2) as BCoord);
-                    }
-                    if x + 1 < 16 {
-                        south_pawn_attacks[index].set_bit_at((x + 1) as BCoord, (y - 1) as BCoord);
-                    }
-                    if x - 1 >= 0 {
-                        south_pawn_attacks[index].set_bit_at((x - 1) as BCoord, (y - 1) as BCoord);
-                    }
-                }
-
-                //KING LOOKUP TABLE
-                let king_deltas = [(0,  1), (0,  -1), (-1, 0), (1,  0),
-                    (1,  1), (1,  -1), (-1, 1), (-1, -1)];
-
-                for delta in &king_deltas {
-                    let x2 = delta.0 + x;
-                    let y2 = delta.1 + y;
-                    if (0..16).contains(&x2) && (0..16).contains(&y2) {
-                        king_attacks[index].set_bit_at(x2 as BCoord, y2 as BCoord);
-                    }
-                }
-                //KNIGHT LOOKUP TABLE
-                let knight_deltas = [(2,  1), (2,  -1), (-2, 1), (-2, -1),
-                    (1,  2), (1,  -2), (-1, 2), (-1, -2)];
-
-                for delta in &knight_deltas {
-                    let x2 = delta.0 + x;
-                    let y2 = delta.1 + y;
-                    if (0..16).contains(&x2) && (0..16).contains(&y2) {
-                        knight_attacks[index].set_bit_at(x2 as BCoord, y2 as BCoord);
-                    }
-                }
-            }
-        }
-
         //16 * 2^16 possible states; 16 squares in 1 rank, 2^16 possible occupancies per rank
         let mut slider_attacks = vec![vec![0; 65536]; 16];
         //16 squares in 1 rank
@@ -139,14 +54,6 @@ impl AttackTables {
 
         AttackTables{
             slider_attacks,
-            king_attacks,
-            knight_attacks,
-            north_pawn_attacks,
-            north_pawn_single_push,
-            north_pawn_double_push,
-            south_pawn_attacks,
-            south_pawn_single_push,
-            south_pawn_double_push,
             masks: MaskHandler::new()
         }
     }
@@ -215,56 +122,6 @@ impl AttackTables {
         return_bb.overflowing_mul(self.masks.get_file(0)) & self.masks.get_antidiagonal(loc_index)
     }
 
-    pub fn get_knight_attack(&self, loc_index: BIndex, _occ: &Bitboard, _enemies: &Bitboard) -> Bitboard {
-        self.knight_attacks[loc_index as usize].to_owned()
-    }
-
-    pub fn get_king_attack(&self, loc_index: BIndex, _occ: &Bitboard, _enemies: &Bitboard) -> Bitboard {
-        self.king_attacks[loc_index as usize].to_owned()
-    }
-
-    pub fn get_north_pawn_attack(&self, loc_index: BIndex, occ: &Bitboard, enemies: &Bitboard) -> Bitboard {
-        let (x, y) = from_index(loc_index);
-        let return_bb = {
-            //Double push
-            if y == 1 && !occ.get_bit_at(x, y+1) {
-                &self.north_pawn_double_push[loc_index as usize] & !occ
-            } else {
-                &self.north_pawn_single_push[loc_index as usize] & !occ
-            }
-        };
-        return_bb ^ (&self.north_pawn_attacks[loc_index as usize] & enemies)
-    }
-
-    pub fn get_south_pawn_attack(&self, loc_index: BIndex, occ: &Bitboard, enemies: &Bitboard) -> Bitboard {
-        let (x, y) = from_index(loc_index);
-        let return_bb = {
-            //Double push
-            if y == 6 && !occ.get_bit_at(x, y-1) {
-                &self.south_pawn_double_push[loc_index as usize] & !occ
-            } else {
-                &self.south_pawn_single_push[loc_index as usize] & !occ
-            }
-        };
-        return_bb ^ (&self.south_pawn_attacks[loc_index as usize] & enemies)
-    }
-
-    pub fn get_south_pawn_attack_masked(&self, loc_index: BIndex, _occ: &Bitboard, enemies: &Bitboard) -> Bitboard {
-        &self.south_pawn_attacks[loc_index as usize] & enemies
-    }
-
-    pub fn get_north_pawn_attack_masked(&self, loc_index: BIndex, _occ: &Bitboard, enemies: &Bitboard) -> Bitboard {
-        &self.north_pawn_attacks[loc_index as usize] & enemies
-    }
-
-    pub fn get_north_pawn_attack_raw(&self, loc_index: BIndex) -> &Bitboard {
-        &self.north_pawn_attacks[loc_index as usize]
-    }
-
-    pub fn get_south_pawn_attack_raw(&self, loc_index: BIndex) -> &Bitboard {
-        &self.south_pawn_attacks[loc_index as usize]
-    }
-
     /// Returns a bitboard of the sliding piece moves
     pub fn get_sliding_moves_bb(&self,
                                 loc_index: BIndex,
@@ -316,21 +173,6 @@ impl AttackTables {
         }
 
         raw_attacks
-    }
-
-    pub fn get_rook_attack(&self, loc_index: BIndex, occ: &Bitboard, _enemies: &Bitboard) -> Bitboard {
-        self.get_file_attack(loc_index, occ)
-            ^ self.get_rank_attack(loc_index, occ)
-    }
-
-    pub fn get_bishop_attack(&self, loc_index: BIndex, occ: &Bitboard, _enemies: &Bitboard) -> Bitboard {
-        self.get_diagonal_attack(loc_index, occ)
-            ^ self.get_antidiagonal_attack(loc_index, occ)
-    }
-
-    pub fn get_queen_attack(&self, loc_index: BIndex, occ: &Bitboard, enemies: &Bitboard) -> Bitboard {
-        self.get_rook_attack(loc_index, occ, enemies)
-            ^ self.get_bishop_attack(loc_index, occ, enemies)
     }
 
 }

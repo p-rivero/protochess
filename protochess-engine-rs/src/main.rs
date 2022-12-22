@@ -50,7 +50,7 @@ pub fn main() {
         match engine.make_move(mv) {
             MakeMoveResult::Ok => {},
             MakeMoveResult::IllegalMove => {
-                assert!(false, "An illegal move was made");
+                panic!("An illegal move was made");
             },
             MakeMoveResult::Checkmate(losing_player) => {
                 if losing_player == 0 {

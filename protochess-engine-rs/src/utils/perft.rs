@@ -8,12 +8,10 @@ use super::{from_index, to_rank_file};
 pub fn perft(position: &mut Position, depth: Depth) -> u64 {
     let mut nodes = 0u64;
 
-    let moves = MoveGen::get_pseudo_moves(position);
-
     if depth == 1 {
         return MoveGen::count_legal_moves(position);
     }
-    for mv in moves{
+    for mv in MoveGen::get_pseudo_moves(position) {
         if !MoveGen::is_move_legal(&mv, position) {
             continue;
         }
@@ -28,12 +26,11 @@ pub fn perft(position: &mut Position, depth: Depth) -> u64 {
 pub fn perft_divide(position: &mut Position, depth: Depth) -> u64 {
     let mut nodes = 0u64;
 
-    let moves = MoveGen::get_pseudo_moves(position);
     if depth == 1 {
         return MoveGen::count_legal_moves(position);
     }
     let mut printing = Vec::new();
-    for mv in moves{
+    for mv in MoveGen::get_pseudo_moves(position) {
         if !MoveGen::is_move_legal(&mv, position) {
             continue;
         }

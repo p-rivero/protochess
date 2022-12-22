@@ -16,7 +16,9 @@ pub enum MoveType {
     // Skip 0b0101 because there is no QueensideCastleCapture
     Promotion = 0b0110,
     PromotionCapture = 0b0111,
-    Null = 0b1000,
+    DoubleJump = 0b1000,
+    // Skip 0b1001 because there is no DoubleJumpCapture
+    Null = 0b1010,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -26,6 +28,8 @@ pub struct Move {
     ///8-15:  to index:u8
     ///16-23: target index:u8
     ///24-27 : movetype (see MoveType above)
+    /// In captures, target is the index of the captured piece (usually the same as to, except for en passant)
+    /// In DoubleJump, target is the index of the generated En Passant square
     move_fields: u32, 
     // Promotion piece
     promotion: Option<PieceId>
@@ -47,6 +51,10 @@ impl Move {
     pub fn is_null(&self) -> bool {
         self.get_move_type() == MoveType::Null
     }
+    
+    pub fn is_quiet(&self) -> bool {
+        self.get_move_type() == MoveType::Quiet || self.get_move_type() == MoveType::DoubleJump
+    }
 
     pub fn get_from(&self) -> BIndex{
         (self.move_fields & (BIndex::MAX as u32)) as BIndex
@@ -57,6 +65,7 @@ impl Move {
     }
     
     // Get the index of the victim piece, if any. Usually the same as get_to(), except for en passant
+    // In double jump, this is the index of the generated en passant square
     pub fn get_target(&self) -> BIndex {
         ((self.move_fields >> 16) & (BIndex::MAX as u32)) as BIndex
     }
@@ -77,7 +86,7 @@ impl Move {
                 }
             }
         }
-        match_move_type!(Quiet, Capture, KingsideCastle, QueensideCastle, Promotion, PromotionCapture, Null)
+        match_move_type!(Quiet, Capture, KingsideCastle, QueensideCastle, Promotion, PromotionCapture, DoubleJump, Null)
     }
 
     pub fn get_promotion_piece(&self) -> Option<PieceId> {
@@ -110,6 +119,29 @@ impl MoveInfo {
             promotion: m.get_promotion_piece()
         }
     }
+    
+    // Create a MoveInfo from a string like "e2e4" or "e7e8=123" (promotion to piece with id 123)
+    pub fn from_string(s: &str) -> MoveInfo {
+        let mut chars = s.chars();
+        let from_x = chars.next().unwrap() as u8 - 'a' as u8;
+        let from_y = chars.next().unwrap() as u8 - '1' as u8;
+        let to_x = chars.next().unwrap() as u8 - 'a' as u8;
+        let to_y = chars.next().unwrap() as u8 - '1' as u8;
+        let promotion = {
+            if chars.next() == Some('=') {
+                let id = chars.as_str().parse::<PieceId>().unwrap();
+                Some(id)
+            } else {
+                None
+            }
+        };
+        MoveInfo {
+            from: (from_x, from_y),
+            to: (to_x, to_y),
+            promotion
+        }
+    }
+    
     pub fn matches_move(&self, m: Move) -> bool {
         let (from_x, from_y) = from_index(m.get_from());
         let (to_x, to_y) = from_index(m.get_to());

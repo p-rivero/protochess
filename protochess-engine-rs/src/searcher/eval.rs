@@ -1,7 +1,5 @@
-use crate::position::piece_set::PieceSet;
 use crate::position::Position;
 use crate::types::{Move, Centipawns};
-use crate::constants::piece_scores::*;
 
 /// Retrieves the score for the player to move (position.whos_turn)
 pub fn evaluate(position: &mut Position) -> Centipawns {
@@ -30,21 +28,21 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
     // Positional score
     let is_endgame = total_leaderless_score < ENDGAME_THRESHOLD;
     for ps in position.pieces.iter() {
-        let positional_score = get_positional_score(is_endgame, ps);
+        if ps.player_num == player_num {
+            score += ps.get_positional_score(is_endgame);
+        } else {
+            score -= ps.get_positional_score(is_endgame);
+        }
+        
         //Castling bonus
         // TODO: Keep castling bonus also in the endgame?
+        const CASTLING_BONUS: Centipawns = 15;
         if position.properties.castling_rights.did_player_castle(ps.player_num) && !is_endgame {
             if ps.player_num == player_num {
                 score += CASTLING_BONUS;
             } else {
                 score -= CASTLING_BONUS;
             }
-        }
-        
-        if ps.player_num == player_num {
-            score += positional_score;
-        } else {
-            score -= positional_score;
         }
     }
 
@@ -82,19 +80,4 @@ pub fn can_do_null_move(position: &Position) -> bool {
     let piece_set = &position.pieces[position.whos_turn as usize];
     let (total_score, leader_score) = piece_set.get_material_score();
     total_score - leader_score > NULL_MOVE_THRESHOLD
-}
-
-fn get_positional_score(is_endgame: bool, piece_set: &PieceSet) -> Centipawns {
-    let mut score = 0;
-    for piece in piece_set.get_piece_refs() {
-        // TODO: Inverting the leader score may not always be the best option
-        // For each piece, get the positional score.
-        // Invert the leader so that it stays away from the center, except in the endgame
-        if piece.is_leader() && !is_endgame {
-            score -= piece.get_positional_score_all();
-        } else {
-            score += piece.get_positional_score_all();
-        }
-    }
-    score
 }

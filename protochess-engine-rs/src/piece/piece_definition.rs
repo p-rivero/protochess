@@ -11,12 +11,15 @@ pub struct PieceDefinition {
     pub char_rep: char,
     
     pub is_leader: bool,
-    pub can_double_move: bool,
     pub can_castle: bool,
+    pub is_castle_rook: bool,
     
     // Places where this piece can promote, as well as PieceId for the promotion pieces
     pub promotion_squares: Bitboard,
     pub promo_vals: Vec<PieceId>,
+    
+    // Places where this piece can double move
+    pub double_move_squares: Bitboard,
 
     // Ways the piece can capture (but not move without capturing)
     pub attack_sliding_deltas: Vec<Vec<(i8, i8)>>,
@@ -94,6 +97,9 @@ impl PieceDefinition {
     }
     pub fn can_jump(&self) -> bool {
         !self.translate_jump_deltas.is_empty() || !self.attack_jump_deltas.is_empty()
+    }
+    pub fn can_double_jump(&self) -> bool {
+        !self.double_move_squares.is_zero()
     }
     pub fn has_sliding_deltas(&self) -> bool {
         !self.translate_sliding_deltas.is_empty() || !self.attack_sliding_deltas.is_empty()

@@ -8,22 +8,15 @@ use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
 use crate::utils::{from_index, to_index};
 
-use zobrist_table::ZobristTable;
 pub use parse_fen::parse_fen;
 use position_properties::PositionProperties;
 
 use crate::piece::{Piece, PieceFactory, PieceId};
 
 mod position_properties;
-pub mod castle_rights;
-mod zobrist_table;
+pub mod castled_players;
 pub mod parse_fen;
 pub mod piece_set;
-
-//No reason to have more than one zobrist table
-lazy_static! {
-    static ref ZOBRIST_TABLE: ZobristTable = ZobristTable::new();
-}
 
 
 /// Represents a single position in chess
@@ -81,19 +74,17 @@ impl Position {
 
     /// Modifies the position to make the move
     pub fn make_move(&mut self, mv: Move) {
-        let zobrist_table = &ZOBRIST_TABLE;
         let my_player_num = self.whos_turn;
         let mut new_props: PositionProperties = (*self.properties).clone();
         
-        // Remove zobrist hash of the old player
-        new_props.zobrist_key ^= zobrist_table.get_player_zobrist(self.whos_turn);
         // Update the player
         self.whos_turn += 1;
         if self.whos_turn == self.num_players {
             self.whos_turn = 0;
         }
-        // Add zobrist hash of the new player
-        new_props.zobrist_key ^= zobrist_table.get_player_zobrist(self.whos_turn);
+        // Update the player zobrist key
+        // For simplicity, use the top bit to represent the player
+        new_props.zobrist_key ^= 0x8000000000000000;
         
         // In the special case of the null move, don't do anything except update whos_turn
         // And update props
@@ -115,9 +106,12 @@ impl Position {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt_index = mv.get_target();
                 let captured_piece = self.piece_at(capt_index).unwrap();
+                let piece_id = captured_piece.get_piece_id();
+                let player = captured_piece.get_player();
                 new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
-                new_props.captured_piece = Some((captured_piece.get_piece_id(), captured_piece.get_player()));
-                self.remove_piece(capt_index);
+                
+                let could_castle = self.remove_piece(capt_index);
+                new_props.captured_piece = Some((piece_id, player, could_castle));
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
@@ -125,7 +119,7 @@ impl Position {
                 let rook_to = to_index(x - 1, y);
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
-                self.move_piece(rook_from, rook_to);
+                self.move_piece(rook_from, rook_to, false);
                 new_props.castling_rights.set_player_castled(my_player_num);
             },
             MoveType::QueensideCastle => {
@@ -134,7 +128,7 @@ impl Position {
                 let rook_to = to_index(x + 1, y);
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
-                self.move_piece(rook_from, rook_to);
+                self.move_piece(rook_from, rook_to, false);
                 new_props.castling_rights.set_player_castled(my_player_num);
             }
             _ => {}
@@ -150,7 +144,7 @@ impl Position {
         
 
         // Move piece to location
-        self.move_piece(from, to);
+        new_props.moved_piece_castle = self.move_piece(from, to, false);
         // Promotion
         match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
@@ -161,55 +155,26 @@ impl Position {
                 // Add new piece
                 let promote_to_pt = mv.get_promotion_piece().unwrap();
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(promote_to_pt, my_player_num, to);
-                self.add_piece(my_player_num, promote_to_pt, to);
+                self.add_piece(my_player_num, promote_to_pt, to, false);
             },
             _ => {}
         };
 
         // Pawn en-passant
         // Check for a pawn double push to set ep square
-        let (x1, y1) = from_index(from);
-        let (x2, y2) = from_index(to);
-
+        // For simplicity, use the ep index as the zobrist key
         if let Some(sq) = self.properties.ep_square {
             // If the last prop had some ep square then we want to clear zob by xoring again
-            let (epx, _epy) = from_index(sq);
-            new_props.zobrist_key ^= zobrist_table.get_ep_zobrist_file(epx);
+            new_props.zobrist_key ^= sq as u64;
         }
 
-        if from_piece_type == ID_PAWN
-            && (y2 as i8 - y1 as i8).abs() == 2
-            && x1 == x2 {
-            new_props.ep_square = Some(
-                if y2 > y1 {
-                    to_index(x1, y2 - 1)
-                } else {
-                    to_index(x1, y2 + 1)
-                }
-            );
-            new_props.zobrist_key ^= zobrist_table.get_ep_zobrist_file(x1);
+        if mv.get_move_type() == MoveType::DoubleJump {
+            new_props.ep_square = Some(mv.get_target());
+            new_props.ep_victim = mv.get_to();
+            
+            new_props.zobrist_key ^= mv.get_target() as u64;
         } else {
             new_props.ep_square = None;
-        }
-
-        // Castling
-        // Disable rights if applicable
-        if new_props.castling_rights.can_player_castle(my_player_num) {
-            if from_piece_type == ID_KING {
-                new_props.zobrist_key ^= zobrist_table.get_castling_zobrist(my_player_num, true);
-                new_props.zobrist_key ^= zobrist_table.get_castling_zobrist(my_player_num, false);
-                new_props.castling_rights.disable_kingside_castle(my_player_num);
-                new_props.castling_rights.disable_queenside_castle(my_player_num);
-            } else if from_piece_type == ID_ROOK {
-                // King side
-                if x1 >= self.dimensions.width/2 {
-                    new_props.castling_rights.disable_kingside_castle(my_player_num);
-                    new_props.zobrist_key ^= zobrist_table.get_castling_zobrist(my_player_num, true);
-                } else {
-                    new_props.castling_rights.disable_queenside_castle(my_player_num);
-                    new_props.zobrist_key ^= zobrist_table.get_castling_zobrist(my_player_num, false);
-                }
-            }
         }
         
         // Increment number of repetitions of new position
@@ -237,7 +202,7 @@ impl Position {
         }
 
         let my_player_num = self.whos_turn;
-        let mv = self.properties.move_played.unwrap();
+        let mv = self.properties.move_played.expect("No move to undo");
         
         // Undo null moves
         if mv.get_move_type() == MoveType::Null {
@@ -251,12 +216,14 @@ impl Position {
 
         //Undo move piece to location
         //Remove piece here
-        self.move_piece(to, from);
+        self.move_piece(to, from, self.properties.moved_piece_castle);
         //Undo Promotion
         match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
                 self.remove_piece(from);
-                self.add_piece(my_player_num, self.properties.promote_from.as_ref().unwrap().to_owned(), from);
+                let promoted_from = self.properties.promote_from.unwrap();
+                // Assume that the piece that promoted must have moved, so it can't castle
+                self.add_piece(my_player_num, promoted_from, from, false);
             },
             _ => {}
         };
@@ -266,20 +233,20 @@ impl Position {
         match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt = mv.get_target();
-                let (piece_id, owner) = self.properties.captured_piece.unwrap();
-                self.add_piece(owner, piece_id, capt);
+                let (piece_id, owner, captured_can_castle) = self.properties.captured_piece.unwrap();
+                self.add_piece(owner, piece_id, capt, captured_can_castle);
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x - 1, y);
-                self.move_piece(rook_to,rook_from);
+                self.move_piece(rook_to,rook_from, true);
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x + 1, y);
-                self.move_piece(rook_to,rook_from);
+                self.move_piece(rook_to,rook_from, true);
             }
             _ => {}
         }
@@ -404,7 +371,7 @@ impl Position {
         
         let mut new_props = (*self.properties).clone();
         new_props.zobrist_key ^= Piece::compute_zobrist_at(piece_type, owner, index);
-        self.add_piece(owner, piece_type, index);
+        self.add_piece(owner, piece_type, index, true);
         self.update_occupied();
         new_props.prev_properties = Some(Arc::clone(&self.properties));
         self.properties = Arc::new(new_props);
@@ -421,41 +388,22 @@ impl Position {
     
     
     /// Adds a piece to the position, assuming the piecetype already exists
-    /// Does nothing if a custom piece isn't registered yet
-    fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex) {
-        match piece_id {
-            ID_KING => {self.pieces[owner as usize].king.add_piece(index);},
-            ID_QUEEN => {self.pieces[owner as usize].queen.add_piece(index);},
-            ID_ROOK => {self.pieces[owner as usize].rook.add_piece(index);},
-            ID_BISHOP => {self.pieces[owner as usize].bishop.add_piece(index);},
-            ID_KNIGHT => {self.pieces[owner as usize].knight.add_piece(index);},
-            ID_PAWN => {self.pieces[owner as usize].pawn.add_piece(index);},
-            _ => {
-                // TODO: Use hashmap to store pieces?
-                for c in self.pieces[owner as usize].custom.iter_mut() {
-                    if piece_id == c.get_piece_id() {
-                        c.add_piece(index);
-                        break;
-                    }
-                }
-            },
-        }
+    fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex, can_castle: bool) {
+        let piece = self.pieces[owner as usize].custom.iter_mut().find(|c| c.get_piece_id() == piece_id).unwrap();
+        piece.add_piece(index, can_castle);
     }
     
     /// Removes a piece from the position, assuming the piece is there
-    fn remove_piece(&mut self, index: BIndex) {
+    fn remove_piece(&mut self, index: BIndex) -> bool {
         let piece = self.piece_at_mut(index).unwrap().1;
-        piece.remove_piece(index);
+        piece.remove_piece(index)
     }
     
-    fn move_piece(&mut self, from: BIndex, to: BIndex) {
+    fn move_piece(&mut self, from: BIndex, to: BIndex, can_castle: bool) -> bool {
         if let Some(piece) = self.piece_at_mut(from) {
-            piece.1.move_piece(from, to);
+            piece.1.move_piece(from, to, can_castle)
         } else {
-            println!("nothing to move??");
-            println!("from {} {}", from_index(from).0, from_index(from).1);
-            println!("to {} {}", from_index(to).0, from_index(to).1);
-            println!("==");
+            panic!("No piece at {} to move to {}", from, to);
         }
     }
 
@@ -471,9 +419,8 @@ impl Position {
     
     fn update_repetitions(&mut self, key: u64, delta: i16) {
         let num_reps = self.position_repetitions.get(&key);
-        if num_reps.is_some() {
-            let old_val = *num_reps.unwrap() as i16;
-            self.position_repetitions.insert(key, (old_val + delta) as u8);
+        if let Some(old_val) = num_reps {
+            self.position_repetitions.insert(key, (*old_val as i16 + delta) as u8);
         } else {
             self.position_repetitions.insert(key, delta as u8);
         }
