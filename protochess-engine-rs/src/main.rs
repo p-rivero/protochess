@@ -33,8 +33,8 @@ pub fn main() {
         max_ply = args[3].parse::<u32>().unwrap();
     }
     if args.len() > 2 {
-        let fen = args[2].to_owned();
-        engine = protochess_engine_rs::Engine::from_fen(fen);
+        let fen = args[2].clone();
+        engine = protochess_engine_rs::Engine::from_fen(&fen);
     }
     if args.len() > 1 {
         depth = args[1].parse::<u8>().unwrap();
@@ -47,7 +47,7 @@ pub fn main() {
     for _ in 0..max_ply {
         let mv = engine.get_best_move(depth);
         print_pgn(&mut pgn_file, ply, &mv, engine.get_piece_at(mv.from).unwrap());
-        match engine.make_move(mv) {
+        match engine.make_move(&mv) {
             MakeMoveResult::Ok => {},
             MakeMoveResult::IllegalMove => {
                 panic!("An illegal move was made");

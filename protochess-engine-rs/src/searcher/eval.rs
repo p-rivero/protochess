@@ -13,10 +13,10 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
     //Material score of both players (opponent pieces are positive), without the leaders
     let mut total_leaderless_score = 0;
     
-    for ps in position.pieces.iter() {
+    for ps in &position.pieces {
         let (material_score, leaders_score) = ps.get_material_score();
         
-        if ps.player_num == player_num {
+        if ps.get_player_num() == player_num {
             score += material_score;
         } else {
             score -= material_score;
@@ -27,8 +27,8 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
 
     // Positional score
     let is_endgame = total_leaderless_score < ENDGAME_THRESHOLD;
-    for ps in position.pieces.iter() {
-        if ps.player_num == player_num {
+    for ps in &position.pieces {
+        if ps.get_player_num() == player_num {
             score += ps.get_positional_score(is_endgame);
         } else {
             score -= ps.get_positional_score(is_endgame);
@@ -37,8 +37,8 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
         //Castling bonus
         // TODO: Keep castling bonus also in the endgame?
         const CASTLING_BONUS: Centipawns = 15;
-        if position.properties.castling_rights.did_player_castle(ps.player_num) && !is_endgame {
-            if ps.player_num == player_num {
+        if position.properties.castled_players.did_player_castle(ps.get_player_num()) && !is_endgame {
+            if ps.get_player_num() == player_num {
                 score += CASTLING_BONUS;
             } else {
                 score -= CASTLING_BONUS;

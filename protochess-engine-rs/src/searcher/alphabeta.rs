@@ -27,7 +27,7 @@ impl Searcher {
         
         let is_root = self.nodes_searched == 0;
         self.nodes_searched += 1;
-        if self.nodes_searched & 0x7FFFF == 0 {
+        if self.nodes_searched.trailing_zeros() >= 19 {
             // Check for timeout periodically (~500k nodes)
             if Instant::now() >= *end_time {
                 return Err(SearchError::Timeout);
@@ -87,7 +87,7 @@ impl Searcher {
             }
 
             num_legal_moves += 1;
-            pos.make_move(mv.to_owned());
+            pos.make_move(mv);
             let mut score: Centipawns;
             if num_legal_moves == 1 {
                 score = -self.alphabeta(pos, depth - 1, -beta, -alpha, true, end_time)?;
@@ -126,7 +126,7 @@ impl Searcher {
                 if score > alpha {
                     if score >= beta {
                         // Record new killer moves
-                        self.update_killers(depth, mv.to_owned());
+                        self.update_killers(depth, mv);
                         // Beta cutoff, store in transpositon table
                         self.transposition_table.insert(pos.get_zobrist(), Entry{
                             key: pos.get_zobrist(),
@@ -164,9 +164,9 @@ impl Searcher {
                 key: pos.get_zobrist(),
                 flag: EntryFlag::Exact,
                 value: best_score,
-                mv: best_move.to_owned(),
+                mv: best_move,
                 depth,
-            })
+            });
         } else {
             self.transposition_table.insert(pos.get_zobrist(), Entry{
                 key: pos.get_zobrist(),
@@ -174,7 +174,7 @@ impl Searcher {
                 value: alpha,
                 mv: best_move,
                 depth,
-            })
+            });
         }
         // The root node returns the best move instead of the score
         if is_root {
@@ -206,7 +206,7 @@ impl Searcher {
                 continue;
             }
 
-            pos.make_move(mv.to_owned());
+            pos.make_move(mv);
             let score = -self.quiesce(pos, -beta, -alpha);
             pos.unmake_move();
 
@@ -215,7 +215,6 @@ impl Searcher {
             }
             if score > alpha {
                 alpha = score;
-                // best_move = mv;
             }
         }
         alpha

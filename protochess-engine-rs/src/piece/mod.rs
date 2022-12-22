@@ -22,8 +22,7 @@ pub struct Piece {
     // Info about this piece type
     type_def: PieceDefinition,
     // Occupancy bitboard
-    // TODO: Make private
-    pub bitboard: Bitboard,
+    bitboard: Bitboard,
     //Player num for the owner of this piece
     player_num: Player,
     // Zobrist hashes for this piece at each board index
@@ -44,8 +43,7 @@ pub struct Piece {
 }
 
 impl Piece {
-    // Don't use new() directly, use PieceFactory instead
-    fn new(mut definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
+    pub fn new(mut definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
         // Make sure that all promotion squares are in bounds
         definition.promotion_squares &= &dims.bounds;
         assert!(&definition.promotion_squares & !&dims.bounds == Bitboard::zero());
@@ -83,6 +81,25 @@ impl Piece {
         self.player_num
     }
     
+    // Access to the bitboard
+    pub fn get_bitboard(&self) -> &Bitboard {
+        &self.bitboard
+    }
+    pub fn is_at_index(&self, index: BIndex) -> bool {
+        self.bitboard.get_bit(index)
+    }
+    // Get the indexes of all pieces of this type
+    pub fn get_indexes(&self) -> Vec<BIndex> {
+        let mut bb_copy = self.bitboard.clone();
+        let mut indexes = Vec::new();
+        while !bb_copy.is_zero() {
+            let index = bb_copy.lowest_one().unwrap();
+            bb_copy.clear_bit(index);
+            indexes.push(index);
+        }
+        indexes
+    }
+    
     // Returns true if this piece is a leader (king)
     pub fn is_leader(&self) -> bool {
         self.type_def.is_leader
@@ -112,7 +129,6 @@ impl Piece {
     // Returns true if the piece could castle before this move
     pub fn move_piece(&mut self, from: BIndex, to: BIndex, set_can_castle: bool) -> bool {
         let could_castle = self.castle_squares.get_bit(from);
-        assert!(self.bitboard.get_bit(from));
         self.bitboard.clear_bit(from);
         self.bitboard.set_bit(to);
         
@@ -195,11 +211,11 @@ impl Piece {
     }
     // TODO: Make private, use RNG
     pub fn compute_zobrist_at(id: PieceId, player_num: Player, index: BIndex) -> u64 {
-        let seed = (id as u64) << 16 | (player_num as u64) << 8 | index as u64;
-        
         // Use Donald Knuth's multiplicative hash
         const KNUTH_MUL: u64 = 6364136223846793005;
         // const KNUTH_ADD: u64 = 1442695040888963407; // Unused, since we only do 1 iteration
+        
+        let seed = (id as u64) << 16 | (player_num as u64) << 8 | index as u64;
         seed.wrapping_mul(KNUTH_MUL)
     }
 }

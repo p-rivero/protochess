@@ -23,9 +23,7 @@ impl TranspositionTable {
     pub fn new() -> TranspositionTable {
         let mut data = Vec::with_capacity(TABLE_SIZE);
         for _ in 0..TABLE_SIZE {
-            data.push(Cluster { 
-                entries: [Entry::null(); ENTRIES_PER_CLUSTER]
-            })
+            data.push(Cluster { entries: [Entry::null(); ENTRIES_PER_CLUSTER] });
         }
         TranspositionTable {
             data

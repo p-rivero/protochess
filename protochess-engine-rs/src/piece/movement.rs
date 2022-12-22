@@ -4,7 +4,8 @@ use crate::types::{Bitboard, Move, MoveType, BCoord, BIndex};
 use crate::move_generator::bitboard_moves::BitboardMoves;
 
 
-#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+#[inline]
 pub fn output_moves(movement: &PieceDefinition, index: BIndex,
         position: &Position, enemies: &Bitboard,
         occ_or_not_in_bounds: &Bitboard, can_castle: bool, can_double_jump: bool,
@@ -32,11 +33,11 @@ pub fn output_moves(movement: &PieceDefinition, index: BIndex,
     // Keep only in bounds
     raw_attacks &= &position.dimensions.bounds;
     out_bb_moves.push(BitboardMoves::new(
-        enemies.to_owned(),
+        enemies.clone(),
         raw_attacks,
         index,
-        movement.promotion_squares.to_owned(),
-        movement.promo_vals.to_owned(),
+        movement.promotion_squares.clone(),
+        movement.promo_vals.clone(),
     ));
     
     // Movements!
@@ -57,11 +58,11 @@ pub fn output_moves(movement: &PieceDefinition, index: BIndex,
     // Keep only in bounds
     raw_moves &= &position.dimensions.bounds;
     out_bb_moves.push(BitboardMoves::new(
-        enemies.to_owned(),
+        enemies.clone(),
         raw_moves,
         index,
-        movement.promotion_squares.to_owned(),
-        movement.promo_vals.to_owned(),
+        movement.promotion_squares.clone(),
+        movement.promo_vals.clone(),
     ));
 
 

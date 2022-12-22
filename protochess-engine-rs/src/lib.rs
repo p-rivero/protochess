@@ -19,7 +19,7 @@ pub mod types;
 pub mod position;
 pub mod searcher;
 pub mod utils;
-use crate::types::*;
+use crate::types::{BCoord, BDimensions, BIndex, Centipawns, Depth, Player};
 use crate::searcher::{Searcher, eval};
 pub use crate::piece::PieceDefinition;
 pub use crate::types::MoveInfo;
@@ -45,7 +45,7 @@ impl Engine {
             position: Position::default(),
         }
     }
-    pub fn from_fen(fen: String) -> Engine {
+    pub fn from_fen(fen: &str) -> Engine {
         Engine{
             position: parse_fen(fen),
         }
@@ -83,7 +83,7 @@ impl Engine {
 
     /// Attempts a move on the current board position
     /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
-    pub fn make_move(&mut self, target_move: MoveInfo) -> MakeMoveResult {
+    pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
         let moves = MoveGen::get_pseudo_moves(&mut self.position);
         for mv in moves {
             if !target_move.matches_move(mv) {
@@ -99,9 +99,8 @@ impl Engine {
             if MoveGen::count_legal_moves(&mut self.position) == 0 {
                 if MoveGen::in_check(&mut self.position) {
                     return MakeMoveResult::Checkmate(self.position.whos_turn);
-                } else {
-                    return MakeMoveResult::Stalemate;
                 }
+                return MakeMoveResult::Stalemate;
             }
             if self.position.num_repetitions() >= 3 {
                 // Threefold Repetition
@@ -166,15 +165,15 @@ impl Engine {
     }
 
     pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
-                     valid_squares: Vec<(BCoord, BCoord)>, pieces: &[(Player, BCoord, BCoord, PieceId)]) {
-        let dims = BDimensions::from_valid_squares(&valid_squares);
+                     valid_squares: &Vec<(BCoord, BCoord)>, pieces: &[(Player, BCoord, BCoord, PieceId)]) {
+        let dims = BDimensions::from_valid_squares(valid_squares);
         
         // For each piece, convert coordnates to index
         let pieces = pieces.iter()
             .map(|(owner, x, y, piece)| (*owner, to_index(*x, *y), *piece))
             .collect();
 
-        self.position = Position::custom(dims, piece_types, pieces)
+        self.position = Position::custom(dims, piece_types, pieces);
     }
     
     pub fn perft(&mut self, depth: Depth) -> u64 {

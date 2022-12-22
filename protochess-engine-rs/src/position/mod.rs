@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::constants::piece_scores::*;
+use crate::constants::piece_scores::ID_ROOK;
 use crate::{types::*, PieceDefinition};
 use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
@@ -11,7 +11,7 @@ use crate::utils::{from_index, to_index};
 pub use parse_fen::parse_fen;
 use position_properties::PositionProperties;
 
-use crate::piece::{Piece, PieceFactory, PieceId};
+use crate::piece::{Piece, PieceId};
 
 mod position_properties;
 pub mod castled_players;
@@ -37,13 +37,13 @@ pub struct Position {
 
 impl Position {
     pub fn default() -> Position {        
-        parse_fen(String::from(fen::STARTING_POS))
+        parse_fen(fen::STARTING_POS)
     }
     
     pub fn new(dimensions: BDimensions, pieces: Vec<PieceSet>, whos_turn: Player, props: PositionProperties) -> Position {
         let mut occupied = Bitboard::zero();
-        for piece_set in pieces.iter() {
-            occupied |= &piece_set.occupied;
+        for piece_set in &pieces {
+            occupied |= piece_set.get_occupied();
         }
         let mut reps = HashMap::with_capacity_and_hasher(4096, ahash::RandomState::new());
         
@@ -65,9 +65,8 @@ impl Position {
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
         // Insert blank for all players
         let dims_copy = self.dimensions.clone();
-        for (i, piece_set) in self.pieces.iter_mut().enumerate() {
-            let new_piece = PieceFactory::make_custom(definition.clone(), i as Player, &dims_copy);
-            piece_set.custom.push(new_piece);
+        for piece_set in &mut self.pieces {
+            piece_set.register_piecetype(definition.clone(), &dims_copy);
         }
     }
 
@@ -120,7 +119,7 @@ impl Position {
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
                 self.move_piece(rook_from, rook_to, false);
-                new_props.castling_rights.set_player_castled(my_player_num);
+                new_props.castled_players.set_player_castled(my_player_num);
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
@@ -129,7 +128,7 @@ impl Position {
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
                 new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
                 self.move_piece(rook_from, rook_to, false);
-                new_props.castling_rights.set_player_castled(my_player_num);
+                new_props.castled_players.set_player_castled(my_player_num);
             }
             _ => {}
         }
@@ -263,13 +262,10 @@ impl Position {
     pub fn pieces_as_tuples(&self) -> Vec<(Player, BCoord, BCoord, PieceId)>{
         let mut tuples = Vec::new();
         for (i, ps) in self.pieces.iter().enumerate() {
-            for piece in ps.get_piece_refs() {
-                let mut bb_copy = piece.bitboard.to_owned();
-                while !bb_copy.is_zero() {
-                    let indx = bb_copy.lowest_one().unwrap();
-                    let (x, y) = from_index(indx as BIndex);
+            for piece in ps.iter() {
+                for index in piece.get_indexes() {
+                    let (x, y) = from_index(index as BIndex);
                     tuples.push((i as Player, x, y, piece.get_piece_id()));
-                    bb_copy.clear_bit(indx);
                 }
             }
         }
@@ -298,7 +294,7 @@ impl Position {
     {
         Position::assert_all_players_have_leader(piece_types, &pieces);
         
-        let mut pos = parse_fen(String::from(fen::EMPTY));
+        let mut pos = parse_fen(fen::EMPTY);
         pos.dimensions = dims;
         for definition in piece_types {
             pos.register_piecetype(definition);
@@ -325,9 +321,7 @@ impl Position {
             }
         }
         for (i, has_leader) in player_has_leader.iter().enumerate() {
-            if !has_leader {
-                panic!("Player {} does not have a leader piece", i);
-            }
+            assert!(has_leader, "Player {} does not have a leader piece", i);
         }
     }
 
@@ -349,10 +343,10 @@ impl Position {
         }
         None
     }
-    pub fn piece_at_mut(&mut self, index: BIndex) -> Option<(Player, &mut Piece)> {
-        for (i, ps) in self.pieces.iter_mut().enumerate() {
-            if let Some(c) = ps.piece_at_mut(index) {
-                return Some((i as Player, c));
+    pub fn piece_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
+        for ps in &mut self.pieces {
+            if let Some(piece) = ps.piece_at_mut(index) {
+                return Some(piece);
             }
         }
         None
@@ -389,19 +383,19 @@ impl Position {
     
     /// Adds a piece to the position, assuming the piecetype already exists
     fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex, can_castle: bool) {
-        let piece = self.pieces[owner as usize].custom.iter_mut().find(|c| c.get_piece_id() == piece_id).unwrap();
+        let piece = self.pieces[owner as usize].iter_mut().find(|c| c.get_piece_id() == piece_id).unwrap();
         piece.add_piece(index, can_castle);
     }
     
     /// Removes a piece from the position, assuming the piece is there
     fn remove_piece(&mut self, index: BIndex) -> bool {
-        let piece = self.piece_at_mut(index).unwrap().1;
+        let piece = self.piece_at_mut(index).unwrap();
         piece.remove_piece(index)
     }
     
     fn move_piece(&mut self, from: BIndex, to: BIndex, can_castle: bool) -> bool {
         if let Some(piece) = self.piece_at_mut(from) {
-            piece.1.move_piece(from, to, can_castle)
+            piece.move_piece(from, to, can_castle)
         } else {
             panic!("No piece at {} to move to {}", from, to);
         }
@@ -413,7 +407,7 @@ impl Position {
         self.occupied = Bitboard::zero();
         for (_i, ps) in self.pieces.iter_mut().enumerate() {
             ps.update_occupied();
-            self.occupied |= &ps.occupied;
+            self.occupied |= ps.get_occupied();
         }
     }
     

@@ -17,7 +17,6 @@ lazy_static! {
 pub struct MoveGen { }
 impl MoveGen {
     
-    // TODO: Remove this function
     pub fn attack_tables() -> &'static AttackTables {
         &ATTACK_TABLES
     }
@@ -47,10 +46,10 @@ impl MoveGen {
         let mut out_bb_moves: Vec<BitboardMoves> = Vec::with_capacity(50);
         let mut out_moves = Vec::with_capacity(50);
 
-        let enemies = &position.occupied & !&my_pieces.occupied;
+        let enemies = &position.occupied & !my_pieces.get_occupied();
         let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
 
-        for p in &my_pieces.custom {
+        for p in my_pieces.iter() {
             p.output_moves(position, &enemies, &occ_or_not_in_bounds, &mut out_bb_moves, &mut out_moves);
         }
         out_bb_moves.into_iter().flatten().chain(out_moves.into_iter())
@@ -81,7 +80,7 @@ impl MoveGen {
         
         let mut legality = true;
         // Try the move
-        position.make_move(mv.to_owned());
+        position.make_move(*mv);
         // See if the opponent has a move that captures our last leader
         for mv in MoveGen::get_pseudo_moves(position)  {
             if mv.is_capture() && position.piece_at(mv.get_target()).unwrap().potential_checkmate() {

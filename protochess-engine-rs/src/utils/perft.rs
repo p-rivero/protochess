@@ -4,7 +4,7 @@ use crate::types::Depth;
 use super::{from_index, to_rank_file};
 
 /// Returns the number of possible moves from a board position up to a given depth
-/// See https://www.chessprogramming.org/Perft
+/// See <https://www.chessprogramming.org/Perft>
 pub fn perft(position: &mut Position, depth: Depth) -> u64 {
     let mut nodes = 0u64;
 

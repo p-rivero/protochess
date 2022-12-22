@@ -35,12 +35,12 @@ impl Searcher {
     pub fn get_best_move(position: &Position, depth: Depth) -> (Move, Depth) {
         // Create a new copy of the heuristics for each search
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
-        Searcher::new().get_best_move_impl(&mut position.to_owned(), depth, 1_000_000)
+        Searcher::new().get_best_move_impl(&mut position.clone(), depth, 1_000_000)
     }
 
     pub fn get_best_move_timeout(position: &Position, time_sec: u64) -> (Move, Depth) {
         // Create a new copy of the heuristics for each search
-        Searcher::new().get_best_move_impl(&mut position.to_owned(), Depth::MAX, time_sec)
+        Searcher::new().get_best_move_impl(&mut position.clone(), Depth::MAX, time_sec)
     }
     
     // Run for some time, then return the best move, its score, and the depth

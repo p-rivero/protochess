@@ -4,10 +4,9 @@ use super::PieceId;
 
 /// External representation of a piece
 
-#[derive(Clone, Debug )]
+#[derive(Clone, Debug)]
 pub struct PieceDefinition {
     pub id: PieceId,
-    // TODO: Maybe make this a string?
     pub char_rep: char,
     
     pub is_leader: bool,

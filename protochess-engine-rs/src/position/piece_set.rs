@@ -1,60 +1,64 @@
-use std::slice::Iter;
+use std::slice::{Iter, IterMut};
 
+use crate::PieceDefinition;
 //Pieces that a player has
 use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns};
-use crate::piece::{Piece, PieceFactory};
-
-use crate::constants::piece_scores::*;
+use crate::piece::Piece;
 
 /// Represents a set of pieces for a player
 /// custom is a vec of custom piece
 #[derive(Clone, Debug)]
 pub struct PieceSet {
-    pub occupied: Bitboard,
-    // TODO: Treemap
-    pub custom: Vec<Piece>,
-    pub player_num: Player,
+    pieces: Vec<Piece>,
+    occupied: Bitboard,
+    player_num: Player,
 }
 
 impl PieceSet {
-    // TODO: Once the hardcoded pieces are removed, remove the BDimensions parameter
-    pub fn new(player_num: Player, dims: &BDimensions) -> PieceSet {
+    pub fn new(player_num: Player) -> PieceSet {
         PieceSet {
             occupied: Bitboard::zero(),
-            // TODO: Remove hardcoded pieces
-            custom: vec![
-                PieceFactory::make_king(ID_KING, player_num, dims),
-                PieceFactory::make_queen(ID_QUEEN, player_num, dims),
-                PieceFactory::make_bishop(ID_BISHOP, player_num, dims),
-                PieceFactory::make_knight(ID_KNIGHT, player_num, dims),
-                PieceFactory::make_rook(ID_ROOK, player_num, dims),
-                PieceFactory::make_pawn(ID_PAWN, player_num, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]),
-            ],
+            pieces: Vec::new(),
             player_num,
         }
     }
+    
+    pub fn register_piecetype(&mut self, definition: PieceDefinition, dims: &BDimensions) {
+        let piece = Piece::new(definition, self.player_num, dims);
+        self.pieces.push(piece);
+    }
+    
+    pub fn iter(&self) -> Iter<Piece> {
+        self.pieces.iter()
+    }
+    pub fn iter_mut(&mut self) -> IterMut<Piece> {
+        self.pieces.iter_mut()
+    }
+    
+    pub fn get_occupied(&self) -> &Bitboard {
+        &self.occupied
+    }
+    
+    pub fn get_player_num(&self) -> Player {
+        self.player_num
+    }
 
     pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {
-        self.custom.iter().find(|&p| p.bitboard.get_bit(index))
+        self.pieces.iter().find(|&p| p.is_at_index(index))
     }
     pub fn piece_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
-        self.custom.iter_mut().find(|p| p.bitboard.get_bit(index))
+        self.pieces.iter_mut().find(|p| p.is_at_index(index))
     }
     
     pub fn search_by_char(&mut self, c: char) -> Option<&mut Piece> {
-        self.custom.iter_mut().find(|p| p.char_rep() == c)
-    }
-
-    // Returns an iterator over all pieces in the set
-    pub fn get_piece_refs(&self) -> Iter<Piece> {
-        self.custom.iter()
+        self.pieces.iter_mut().find(|p| p.char_rep() == c)
     }
 
     //Recomputes occupied bb
     pub fn update_occupied(&mut self) {
         self.occupied = Bitboard::zero();
-        for p in &self.custom {
-            self.occupied |= &p.bitboard;
+        for p in &self.pieces {
+            self.occupied |= p.get_bitboard();
         }
     }
     
@@ -62,7 +66,7 @@ impl PieceSet {
     pub fn get_material_score(&self) -> (Centipawns, Centipawns) {
         let mut score = 0;
         let mut leader_score = 0;
-        for piece in &self.custom {
+        for piece in &self.pieces {
             let piece_total_score = piece.get_material_score_all();
             score += piece_total_score;
             if piece.is_leader() {
@@ -74,7 +78,7 @@ impl PieceSet {
     
     pub fn get_positional_score(&self, is_endgame: bool, ) -> Centipawns {
         let mut score = 0;
-        for piece in &self.custom {
+        for piece in &self.pieces {
             // TODO: Inverting the leader score may not always be the best option
             // For each piece, get the positional score.
             // Invert the leader so that it stays away from the center, except in the endgame

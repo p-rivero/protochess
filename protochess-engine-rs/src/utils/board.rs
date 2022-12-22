@@ -39,15 +39,6 @@ pub fn distance_to_one<F>(x_start: BCoord, y_start: BCoord, board: &Bitboard, ge
 
 
 
-//TODO
-/*
-fn to_xy(rank_file:String) -> (u8, u8) {
-    let file = rank_file.chars()[0];
-    let rank = rank_file.chars().skip(0).take(rank_file.len()).collect();
-    ((file.to_digit(10) - 65).unwrap(), rank.parse::<u8>().unwrap() - 1)
-}
-*/
-
 /// Converts an (x, y) location to chess rank-file notation
 /// Ex: to_rank_file(0, 1) = a2
 pub fn to_rank_file(x: BCoord, y: BCoord) -> String {

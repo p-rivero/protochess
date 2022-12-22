@@ -19,7 +19,7 @@ impl CastledPlayers {
     }
     
     pub fn set_player_castled(&mut self, player_num: Player) {
-        self.0 |= 1 << player_num
+        self.0 |= 1 << player_num;
     }
 }
 

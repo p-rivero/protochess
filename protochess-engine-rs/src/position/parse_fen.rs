@@ -1,4 +1,6 @@
 use crate::constants::fen;
+use crate::constants::piece_scores::*;
+use crate::piece::PieceFactory;
 use crate::types::*;
 use crate::utils::to_index;
 
@@ -6,7 +8,8 @@ use super::Position;
 use super::piece_set::PieceSet;
 use super::position_properties::PositionProperties;
 
-pub fn parse_fen(fen: String) -> Position {
+#[allow(clippy::iter_nth_zero)]
+pub fn parse_fen(fen: &str) -> Position {
     let mut bounds = Bitboard::zero();
     for x in 0..fen::BOARD_WIDTH {
         for y in 0..fen::BOARD_HEIGHT {
@@ -15,8 +18,9 @@ pub fn parse_fen(fen: String) -> Position {
     }
     let dims = BDimensions{ width: fen::BOARD_WIDTH, height: fen::BOARD_HEIGHT, bounds};
     
-    let mut w_pieces = PieceSet::new(0, &dims);
-    let mut b_pieces = PieceSet::new(1, &dims);
+    let mut w_pieces = PieceSet::new(0);
+    let mut b_pieces = PieceSet::new(1);
+    register_pieces(&mut w_pieces, &mut b_pieces, &dims);
 
     let fen_parts: Vec<&str> = fen.split_whitespace().collect();
     
@@ -59,13 +63,10 @@ pub fn parse_fen(fen: String) -> Position {
         let p = pieces.search_by_char(c).expect("Piece not found!");
         p.add_piece(index, false);
         
-        if c.is_uppercase() {
-            w_pieces.occupied.set_bit(index)
-        } else {
-            b_pieces.occupied.set_bit(index)
-        };
         x += 1;
     }
+    w_pieces.update_occupied();
+    b_pieces.update_occupied();
     
     let mut zobrist_key = 0;
     
@@ -94,9 +95,8 @@ pub fn parse_fen(fen: String) -> Position {
     
     let mut properties = PositionProperties::default();
     if ep_x != -1 {
-        if ep_y == -1 || (ep_y != 2 && ep_y != 5) {
-            panic!("Invalid en passant square: {}", fen);
-        }
+        assert!(ep_y != -1, "Invalid en passant square: {}", fen);
+        assert!(ep_y == 2 || ep_y == 5, "Invalid en passant square: {}", fen);
         let ep_index = to_index(ep_x as BCoord, ep_y as BCoord);
         let offset = if whos_turn == 0 {1} else {-1};
         properties.ep_square = Some(ep_index);
@@ -106,12 +106,9 @@ pub fn parse_fen(fen: String) -> Position {
     }
 
 
-    for piece in w_pieces.get_piece_refs().chain(b_pieces.get_piece_refs()) {
-        let mut bb_copy = piece.bitboard.to_owned();
-        while !bb_copy.is_zero() {
-            let indx = bb_copy.lowest_one().unwrap();
+    for piece in w_pieces.iter().chain(b_pieces.iter()) {
+        for indx in piece.get_indexes() {
             zobrist_key ^= piece.get_zobrist(indx);
-            bb_copy.clear_bit(indx);
         }
     }
     
@@ -124,4 +121,19 @@ pub fn parse_fen(fen: String) -> Position {
     
 
     Position::new(dims, vec![w_pieces, b_pieces], whos_turn, properties)
+}
+
+fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet, dims: &BDimensions) {
+    w_pieces.register_piecetype(PieceFactory::make_king(ID_KING, 0), dims);
+    b_pieces.register_piecetype(PieceFactory::make_king(ID_KING, 1), dims);
+    w_pieces.register_piecetype(PieceFactory::make_queen(ID_QUEEN, 0), dims);
+    b_pieces.register_piecetype(PieceFactory::make_queen(ID_QUEEN, 1), dims);
+    w_pieces.register_piecetype(PieceFactory::make_rook(ID_ROOK, 0), dims);
+    b_pieces.register_piecetype(PieceFactory::make_rook(ID_ROOK, 1), dims);
+    w_pieces.register_piecetype(PieceFactory::make_bishop(ID_BISHOP, 0), dims);
+    b_pieces.register_piecetype(PieceFactory::make_bishop(ID_BISHOP, 1), dims);
+    w_pieces.register_piecetype(PieceFactory::make_knight(ID_KNIGHT, 0), dims);
+    b_pieces.register_piecetype(PieceFactory::make_knight(ID_KNIGHT, 1), dims);
+    w_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, 0, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), dims);
+    b_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, 1, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), dims);
 }

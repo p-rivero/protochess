@@ -8,7 +8,7 @@ pub enum EntryFlag{
     Null = 3,
 }
 impl EntryFlag {
-    #[inline(always)]
+    #[inline]
     pub fn equal_or_better_than(self, other: EntryFlag) -> bool {
         // Values are ordered so that EXACT < ALPHA <= BETA < NULL (ALPHA and BETA are worth the same)
         (self as u8) <= (other as u8) || (self == EntryFlag::Beta && other == EntryFlag::Alpha)
@@ -33,14 +33,14 @@ impl Entry {
             depth: 0,
         }
     }
-    #[inline(always)]
+    #[inline]
     pub fn equal_or_better_than(&self, other: &Entry) -> bool {
-        if self.depth != other.depth {
-            // A deeper entry is always better: if depths are different, prefer higher depth
-            self.depth > other.depth
-        } else {
+        if self.depth == other.depth {
             // If the depth is the same, the entry with the most useful value is better
             self.flag.equal_or_better_than(other.flag)
+        } else {
+            // A deeper entry is always better: if depths are different, prefer higher depth
+            self.depth > other.depth
         }
     }
 }

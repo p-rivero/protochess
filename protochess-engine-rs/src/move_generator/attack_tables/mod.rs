@@ -20,8 +20,6 @@ impl AttackTables {
         for i in 0..16 {
             //2^16 = 65536 possible occupancies
             for occ in 0..=65535 {
-                //Square from index
-                let sq = 1u16 << i;
                 //Classical approach to generate the table
                 fn get_left_attack(src:u16) -> u16 {
                     if src == 0 {
@@ -33,6 +31,8 @@ impl AttackTables {
                 fn get_right_attack(src:u16) -> u16 {
                     !src & !get_left_attack(src)
                 }
+                //Square from index
+                let sq = 1u16 << i;
 
                 let mut left_attack = get_left_attack(sq);
                 let left_blockers = occ & left_attack;
@@ -123,6 +123,7 @@ impl AttackTables {
     }
 
     /// Returns a bitboard of the sliding piece moves
+    #[allow(clippy::too_many_arguments)]
     pub fn get_sliding_moves_bb(&self,
                                 loc_index: BIndex,
                                 occ: &Bitboard,

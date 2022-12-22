@@ -5,7 +5,7 @@ mod eval_test {
 
     #[test]
     fn test() {
-        let mut pos = parse_fen("rnbqkbnr/pppppppp/8/8/8/3PP3/PPP2PPP/RNBQKBNR w KQkq - 0 1".parse().unwrap());
+        let mut pos = parse_fen("rnbqkbnr/pppppppp/8/8/8/3PP3/PPP2PPP/RNBQKBNR w KQkq - 0 1");
         // TODO: Make more tests
         assert_eq!(eval::evaluate(&mut pos), 30);
     }

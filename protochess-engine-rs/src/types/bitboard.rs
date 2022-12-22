@@ -92,23 +92,24 @@ impl Bitboard {
     pub fn count_ones(&self) -> u32 {
         self.board_internal.count_ones()
     }
-    pub fn overflowing_mul(&self, rhs: &Bitboard) -> Bitboard {
+    pub fn overflowing_mul(self, rhs: &Bitboard) -> Bitboard {
         Bitboard { board_internal: self.board_internal.overflowing_mul(&rhs.board_internal).0 }
     }
-    pub fn to_string(&self, bitboard:&Bitboard) -> String {
-        let mut return_str = String::new();
+}
+impl std::fmt::Display for Bitboard {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         for y in (0..16).rev() {
             for x in 0..16 {
-                if bitboard.get_bit_at(x, y) {
-                    return_str.push('1');
+                if self.get_bit_at(x, y) {
+                    write!(f, "1")?;
                 } else {
-                    return_str.push('.');
+                    write!(f, ".")?;
                 }
-                return_str.push(' ');
+                write!(f, " ")?;
             }
-            return_str.push('\n');
+            writeln!(f)?;
         }
-        return_str
+        Ok(())
     }
 }
 

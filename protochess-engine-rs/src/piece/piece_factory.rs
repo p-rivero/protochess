@@ -1,17 +1,11 @@
-use super::PieceDefinition;
-use super::{Piece, PieceId};
+use super::{PieceDefinition, PieceId};
 use crate::types::{Player, Bitboard, BDimensions};
 
 pub struct PieceFactory { }
 
 impl PieceFactory {
     
-    // TODO: Remove this
-    pub fn make_custom(definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
-        Piece::new(definition, player_num, dims)
-    }
-    
-    pub fn make_pawn(id: PieceId, player_num: Player, dims: &BDimensions, promotions: Vec<PieceId>) -> Piece {
+    pub fn make_pawn(id: PieceId, player_num: Player, dims: &BDimensions, promotions: Vec<PieceId>) -> PieceDefinition {
         let is_white = player_num == 0;
         let promotion_rank = { if is_white { dims.height - 1 } else { 0 } };
         let double_move_rank = { if is_white { 1 } else { dims.height - 2 } };
@@ -23,7 +17,7 @@ impl PieceFactory {
         }
         let move_dir = { if is_white { 1 } else { -1 } };
         
-        let piece_def = PieceDefinition {
+        PieceDefinition {
             id,
             char_rep: if is_white { 'P' } else { 'p' },
             is_leader: false,
@@ -52,14 +46,11 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
-        };
-        
-        Piece::new(piece_def, player_num, dims)
+        }        
     }
     
-    pub fn make_knight(id: PieceId, player_num: Player, dims: &BDimensions) -> Piece {
-                
-        let piece_def = PieceDefinition {
+    pub fn make_knight(id: PieceId, player_num: Player) -> PieceDefinition {
+        PieceDefinition {
             id,
             char_rep: if player_num == 0 { 'N' } else { 'n' },
             is_leader: false,
@@ -88,13 +79,11 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
-        };
-        
-        Piece::new(piece_def, player_num, dims)
+        }
     }
     
-    pub fn make_bishop(id: PieceId, player_num: Player, dims: &BDimensions) -> Piece {
-        let piece_def = PieceDefinition {
+    pub fn make_bishop(id: PieceId, player_num: Player) -> PieceDefinition {
+        PieceDefinition {
             id,
             char_rep: if player_num == 0 { 'B' } else { 'b' },
             is_leader: false,
@@ -123,13 +112,11 @@ impl PieceFactory {
             translate_northwest: true,
             translate_southeast: true,
             translate_southwest: true,
-        };
-        
-        Piece::new(piece_def, player_num, dims)
+        }
     }
     
-    pub fn make_rook(id: PieceId, player_num: Player, dims: &BDimensions) -> Piece {
-        let piece_def = PieceDefinition {
+    pub fn make_rook(id: PieceId, player_num: Player) -> PieceDefinition {
+        PieceDefinition {
             id,
             char_rep: if player_num == 0 { 'R' } else { 'r' },
             is_leader: false,
@@ -158,13 +145,11 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
-        };
-        
-        Piece::new(piece_def, player_num, dims)
+        }
     }
     
-    pub fn make_king(id: PieceId, player_num: Player, dims: &BDimensions) -> Piece {
-        let piece_def = PieceDefinition {
+    pub fn make_king(id: PieceId, player_num: Player) -> PieceDefinition {
+        PieceDefinition {
             id,
             char_rep: if player_num == 0 { 'K' } else { 'k' },
             is_leader: true,
@@ -193,13 +178,11 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
-        };
-        
-        Piece::new(piece_def, player_num, dims)
+        }
     }
     
-    pub fn make_queen(id: PieceId, player_num: Player, dims: &BDimensions) -> Piece {
-        let piece_def = PieceDefinition {
+    pub fn make_queen(id: PieceId, player_num: Player) -> PieceDefinition {
+        PieceDefinition {
             id,
             char_rep: if player_num == 0 { 'Q' } else { 'q' },
             is_leader: false,
@@ -228,8 +211,6 @@ impl PieceFactory {
             translate_northwest: true,
             translate_southeast: true,
             translate_southwest: true,
-        };
-        
-        Piece::new(piece_def, player_num, dims)
+        }
     }
 }

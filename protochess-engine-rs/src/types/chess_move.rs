@@ -123,10 +123,10 @@ impl MoveInfo {
     // Create a MoveInfo from a string like "e2e4" or "e7e8=123" (promotion to piece with id 123)
     pub fn from_string(s: &str) -> MoveInfo {
         let mut chars = s.chars();
-        let from_x = chars.next().unwrap() as u8 - 'a' as u8;
-        let from_y = chars.next().unwrap() as u8 - '1' as u8;
-        let to_x = chars.next().unwrap() as u8 - 'a' as u8;
-        let to_y = chars.next().unwrap() as u8 - '1' as u8;
+        let from_x = chars.next().unwrap() as u8 - b'a';
+        let from_y = chars.next().unwrap() as u8 - b'1';
+        let to_x = chars.next().unwrap() as u8 - b'a';
+        let to_y = chars.next().unwrap() as u8 - b'1';
         let promotion = {
             if chars.next() == Some('=') {
                 let id = chars.as_str().parse::<PieceId>().unwrap();

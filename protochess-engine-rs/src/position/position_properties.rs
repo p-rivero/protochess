@@ -13,8 +13,7 @@ pub struct PositionProperties {
     pub move_played: Option<Move>,
     //If the last move was a promotion, promote_from is the previous piecetype
     pub promote_from: Option<PieceId>,
-    // TODO: Rename to castled_players
-    pub castling_rights: CastledPlayers,
+    pub castled_players: CastledPlayers,
     //EP square (square behind a double pawn push)
     pub ep_square: Option<BIndex>,
     pub ep_victim: BIndex, // Only valid if ep_square is Some
@@ -32,7 +31,7 @@ impl PositionProperties {
             zobrist_key: 0,
             move_played: None,
             promote_from: None,
-            castling_rights: Default::default(),
+            castled_players: CastledPlayers::new(),
             ep_square: None,
             ep_victim: 0,
             moved_piece_castle: false,

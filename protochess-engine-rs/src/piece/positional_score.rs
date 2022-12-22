@@ -20,7 +20,7 @@ pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions) -> V
             continue;
         }
         let mut moves = get_moves_on_empty_board(mp, index, dims, true);
-        moves &= center_squares_bb.to_owned();
+        moves &= &center_squares_bb;
         
         // 1 point for each move that lands on a center square
         let mut score = moves.count_ones() as Centipawns * POSITION_BASE_MULT;
