@@ -5,10 +5,6 @@ protochess-engine-rs/Cargo.lock
 protochess-engine-rs/perf.data
 protochess-engine-rs/perf.data.old
 .vscode
-protochess-common/target
-protochess-common/Cargo.lock
 protochess-engine-wasm/target
 protochess-engine-wasm/Cargo.lock
-protochess-server-rs/target
-protochess-server-rs/Cargo.lock
 protochess-engine-rs/pgn.txt

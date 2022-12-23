@@ -17,7 +17,6 @@ default = ["console_error_panic_hook"]
 [dependencies]
 wasm-bindgen = {version = "0.2.63", features = ["serde-serialize"]}
 protochess-engine-rs = {path = "../protochess-engine-rs"}
-protochess-common = {path = "../protochess-common"}
 
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
