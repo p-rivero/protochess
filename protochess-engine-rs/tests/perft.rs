@@ -3,7 +3,7 @@ extern crate protochess_engine_rs;
 
 
 #[cfg(test)]
-mod fen {
+mod perft {
     #[test]
     fn starting_pos() {
         use protochess_engine_rs::Engine;
@@ -13,6 +13,7 @@ mod fen {
         assert_eq!(engine.perft(3), 8902);
         assert_eq!(engine.perft(4), 197281);
         assert_eq!(engine.perft(5), 4865609);
+        assert_eq!(engine.perft(6), 119060324);
     }
 
     #[test]
@@ -35,6 +36,7 @@ mod fen {
         assert_eq!(engine.perft(3), 2812);
         assert_eq!(engine.perft(4), 43238);
         assert_eq!(engine.perft(5), 674624);
+        assert_eq!(engine.perft(6), 11030083);
     }
 
     #[test]
