@@ -1,3 +1,6 @@
+use rand::rngs::StdRng;
+use rand::{SeedableRng, Rng};
+
 use crate::move_generator::bitboard_moves::BitboardMoves;
 use crate::{types::*, Position};
 
@@ -39,7 +42,7 @@ pub struct Piece {
     total_material_score: Centipawns,
     
     // Positions at which this piece can castle. Used if can_castle or is_castle_rook are true
-    pub castle_squares: Bitboard,
+    castle_squares: Bitboard,
 }
 
 impl Piece {
@@ -51,7 +54,7 @@ impl Piece {
         assert!(!(definition.can_castle && definition.is_castle_rook));
         
         let material_score = compute_material_score(&definition);
-        let zobrist_hashes = Piece::compute_zobrist(definition.id, player_num);
+        let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims);
         Piece {
             type_def: definition,
@@ -207,21 +210,16 @@ impl Piece {
         &self.type_def
     }
     
-    fn compute_zobrist(id: PieceId, player_num: Player) -> Vec<u64> {
+    fn random_zobrist(piece_id: u32, player: Player) -> Vec<u64> {
+        // Generate a predictable seed for the rng
+        let seed = (player as u64) << 32 | (piece_id as u64);
+        let mut rng = StdRng::seed_from_u64(seed);
+        
         let mut zobrist = Vec::with_capacity(256);
-        for i in 0..=255 {
-            zobrist.push(Piece::compute_zobrist_at(id, player_num, i));
+        for _ in 0..=255 {
+            zobrist.push(rng.gen::<u64>());
         }
         zobrist
-    }
-    // TODO: Make private, use RNG
-    pub fn compute_zobrist_at(id: PieceId, player_num: Player, index: BIndex) -> u64 {
-        // Use Donald Knuth's multiplicative hash
-        const KNUTH_MUL: u64 = 6364136223846793005;
-        // const KNUTH_ADD: u64 = 1442695040888963407; // Unused, since we only do 1 iteration
-        
-        let seed = (id as u64) << 16 | (player_num as u64) << 8 | index as u64;
-        seed.wrapping_mul(KNUTH_MUL)
     }
 }
 

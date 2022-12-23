@@ -151,7 +151,7 @@ impl MoveGen {
         let piece_movement = piece.get_movement();
         let slides = attack_tables.get_sliding_moves_bb(
             piece_index,
-            &occ_or_not_in_bounds,
+            occ_or_not_in_bounds,
             piece_movement.attack_north,
             piece_movement.attack_east,
             piece_movement.attack_south,

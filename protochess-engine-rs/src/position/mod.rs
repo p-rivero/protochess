@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::constants::piece_scores::ID_ROOK;
 use crate::{types::*, PieceDefinition};
 use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
@@ -114,19 +113,19 @@ impl Position {
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x - 1, y);
-                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
-                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
+                let rook_to = mv.get_to() - 1;
+                let rook_piece = self.pieces[my_player_num as usize].piece_at(rook_from).unwrap();
+                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
+                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
                 self.move_piece(rook_from, rook_to, false);
                 new_props.castled_players.set_player_castled(my_player_num);
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x + 1, y);
-                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_from);
-                new_props.zobrist_key ^= Piece::compute_zobrist_at(ID_ROOK, my_player_num, rook_to);
+                let rook_to = mv.get_to() + 1;
+                let rook_piece = self.pieces[my_player_num as usize].piece_at(rook_from).unwrap();
+                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
+                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
                 self.move_piece(rook_from, rook_to, false);
                 new_props.castled_players.set_player_castled(my_player_num);
             }
@@ -153,8 +152,8 @@ impl Position {
                 self.remove_piece(to);
                 // Add new piece
                 let promote_to_pt = mv.get_promotion_piece().unwrap();
-                new_props.zobrist_key ^= Piece::compute_zobrist_at(promote_to_pt, my_player_num, to);
-                self.add_piece(my_player_num, promote_to_pt, to, false);
+                let piece = self.add_piece(my_player_num, promote_to_pt, to, false);
+                new_props.zobrist_key ^= piece.get_zobrist(to);
             },
             _ => {}
         };
@@ -364,8 +363,8 @@ impl Position {
         self.update_repetitions(self.properties.zobrist_key, -1);
         
         let mut new_props = (*self.properties).clone();
-        new_props.zobrist_key ^= Piece::compute_zobrist_at(piece_type, owner, index);
-        self.add_piece(owner, piece_type, index, true);
+        let piece = self.add_piece(owner, piece_type, index, true);
+        new_props.zobrist_key ^= piece.get_zobrist(index);
         self.update_occupied();
         new_props.prev_properties = Some(Arc::clone(&self.properties));
         self.properties = Arc::new(new_props);
@@ -382,9 +381,11 @@ impl Position {
     
     
     /// Adds a piece to the position, assuming the piecetype already exists
-    fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex, can_castle: bool) {
+    /// Returns the piece that was added
+    fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex, can_castle: bool) -> &Piece {
         let piece = self.pieces[owner as usize].iter_mut().find(|c| c.get_piece_id() == piece_id).unwrap();
         piece.add_piece(index, can_castle);
+        piece
     }
     
     /// Removes a piece from the position, assuming the piece is there
@@ -393,6 +394,9 @@ impl Position {
         piece.remove_piece(index)
     }
     
+    /// Move a piece from one index to another
+    /// If set_can_castle is true, set the new index as a castle square.
+    /// Returns true if the piece could castle before this move
     fn move_piece(&mut self, from: BIndex, to: BIndex, can_castle: bool) -> bool {
         if let Some(piece) = self.piece_at_mut(from) {
             piece.move_piece(from, to, can_castle)

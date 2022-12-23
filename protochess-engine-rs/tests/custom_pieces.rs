@@ -53,23 +53,6 @@ mod custom_pieces {
     }
     
     #[test]
-    fn zobrist_hashing() {
-        let h1 = Piece::compute_zobrist_at(1, 2, 3);
-        let h1_again = Piece::compute_zobrist_at(1, 2, 3);
-        let h2 = Piece::compute_zobrist_at(1, 2, 4);
-        let h3 = Piece::compute_zobrist_at(1, 3, 3);
-        let h4 = Piece::compute_zobrist_at(2, 2, 3);
-        
-        assert_eq!(h1, h1_again);
-        assert_ne!(h1, h2);
-        assert_ne!(h1, h3);
-        assert_ne!(h1, h4);
-        assert_ne!(h2, h3);
-        assert_ne!(h2, h4);
-        assert_ne!(h3, h4);
-    }
-    
-    #[test]
     fn piece_factory_pawn() {
         let dims = BDimensions::new_without_walls(8, 8);
         let white_pawn = Piece::new(PieceFactory::make_pawn(123, 0, &dims, vec![1, 2, 3]), 0, &dims);
