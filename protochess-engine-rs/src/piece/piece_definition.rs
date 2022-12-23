@@ -103,4 +103,62 @@ impl PieceDefinition {
     pub fn has_sliding_deltas(&self) -> bool {
         !self.translate_sliding_deltas.is_empty() || !self.attack_sliding_deltas.is_empty()
     }
+    
+    pub fn update_inverse_attack(&mut self, other: &PieceDefinition) {
+        self.attack_north |= other.attack_south;
+        self.attack_south |= other.attack_north;
+        self.attack_east |= other.attack_west;
+        self.attack_west |= other.attack_east;
+        self.attack_northeast |= other.attack_southwest;
+        self.attack_northwest |= other.attack_southeast;
+        self.attack_southeast |= other.attack_northwest;
+        self.attack_southwest |= other.attack_northeast;
+        
+        for delta in &other.attack_jump_deltas {
+            self.attack_jump_deltas.push((-delta.0, -delta.1));
+        }
+        
+        for delta in &other.attack_sliding_deltas {
+            let mut new_delta = Vec::new();
+            for (x, y) in delta {
+                new_delta.push((-x, -y));
+            }
+            self.attack_sliding_deltas.push(new_delta);
+        }
+    }
+}
+
+impl Default for PieceDefinition {
+    fn default() -> Self {
+        PieceDefinition {
+            id: 0,
+            char_rep: '?',
+            is_leader: false,
+            can_castle: false,
+            is_castle_rook: false,
+            promotion_squares: Bitboard::zero(),
+            promo_vals: Vec::new(),
+            double_move_squares: Bitboard::zero(),
+            attack_sliding_deltas: Vec::new(),
+            attack_jump_deltas: Vec::new(),
+            attack_north: false,
+            attack_south: false,
+            attack_east: false,
+            attack_west: false,
+            attack_northeast: false,
+            attack_northwest: false,
+            attack_southeast: false,
+            attack_southwest: false,
+            translate_jump_deltas: Vec::new(),
+            translate_sliding_deltas: Vec::new(),
+            translate_north: false,
+            translate_south: false,
+            translate_east: false,
+            translate_west: false,
+            translate_northeast: false,
+            translate_northwest: false,
+            translate_southeast: false,
+            translate_southwest: false,
+        }
+    }
 }

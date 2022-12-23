@@ -99,15 +99,17 @@ impl Piece {
         }
         indexes
     }
+    pub fn get_first_index(&self) -> Option<BIndex> {
+        self.bitboard.lowest_one()
+    }
     
     // Returns true if this piece is a leader (king)
     pub fn is_leader(&self) -> bool {
         self.type_def.is_leader
     }
     
-    // Returns true if capturing this piece causes the capturing player to win
-    pub fn potential_checkmate(&self) -> bool {
-        self.type_def.is_leader && self.num_pieces == 1
+    pub fn get_num_pieces(&self) -> u32 {
+        self.num_pieces
     }
     
     pub fn is_castle_rook(&self, index: BIndex) -> bool {
@@ -194,13 +196,16 @@ impl Piece {
         while !bb_copy.is_zero() {
             let index = bb_copy.lowest_one().unwrap();
             let can_castle = self.type_def.can_castle && self.castle_squares.get_bit(index);
-            let can_double_move = self.type_def.double_move_squares.get_bit(index);
+            let can_double_jump = self.type_def.double_move_squares.get_bit(index);
             output_moves(&self.type_def, index, position, enemies, 
-                occ_or_not_in_bounds, can_castle, can_double_move, out_bb_moves, out_moves);
+                occ_or_not_in_bounds, can_castle, can_double_jump, out_bb_moves, out_moves);
             bb_copy.clear_bit(index);
         }
     }
     
+    pub fn get_movement(&self) -> &PieceDefinition {
+        &self.type_def
+    }
     
     fn compute_zobrist(id: PieceId, player_num: Player) -> Vec<u64> {
         let mut zobrist = Vec::with_capacity(256);
