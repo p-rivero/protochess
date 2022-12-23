@@ -8,7 +8,6 @@ use crate::piece::PieceId;
 
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGen;
-use crate::position::parse_fen;
 use crate::utils::to_index;
 
 //Private modules
@@ -25,6 +24,7 @@ pub use crate::piece::PieceDefinition;
 pub use crate::types::MoveInfo;
 
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum MakeMoveResult {
     Ok,
     IllegalMove,
@@ -47,7 +47,7 @@ impl Engine {
     }
     pub fn from_fen(fen: &str) -> Engine {
         Engine{
-            position: parse_fen(fen),
+            position: Position::from_fen(fen),
         }
     }
 

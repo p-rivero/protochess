@@ -148,3 +148,18 @@ impl MoveInfo {
         self.from == (from_x, from_y) && self.to == (to_x, to_y) && self.promotion == m.get_promotion_piece()
     }
 }
+
+impl fmt::Display for MoveInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}{}{}{}", 
+            (self.from.0 + b'a') as char,
+            (self.from.1 + b'1') as char,
+            (self.to.0 + b'a') as char,
+            (self.to.1 + b'1') as char,
+            match self.promotion {
+                Some(id) => format!("={}", id),
+                None => "".to_string()
+            }
+        )
+    }
+}

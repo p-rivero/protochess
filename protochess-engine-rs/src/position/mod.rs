@@ -6,17 +6,15 @@ use crate::{types::*, PieceDefinition};
 use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
 use crate::utils::{from_index, to_index};
-
-pub use parse_fen::parse_fen;
-use position_properties::PositionProperties;
-
 use crate::piece::{Piece, PieceId};
 
 mod position_properties;
+mod parse_fen;
 pub mod castled_players;
-pub mod parse_fen;
 pub mod piece_set;
 
+use position_properties::PositionProperties;
+use parse_fen::parse_fen;
 
 /// Represents a single position in chess
 #[derive(Clone, Debug)]
@@ -37,6 +35,31 @@ pub struct Position {
 impl Position {
     pub fn default() -> Position {        
         parse_fen(fen::STARTING_POS)
+    }
+    pub fn empty() -> Position {
+        parse_fen(fen::EMPTY)
+    }
+    pub fn from_fen(fen: &str) -> Position {
+        parse_fen(fen)
+    }
+    
+    ///pieces(owner, index, PieceType)
+    pub fn custom(dims: BDimensions,
+                  piece_types: &Vec<PieceDefinition>,
+                  pieces: Vec<(Player, BIndex, PieceId)>) -> Position
+    {
+        Position::assert_all_players_have_leader(piece_types, &pieces);
+        
+        let mut pos = Position::empty();
+        pos.dimensions = dims;
+        for definition in piece_types {
+            pos.register_piecetype(definition);
+        }
+
+        for (owner, index, piece_type) in pieces {
+            pos.public_add_piece(owner, piece_type, index);
+        }
+        pos
     }
     
     pub fn new(dimensions: BDimensions, pieces: Vec<PieceSet>, whos_turn: Player, props: PositionProperties) -> Position {
@@ -286,44 +309,6 @@ impl Position {
         squares
     }
 
-    ///pieces(owner, index, PieceType)
-    pub(crate) fn custom(dims: BDimensions,
-                  piece_types: &Vec<PieceDefinition>,
-                  pieces: Vec<(Player, BIndex, PieceId)>) -> Position
-    {
-        Position::assert_all_players_have_leader(piece_types, &pieces);
-        
-        let mut pos = parse_fen(fen::EMPTY);
-        pos.dimensions = dims;
-        for definition in piece_types {
-            pos.register_piecetype(definition);
-        }
-
-        for (owner, index, piece_type) in pieces {
-            pos.public_add_piece(owner, piece_type, index);
-        }
-        pos
-    }
-    fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) {
-        let mut leader_pieces = Vec::new();
-        for definition in piece_types {
-            if definition.is_leader {
-                leader_pieces.push(definition.id);
-            }
-        }
-        // The number of players is (max player number) + 1
-        let num_players = pieces.iter().map(|(p, _, _)| p).max().unwrap() + 1;
-        let mut player_has_leader = vec![false; num_players as usize];
-        for (owner, _, piece_type) in pieces {
-            if leader_pieces.contains(piece_type) {
-                player_has_leader[*owner as usize] = true;
-            }
-        }
-        for (i, has_leader) in player_has_leader.iter().enumerate() {
-            assert!(has_leader, "Player {} does not have a leader piece", i);
-        }
-    }
-
     pub fn get_zobrist(&self) -> u64 {
         self.properties.zobrist_key
     }
@@ -379,6 +364,26 @@ impl Position {
     }
     
     
+    
+    fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) {
+        let mut leader_pieces = Vec::new();
+        for definition in piece_types {
+            if definition.is_leader {
+                leader_pieces.push(definition.id);
+            }
+        }
+        // The number of players is (max player number) + 1
+        let num_players = pieces.iter().map(|(p, _, _)| p).max().unwrap() + 1;
+        let mut player_has_leader = vec![false; num_players as usize];
+        for (owner, _, piece_type) in pieces {
+            if leader_pieces.contains(piece_type) {
+                player_has_leader[*owner as usize] = true;
+            }
+        }
+        for (i, has_leader) in player_has_leader.iter().enumerate() {
+            assert!(has_leader, "Player {} does not have a leader piece", i);
+        }
+    }
     
     /// Adds a piece to the position, assuming the piecetype already exists
     /// Returns the piece that was added

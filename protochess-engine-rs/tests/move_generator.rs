@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod move_generator_test {
+    use protochess_engine_rs::Position;
     use protochess_engine_rs::move_generator::attack_tables::AttackTables;
     use protochess_engine_rs::move_generator::MoveGen;
-    use protochess_engine_rs::position::parse_fen;
     use protochess_engine_rs::types::{Bitboard, Move, MoveType};
 
     #[test]
     fn capture_moves() {
-        let mut pos = parse_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+        let mut pos = Position::from_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
         let z1 = pos.get_zobrist();
         assert!(MoveGen::in_check(&mut pos));
         let z2 = pos.get_zobrist();
