@@ -53,45 +53,55 @@ pub struct Bitboard {
 }
 
 impl Bitboard {
+    #[inline]
     pub fn zero() -> Bitboard {
         Bitboard { board_internal: numext_fixed_uint::U256::zero() }
     }
+    #[inline]
     pub fn one() -> Bitboard {
         Bitboard { board_internal: numext_fixed_uint::U256::one() }
     }
-    pub fn all_ones() -> Bitboard {
-        Bitboard { board_internal: numext_fixed_uint::U256::max_value() }
-    }
+    #[inline]
     pub fn set_bit(&mut self, index: BIndex) {
         self.board_internal.set_bit(index as usize, true);
     }
+    #[inline]
     pub fn clear_bit(&mut self, index: BIndex) {
         self.board_internal.set_bit(index as usize, false);
     }
+    #[inline]
     pub fn set_bit_at(&mut self, x: BCoord, y: BCoord) {
         self.set_bit(to_index(x, y));
     }
+    #[inline]
     pub fn clear_bit_at(&mut self, x: BCoord, y: BCoord) {
         self.clear_bit(to_index(x, y));
     }
+    #[inline]
     pub fn get_bit(&self, index: BIndex) -> bool {
         self.board_internal.bit(index as usize).unwrap()
     }
+    #[inline]
     pub fn get_bit_at(&self, x: BCoord, y: BCoord) -> bool {
         self.get_bit(to_index(x, y))
     }
+    #[inline]
     pub fn get_byte(&self, index: usize) -> u8 {
         self.board_internal.byte(index).unwrap()
     }
+    #[inline]
     pub fn is_zero(&self) -> bool {
         self.board_internal.is_zero()
     }
+    #[inline]
     pub fn lowest_one(&self) -> Option<BIndex> {
         self.board_internal.lowest_one().map(|x| x as BIndex)
     }
+    #[inline]
     pub fn count_ones(&self) -> u32 {
         self.board_internal.count_ones()
     }
+    #[inline]
     pub fn overflowing_mul(self, rhs: &Bitboard) -> Bitboard {
         Bitboard { board_internal: self.board_internal.overflowing_mul(&rhs.board_internal).0 }
     }
@@ -126,7 +136,6 @@ impl_op_ex!(+= |a: &mut Bitboard, b: &Bitboard| { a.board_internal += &b.board_i
 impl_op_ex!(-= |a: &mut Bitboard, b: &Bitboard| { a.board_internal -= &b.board_internal });
 impl_op_ex!(&= |a: &mut Bitboard, b: &Bitboard| { a.board_internal &= &b.board_internal });
 impl_op_ex!(|= |a: &mut Bitboard, b: &Bitboard| { a.board_internal |= &b.board_internal });
-impl_op_ex!(|= |a: &mut Bitboard, b: u64| { a.board_internal |= numext_fixed_uint::U256::from(b) });
 impl_op_ex!(^= |a: &mut Bitboard, b: &Bitboard| { a.board_internal ^= &b.board_internal });
 impl_op_ex!(^= |a: &mut Bitboard, b: u16| { a.board_internal ^= numext_fixed_uint::U256::from(b) });
 impl_op_ex!(<<= |a: &mut Bitboard, b: BCoord| { a.board_internal <<= b });
