@@ -94,9 +94,10 @@ impl Position {
 
 
     /// Modifies the position to make the move
-    pub fn make_move(&mut self, mv: Move) {
+    pub fn make_move(&mut self, mv: Move, update_reps: bool) {
         let my_player_num = self.whos_turn;
         let mut new_props: PositionProperties = (*self.properties).clone();
+        new_props.update_reps = update_reps;
         
         // Update the player
         self.whos_turn += 1;
@@ -116,7 +117,9 @@ impl Position {
             new_props.move_played = Some(mv);
             new_props.prev_properties = Some(Arc::clone(&self.properties));
             // Increment number of repetitions of new position
-            self.update_repetitions(new_props.zobrist_key, 1);
+            if update_reps {
+                self.update_repetitions(new_props.zobrist_key, 1);
+            }
             
             self.properties = Arc::new(new_props);
             return;
@@ -199,7 +202,9 @@ impl Position {
         }
         
         // Increment number of repetitions of new position
-        self.update_repetitions(new_props.zobrist_key, 1);
+        if update_reps {
+            self.update_repetitions(new_props.zobrist_key, 1);
+        }
 
         // Update props
         new_props.move_played = Some(mv);
@@ -214,7 +219,9 @@ impl Position {
     pub fn unmake_move(&mut self) {
         
         // Decrement the number of repetitions of old position
-        self.update_repetitions(self.properties.zobrist_key, -1);
+        if self.properties.update_reps {
+            self.update_repetitions(self.properties.zobrist_key, -1);
+        }
 
         if self.whos_turn == 0 {
             self.whos_turn = self.num_players - 1;
@@ -420,6 +427,7 @@ impl Position {
         }
     }
     
+    #[inline]
     fn update_repetitions(&mut self, key: u64, delta: i16) {
         let num_reps = self.position_repetitions.get(&key);
         if let Some(old_val) = num_reps {

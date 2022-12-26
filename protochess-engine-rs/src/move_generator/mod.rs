@@ -211,8 +211,8 @@ impl MoveGen {
         }
         
         // Try the move and skip a turn, then see if we are in check
-        position.make_move(*mv);
-        position.make_move(Move::null());
+        position.make_move(*mv, false);
+        position.make_move(Move::null(), false);
         // See if we are in check
         let legal = !MoveGen::in_check(position);
         position.unmake_move();

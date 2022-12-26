@@ -19,6 +19,8 @@ pub struct PositionProperties {
     pub ep_victim: BIndex, // Only valid if ep_square is Some
     // true if the piece that moved could castle
     pub moved_piece_castle: bool,
+    // true if make_move() was called with update_reps = true
+    pub update_reps: bool,
     // Full id (piece type + player num) of the captured piece, if any.
     // Also store whether the captured piece could castle
     pub captured_piece: Option<(PieceId, Player, bool)>,
@@ -26,7 +28,13 @@ pub struct PositionProperties {
 }
 
 impl PositionProperties {
-    pub fn default() -> PositionProperties {
+    pub fn get_prev(&self) -> Option<Arc<PositionProperties>> {
+        self.prev_properties.as_ref().cloned()
+    }
+}
+
+impl Default for PositionProperties {
+    fn default() -> PositionProperties {
         PositionProperties{
             zobrist_key: 0,
             move_played: None,
@@ -35,13 +43,9 @@ impl PositionProperties {
             ep_square: None,
             ep_victim: 0,
             moved_piece_castle: false,
+            update_reps: false,
             captured_piece: None,
             prev_properties: None,
         }
     }
-
-    pub fn get_prev(&self) -> Option<Arc<PositionProperties>> {
-        self.prev_properties.as_ref().cloned()
-    }
-
 }

@@ -64,7 +64,7 @@ impl Searcher {
 
         //Null move pruning
         if !is_pv && do_null && depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
-            pos.make_move(Move::null());
+            pos.make_move(Move::null(), true);
             let nscore = -self.alphabeta(pos, depth - 3, -beta, -beta + 1, false, end_time)?;
             pos.unmake_move();
             if nscore >= beta {
@@ -87,7 +87,7 @@ impl Searcher {
             }
 
             num_legal_moves += 1;
-            pos.make_move(mv);
+            pos.make_move(mv, true);
             let mut score: Centipawns;
             if num_legal_moves == 1 {
                 score = -self.alphabeta(pos, depth - 1, -beta, -alpha, true, end_time)?;
@@ -205,8 +205,9 @@ impl Searcher {
             if !MoveGen::is_move_legal(&mv, pos) {
                 continue;
             }
-
-            pos.make_move(mv);
+            
+            // This is a capture move, so there is no need to check for repetition
+            pos.make_move(mv, false);
             let score = -self.quiesce(pos, -beta, -alpha);
             pos.unmake_move();
 

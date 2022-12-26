@@ -93,7 +93,7 @@ impl Engine {
                 continue;
             }
             // Found the move, try to play it
-            self.position.make_move(mv);
+            self.position.make_move(mv, true);
             
             // Check if the game is over
             if MoveGen::count_legal_moves(&mut self.position) == 0 {

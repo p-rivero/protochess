@@ -15,7 +15,7 @@ pub fn perft(position: &mut Position, depth: Depth) -> u64 {
         if !MoveGen::is_move_legal(&mv, position) {
             continue;
         }
-        position.make_move(mv);
+        position.make_move(mv, false);
         nodes += perft(position, depth - 1);
         position.unmake_move();
     }
@@ -37,7 +37,7 @@ pub fn perft_divide(position: &mut Position, depth: Depth) -> u64 {
 
         let (x,y) = from_index(mv.get_from());
         let (x2,y2) = from_index(mv.get_to());
-        position.make_move(mv);
+        position.make_move(mv, false);
         let plus = perft(position, depth - 1);
         nodes += plus;
         position.unmake_move();
