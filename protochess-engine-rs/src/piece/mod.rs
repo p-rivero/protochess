@@ -17,7 +17,7 @@ pub use piece_definition::PieceDefinition;
 
 use material_score::compute_material_score;
 use positional_score::compute_piece_square_table;
-use movement::output_moves;
+use movement::{output_translations, output_captures};
 
 // Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
 #[derive(Clone, Debug)]
@@ -200,8 +200,22 @@ impl Piece {
             let index = bb_copy.lowest_one().unwrap();
             let can_castle = self.type_def.can_castle && self.castle_squares.get_bit(index);
             let can_double_jump = self.type_def.double_move_squares.get_bit(index);
-            output_moves(&self.type_def, index, position, enemies, 
+            output_translations(&self.type_def, index, position, enemies,
                 occ_or_not_in_bounds, can_castle, can_double_jump, out_bb_moves, out_moves);
+            output_captures(&self.type_def, index, position, enemies, 
+                occ_or_not_in_bounds, out_bb_moves, out_moves);
+            bb_copy.clear_bit(index);
+        }
+    }
+    
+    pub fn output_captures(&self, position: &Position, enemies: &Bitboard, occ_or_not_in_bounds: &Bitboard,
+            out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
+    {
+        let mut bb_copy = self.bitboard.clone();
+        while !bb_copy.is_zero() {
+            let index = bb_copy.lowest_one().unwrap();
+            output_captures(&self.type_def, index, position, enemies, 
+                occ_or_not_in_bounds, out_bb_moves, out_moves);
             bb_copy.clear_bit(index);
         }
     }

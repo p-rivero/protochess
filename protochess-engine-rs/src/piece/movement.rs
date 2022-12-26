@@ -4,9 +4,10 @@ use crate::types::{Bitboard, Move, MoveType, BCoord, BIndex};
 use crate::move_generator::bitboard_moves::BitboardMoves;
 
 
+/// Outputs all pseudo-legal translation (non-capture) moves for a piece at a given index
 #[allow(clippy::too_many_arguments)]
 #[inline]
-pub fn output_moves(movement: &PieceDefinition, index: BIndex,
+pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         position: &Position, enemies: &Bitboard,
         occ_or_not_in_bounds: &Bitboard, can_castle: bool, can_double_jump: bool,
         out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
@@ -15,33 +16,7 @@ pub fn output_moves(movement: &PieceDefinition, index: BIndex,
     
     // SLIDING MOVES
     
-    // Attacks!
-    let mut raw_attacks = attack_tables.get_sliding_moves_bb(
-        index,
-        occ_or_not_in_bounds,
-        movement.attack_north,
-        movement.attack_east,
-        movement.attack_south,
-        movement.attack_west,
-        movement.attack_northeast,
-        movement.attack_northwest,
-        movement.attack_southeast,
-        movement.attack_southwest
-    );
-    // Attacks only
-    raw_attacks &= enemies;
-    // Keep only in bounds
-    raw_attacks &= &position.dimensions.bounds;
-    out_bb_moves.push(BitboardMoves::new(
-        enemies.clone(),
-        raw_attacks,
-        index,
-        movement.promotion_squares.clone(),
-        movement.promo_vals.clone(),
-    ));
-    
-    // Movements!
-    let mut raw_moves = attack_tables.get_sliding_moves_bb(
+    let mut slide_moves = attack_tables.get_sliding_moves_bb(
         index,
         occ_or_not_in_bounds,
         movement.translate_north,
@@ -54,12 +29,12 @@ pub fn output_moves(movement: &PieceDefinition, index: BIndex,
         movement.translate_southwest
     );
     // Non-attacks only
-    raw_moves &= !&position.occupied;
+    slide_moves &= !&position.occupied;
     // Keep only in bounds
-    raw_moves &= &position.dimensions.bounds;
+    slide_moves &= &position.dimensions.bounds;
     out_bb_moves.push(BitboardMoves::new(
         enemies.clone(),
-        raw_moves,
+        slide_moves,
         index,
         movement.promotion_squares.clone(),
         movement.promo_vals.clone(),
@@ -110,30 +85,6 @@ pub fn output_moves(movement: &PieceDefinition, index: BIndex,
             }
         }
     }
-
-    for (dx, dy) in &movement.attack_jump_deltas {
-        let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-        if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-            continue;
-        }
-        let to = to_index(x2 as BCoord, y2 as BCoord);
-        if enemies.get_bit(to) {
-            //Promotion here?
-            if movement.promotion_at(to) {
-                //Add all the promotion moves
-                for c in &movement.promo_vals {
-                    out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
-                }
-            } else {
-                out_moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
-            }
-        }
-        // En passant capture
-        if position.properties.ep_square == Some(to) && movement.can_double_jump() {
-            let target = position.properties.ep_victim;
-            out_moves.push(Move::new(index, to, Some(target), MoveType::Capture, None));
-        }
-    }
     
     
     // SLIDING DELTAS
@@ -157,38 +108,6 @@ pub fn output_moves(movement: &PieceDefinition, index: BIndex,
                 }
             } else {
                 out_moves.push(Move::new(index, to, None, MoveType::Quiet, None));
-            }
-        }
-    }
-
-    for run in &movement.attack_sliding_deltas {
-        for (dx, dy) in run {
-
-            let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-            if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                break;
-            }
-
-            let to = to_index(x2 as BCoord, y2 as BCoord);
-            //Out of bounds, next sliding moves can be ignored
-            if !position.in_bounds(x2 as BCoord, y2 as BCoord) {
-                break;
-            }
-            //If there is an enemy here, we can add an attack move
-            if enemies.get_bit(to) {
-                if movement.promotion_at(to) {
-                    //Add all the promotion moves
-                    for c in &movement.promo_vals {
-                        out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
-                    }
-                } else {
-                    out_moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
-                }
-                break;
-            }
-            //Occupied by own team
-            if position.occupied.get_bit(to) {
-                break;
             }
         }
     }
@@ -227,6 +146,106 @@ pub fn output_moves(movement: &PieceDefinition, index: BIndex,
                     let to_index = to_index(kx - 2, ky);
                     out_moves.push(Move::new(index, to_index, Some(queenside_rook_index), MoveType::QueensideCastle, None));
                 }
+            }
+        }
+    }
+}
+
+
+
+/// Outputs all the pseudo-legal capture moves for a piece at a given index
+#[inline]
+pub fn output_captures(movement: &PieceDefinition, index: BIndex,
+        position: &Position, enemies: &Bitboard,
+        occ_or_not_in_bounds: &Bitboard, out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
+{
+    let attack_tables = MoveGen::attack_tables();
+    
+    // SLIDING MOVES
+    
+    let mut slide_attacks = attack_tables.get_sliding_moves_bb(
+        index,
+        occ_or_not_in_bounds,
+        movement.attack_north,
+        movement.attack_east,
+        movement.attack_south,
+        movement.attack_west,
+        movement.attack_northeast,
+        movement.attack_northwest,
+        movement.attack_southeast,
+        movement.attack_southwest
+    );
+    // Attacks only
+    slide_attacks &= enemies;
+    // Keep only in bounds
+    slide_attacks &= &position.dimensions.bounds;
+    out_bb_moves.push(BitboardMoves::new(
+        enemies.clone(),
+        slide_attacks,
+        index,
+        movement.promotion_squares.clone(),
+        movement.promo_vals.clone(),
+    ));
+
+    
+    // JUMP MOVES
+
+    let (x, y) = from_index(index);
+    for (dx, dy) in &movement.attack_jump_deltas {
+        let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
+        if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
+            continue;
+        }
+        let to = to_index(x2 as BCoord, y2 as BCoord);
+        if enemies.get_bit(to) {
+            //Promotion here?
+            if movement.promotion_at(to) {
+                //Add all the promotion moves
+                for c in &movement.promo_vals {
+                    out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
+                }
+            } else {
+                out_moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
+            }
+        }
+        // En passant capture
+        if position.properties.ep_square == Some(to) && movement.can_double_jump() {
+            let target = position.properties.ep_victim;
+            out_moves.push(Move::new(index, to, Some(target), MoveType::Capture, None));
+        }
+    }
+    
+    
+    // SLIDING DELTAS
+    
+    for run in &movement.attack_sliding_deltas {
+        for (dx, dy) in run {
+
+            let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
+            if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
+                break;
+            }
+
+            let to = to_index(x2 as BCoord, y2 as BCoord);
+            //Out of bounds, next sliding moves can be ignored
+            if !position.in_bounds(x2 as BCoord, y2 as BCoord) {
+                break;
+            }
+            //If there is an enemy here, we can add an attack move
+            if enemies.get_bit(to) {
+                if movement.promotion_at(to) {
+                    //Add all the promotion moves
+                    for c in &movement.promo_vals {
+                        out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
+                    }
+                } else {
+                    out_moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
+                }
+                break;
+            }
+            //Occupied by own team
+            if position.occupied.get_bit(to) {
+                break;
             }
         }
     }

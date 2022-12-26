@@ -33,14 +33,7 @@ impl MoveGen {
         legal_tuples
     }
 
-
-    ///Iterator that yields only capture moves
-    pub fn get_capture_moves(position: &mut Position) -> impl Iterator<Item=Move> {
-        MoveGen::get_pseudo_moves(position).filter(|x| x.is_capture())
-    }
-
     /// Iterator that yields pseudo-legal moves from a positon
-    /// Considering only custom piece types
     pub fn get_pseudo_moves(position: &mut Position) -> impl Iterator<Item=Move> {
         let my_pieces = &position.pieces[position.whos_turn as usize];
 
@@ -52,6 +45,22 @@ impl MoveGen {
 
         for p in my_pieces.iter() {
             p.output_moves(position, &enemies, &occ_or_not_in_bounds, &mut out_bb_moves, &mut out_moves);
+        }
+        out_bb_moves.into_iter().flatten().chain(out_moves.into_iter())
+    }
+    
+    ///Iterator that yields only pseudo-legal capture moves
+    pub fn get_capture_moves(position: &mut Position) -> impl Iterator<Item=Move> {
+        let my_pieces = &position.pieces[position.whos_turn as usize];
+
+        let mut out_bb_moves: Vec<BitboardMoves> = Vec::with_capacity(50);
+        let mut out_moves = Vec::with_capacity(50);
+
+        let enemies = &position.occupied & !my_pieces.get_occupied();
+        let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
+
+        for p in my_pieces.iter() {
+            p.output_captures(position, &enemies, &occ_or_not_in_bounds, &mut out_bb_moves, &mut out_moves);
         }
         out_bb_moves.into_iter().flatten().chain(out_moves.into_iter())
     }
