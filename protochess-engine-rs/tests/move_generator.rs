@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod move_generator_test {
     use protochess_engine_rs::Position;
-    use protochess_engine_rs::move_generator::attack_tables::AttackTables;
     use protochess_engine_rs::move_generator::MoveGen;
-    use protochess_engine_rs::types::{Bitboard, Move, MoveType};
+    use protochess_engine_rs::types::{Move, MoveType};
 
     #[test]
     fn capture_moves() {
@@ -16,18 +15,6 @@ mod move_generator_test {
             println!("{}", mv);
             assert!(mv.is_capture());
         }
-    }
-
-    #[test]
-    fn attack_tables() {
-        let _attacktb = AttackTables::new();
-        let mut bb = Bitboard::zero();
-        bb |= 9252345218324798u64;
-
-        // println!("occ \n{}", to_string(&bb));
-        // let rankatt = _attacktb.get_rank_attack(2,&bb);
-        // println!("{}", to_string(&rankatt));
-
     }
     
     #[test]

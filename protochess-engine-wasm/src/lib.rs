@@ -28,6 +28,7 @@ pub struct Protochess {
 #[wasm_bindgen]
 impl Protochess {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Protochess {
         utils::set_panic_hook();
         Protochess{
@@ -35,6 +36,7 @@ impl Protochess {
         }
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&mut self) -> String {
         self.engine.to_string()
     }

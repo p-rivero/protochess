@@ -150,7 +150,7 @@ impl AttackTables {
             if occ.get_bit(index as BIndex) {
                 occ_index |= 1;
             }
-            index += 15 as i16;
+            index += 15;
         }
         if y + x > 15 {
             occ_index <<= 16 - num_iters;
