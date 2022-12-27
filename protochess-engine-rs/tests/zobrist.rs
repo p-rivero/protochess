@@ -33,7 +33,7 @@ mod zobrist_test {
     #[test]
     fn zobrist_castle() {
         let mv = vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "e1g1"];
-        let expected_fen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 5 4";
+        let expected_fen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b Qkq - 5 4";
         test_zobrist_sequence(&mv, expected_fen);
     }
     
@@ -41,7 +41,7 @@ mod zobrist_test {
     fn zobrist_transposition() {
         let mv1 = vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "e1g1"];
         let mv2 = vec!["g1f3", "e7e5", "e2e4", "g8f6", "f1c4", "b8c6", "e1g1"];
-        let expected_fen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 5 4";
+        let expected_fen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b Qkq - 5 4";
         test_zobrist_sequence(&mv1, expected_fen);
         test_zobrist_sequence(&mv2, expected_fen);
     }

@@ -143,6 +143,7 @@ impl Position {
                 let rook_piece = self.pieces[my_player_num as usize].piece_at(rook_from).unwrap();
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
+                new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
                 self.move_piece(rook_from, rook_to, false);
                 new_props.castled_players.set_player_castled(my_player_num);
             },
@@ -152,6 +153,7 @@ impl Position {
                 let rook_piece = self.pieces[my_player_num as usize].piece_at(rook_from).unwrap();
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
+                new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
                 self.move_piece(rook_from, rook_to, false);
                 new_props.castled_players.set_player_castled(my_player_num);
             }
@@ -160,7 +162,7 @@ impl Position {
 
         let from = mv.get_from();
         let to = mv.get_to();
-        let from_piece = self.piece_at(from).unwrap();
+        let from_piece = self.piece_at_mut(from).unwrap();
         let from_piece_type = from_piece.get_piece_id();
         let from_piece_new_pos_zobrist = from_piece.get_zobrist(to);
         new_props.zobrist_key ^= from_piece.get_zobrist(from);
@@ -168,7 +170,12 @@ impl Position {
         
 
         // Move piece to location
-        new_props.moved_piece_castle = self.move_piece(from, to, false);
+        new_props.moved_piece_castle = from_piece.move_piece(from, to, false);
+        if new_props.moved_piece_castle {
+            // A castling piece was moved, so it cannot castle anymore
+            // Remove the castling ability from the zobrist key
+            new_props.zobrist_key ^= from_piece.get_castle_zobrist(from);
+        }
         // Promotion
         match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {

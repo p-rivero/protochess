@@ -124,6 +124,12 @@ impl Piece {
         self.zobrist_hashes[index as usize]
     }
     
+    // Get the zobrist hash for the castling right of this piece at the given index
+    pub fn get_castle_zobrist(&self, index: BIndex) -> u64 {
+        // This could be implemented with a separate random array, but this is simpler
+        self.zobrist_hashes[index as usize] >> 1
+    }
+    
     // Get the material score for 1 unit of this piece
     pub fn get_material_score(&self) -> Centipawns {
         self.material_score

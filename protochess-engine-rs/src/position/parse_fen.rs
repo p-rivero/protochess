@@ -70,27 +70,31 @@ pub fn parse_fen(fen: &str) -> Position {
     
     let mut zobrist_key = 0;
     
-    let enable_castle = |pieces: &mut PieceSet, x: BCoord, y: BCoord| {
+    let enable_castle = |pieces: &mut PieceSet, x: BCoord, y: BCoord, zob: &mut u64| {
         let index = to_index(x, y);
         if let Some(piece) = pieces.piece_at_mut(index) {
-            piece.move_piece(index, index, true);
+            let could_castle = piece.move_piece(index, index, true);
+            if !could_castle {
+                // Enable the castle square in zobrist key
+                *zob ^= piece.get_castle_zobrist(index);
+            }
         }
     };
     if can_w_castle_k {
-        enable_castle(&mut w_pieces, 7, 0);
-        enable_castle(&mut w_pieces, 4, 0);
+        enable_castle(&mut w_pieces, 7, 0, &mut zobrist_key);
+        enable_castle(&mut w_pieces, 4, 0, &mut zobrist_key);
     }
     if can_b_castle_k {
-        enable_castle(&mut b_pieces, 7, 7);
-        enable_castle(&mut b_pieces, 4, 7);
+        enable_castle(&mut b_pieces, 7, 7, &mut zobrist_key);
+        enable_castle(&mut b_pieces, 4, 7, &mut zobrist_key);
     }
     if can_w_castle_q {
-        enable_castle(&mut w_pieces, 0, 0);
-        enable_castle(&mut w_pieces, 4, 0);
+        enable_castle(&mut w_pieces, 0, 0, &mut zobrist_key);
+        enable_castle(&mut w_pieces, 4, 0, &mut zobrist_key);
     }
     if can_b_castle_q {
-        enable_castle(&mut b_pieces, 0, 7);
-        enable_castle(&mut b_pieces, 4, 7);
+        enable_castle(&mut b_pieces, 0, 7, &mut zobrist_key);
+        enable_castle(&mut b_pieces, 4, 7, &mut zobrist_key);
     }
     
     let mut properties = PositionProperties::default();
