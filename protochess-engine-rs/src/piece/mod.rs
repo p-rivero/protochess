@@ -95,8 +95,7 @@ impl Piece {
     pub fn get_indexes(&self) -> Vec<BIndex> {
         let mut bb_copy = self.bitboard.clone();
         let mut indexes = Vec::new();
-        while !bb_copy.is_zero() {
-            let index = bb_copy.lowest_one().unwrap();
+        while let Some(index) = bb_copy.lowest_one() {
             bb_copy.clear_bit(index);
             indexes.push(index);
         }
@@ -190,8 +189,7 @@ impl Piece {
     pub fn get_positional_score_all(&self) -> Centipawns {
         let mut bb_copy = self.bitboard.clone();
         let mut score = 0;
-        while !bb_copy.is_zero() {
-            let index = bb_copy.lowest_one().unwrap();
+        while let Some(index) = bb_copy.lowest_one() {
             score += self.get_positional_score(index);
             bb_copy.clear_bit(index);
         }
@@ -202,8 +200,7 @@ impl Piece {
             out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
     {
         let mut bb_copy = self.bitboard.clone();
-        while !bb_copy.is_zero() {
-            let index = bb_copy.lowest_one().unwrap();
+        while let Some(index) = bb_copy.lowest_one() {
             let can_castle = self.type_def.can_castle && self.castle_squares.get_bit(index);
             let can_double_jump = self.type_def.double_move_squares.get_bit(index);
             output_translations(&self.type_def, index, position, enemies,
@@ -218,8 +215,7 @@ impl Piece {
             out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
     {
         let mut bb_copy = self.bitboard.clone();
-        while !bb_copy.is_zero() {
-            let index = bb_copy.lowest_one().unwrap();
+        while let Some(index) = bb_copy.lowest_one() {
             output_captures(&self.type_def, index, position, enemies, 
                 occ_or_not_in_bounds, out_bb_moves, out_moves);
             bb_copy.clear_bit(index);

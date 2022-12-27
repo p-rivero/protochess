@@ -76,12 +76,12 @@ impl MoveGen {
         }
         let enemy = 1 - position.whos_turn;
         let enemy_pieces = &position.pieces[enemy as usize];
+        let enemy_occupied = enemy_pieces.get_occupied();
         let inverse_attack = enemy_pieces.get_inverse_attack();
         // Use inverse attack pattern to get the squares that can potentially attack the last leader
         let index = my_leader.get_first_index().unwrap();
         let attack_tables = MoveGen::attack_tables();
         let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
-        let enemies = &position.occupied & !my_pieces.get_occupied();
         
         let mut slides = attack_tables.get_sliding_moves_bb(
             index,
@@ -95,9 +95,8 @@ impl MoveGen {
             inverse_attack.attack_southeast,
             inverse_attack.attack_southwest
         );
-        slides &= &enemies;
-        while !slides.is_zero() {
-            let enemy_piece_index = slides.lowest_one().unwrap();
+        slides &= enemy_occupied;
+        while let Some(enemy_piece_index) = slides.lowest_one() {
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // Found an enemy piece that might attack the last leader
             if MoveGen::slide_targets_index(enemy_piece, enemy_piece_index, index, &occ_or_not_in_bounds) {
@@ -114,7 +113,7 @@ impl MoveGen {
                 continue;
             }
             let enemy_piece_index = to_index(x2 as BCoord, y2 as BCoord);
-            if !enemies.get_bit(enemy_piece_index) {
+            if !enemy_occupied.get_bit(enemy_piece_index) {
                 continue;
             }
             // Found an enemy piece that might attack the last leader
@@ -138,7 +137,7 @@ impl MoveGen {
                 if !position.in_bounds(x2 as BCoord, y2 as BCoord) {
                     break;
                 }
-                if enemies.get_bit(to) {
+                if enemy_occupied.get_bit(to) {
                     // Found an enemy piece that might attack the last leader
                     let enemy_piece = enemy_pieces.piece_at(to).unwrap();
                     if MoveGen::sliding_delta_targets_index(enemy_piece, to, index, &occ_or_not_in_bounds) {

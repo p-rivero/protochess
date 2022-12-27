@@ -34,7 +34,7 @@ impl Iterator for BitboardMoves {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(to) = self.moves.lowest_one() {
             let promo_here = self.promotion_squares.get_bit(to);
-            let capture_here = { self.enemies.get_bit(to) };
+            let capture_here = self.enemies.get_bit(to);
             let move_type = {
                 match (capture_here, promo_here) {
                     (true, true) => { MoveType::PromotionCapture },
@@ -43,7 +43,7 @@ impl Iterator for BitboardMoves {
                     (false, false) => { MoveType::Quiet },
                 }
             };
-            let target = {if capture_here {to} else {0}};
+            let target = { if capture_here { Some(to) } else { None } };
             let promotion = {
                 if promo_here {
                     //promotion, do not go next until we run out of promo options
@@ -71,7 +71,7 @@ impl Iterator for BitboardMoves {
                     None
                 }
             };
-            Some(Move::new(self.source_index, to, Some(target), move_type, promotion))
+            Some(Move::new(self.source_index, to, target, move_type, promotion))
         } else {
             None
         }

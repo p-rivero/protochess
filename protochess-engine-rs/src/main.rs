@@ -43,38 +43,40 @@ pub fn main() {
     println!("{}", engine);
 
     let start = instant::Instant::now();
-    let mut ply = 0;
-    for _ in 0..max_ply {
+    for ply in 1..=max_ply {
         let mv = engine.get_best_move(depth);
+        println!("(Time since start: {:?})", start.elapsed());
+        println!("PLY: {} Engine plays: \n", ply);
         print_pgn(&mut pgn_file, ply, &mv, engine.get_piece_at(mv.from).unwrap());
         match engine.make_move(&mv) {
-            MakeMoveResult::Ok => {},
+            MakeMoveResult::Ok => {
+                println!("{}", engine);
+                println!("\n========================================\n");
+            },
             MakeMoveResult::IllegalMove => {
                 panic!("An illegal move was made");
             },
             MakeMoveResult::Checkmate(losing_player) => {
                 if losing_player == 0 {
+                    println!("{}", engine);
                     println!("CHECKMATE! Black wins!");
                 } else {
+                    println!("{}", engine);
                     println!("CHECKMATE! White wins!");
                 }
                 break;
             },
             MakeMoveResult::Stalemate => {
+                println!("{}", engine);
                 println!("STALEMATE!");
                 break;
             },
             MakeMoveResult::Repetition => {
+                println!("{}", engine);
                 println!("DRAW BY REPETITION!");
                 break;
             },
         }
-        ply += 1;
-        println!("(Time since start: {:?})", start.elapsed());
-        println!("PLY: {} Engine plays: \n", ply);
-        println!("{}", engine);
-        println!("\n========================================\n");
-
     }
 }
 

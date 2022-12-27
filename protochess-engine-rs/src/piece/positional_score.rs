@@ -38,8 +38,7 @@ pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions) -> V
                 let mut neighbors = Vec::new();
                 let mut moves = get_moves_on_empty_board(mp, to_index(x, y), dims, false);
                 // Get the coordinates of all the 1s in the bitboard
-                while !moves.is_zero() {
-                    let index = moves.lowest_one().unwrap();
+                while let Some(index) = moves.lowest_one() {
                     neighbors.push(from_index(index));
                     moves.clear_bit(index);
                 }
