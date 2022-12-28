@@ -4,14 +4,11 @@ extern crate impl_ops;
 
 use std::fmt;
 
-use crate::piece::PieceId;
-
+pub use crate::piece::PieceId;
 pub use crate::position::Position;
 pub use crate::move_generator::MoveGen;
 use crate::utils::to_index;
 
-//Private modules
-mod constants;
 pub mod piece;
 pub mod move_generator;
 pub mod types;
@@ -40,15 +37,14 @@ pub struct Engine{
 
 impl Engine {
     /// Initializes a new engine
+    pub fn empty() -> Engine {
+        Engine{ position: Position::empty() }
+    }
     pub fn default() -> Engine {
-        Engine{
-            position: Position::default(),
-        }
+        Engine{ position: Position::default() }
     }
     pub fn from_fen(fen: &str) -> Engine {
-        Engine{
-            position: Position::from_fen(fen),
-        }
+        Engine{ position: Position::from_fen(fen) }
     }
 
     /// Returns the zobrist hash key for the current position
@@ -61,9 +57,14 @@ impl Engine {
         eval::evaluate(&mut self.position)
     }
     
-    /// Returns the character representation of the piece at the given coordinates
-    pub fn get_piece_at(&mut self, position: (BCoord, BCoord)) -> Option<PieceId> {
+    /// Returns the id of the piece at the given coordinates
+    pub fn get_piece_at(&self, position: (BCoord, BCoord)) -> Option<PieceId> {
         self.position.piece_at(to_index(position.0, position.1)).map(|p| p.get_piece_id())
+    }
+    
+    /// Returns the character representation of the piece with a given id
+    pub fn get_piece_char(&self, piece_id: PieceId) -> Option<char> {
+        self.position.search_piece_by_id(piece_id).map(|p| p.char_rep())
     }
 
     /// Registers a custom piecetype for the current position
@@ -167,6 +168,11 @@ impl Engine {
     pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
                      valid_squares: &Vec<(BCoord, BCoord)>, pieces: &[(Player, BCoord, BCoord, PieceId)]) {
         let dims = BDimensions::from_valid_squares(valid_squares);
+        
+        // Assert that all pieces are placed on valid squares
+        for p in pieces {
+            assert!(dims.in_bounds(p.1, p.2));
+        }
         
         // For each piece, convert coordnates to index
         let pieces = pieces.iter()

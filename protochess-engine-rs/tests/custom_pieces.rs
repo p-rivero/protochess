@@ -55,7 +55,7 @@ mod custom_pieces {
     #[test]
     fn piece_factory_pawn() {
         let dims = BDimensions::new_without_walls(8, 8);
-        let white_pawn = Piece::new(PieceFactory::make_pawn(123, 0, &dims, vec![1, 2, 3]), 0, &dims);
+        let white_pawn = Piece::new(PieceFactory::make_pawn(123, true, &dims, vec![1, 2, 3]), 0, &dims);
         
         assert_eq!(white_pawn.get_piece_id(), 123);
         assert_eq!(white_pawn.get_player(), 0);
@@ -72,7 +72,7 @@ mod custom_pieces {
         }
         println!();
         
-        let black_pawn = Piece::new(PieceFactory::make_pawn(123, 1, &dims, vec![1, 2, 3]), 1, &dims);
+        let black_pawn = Piece::new(PieceFactory::make_pawn(123, false, &dims, vec![1, 2, 3]), 1, &dims);
         
         assert_eq!(black_pawn.get_piece_id(), 123);
         assert_eq!(black_pawn.get_player(), 1);
@@ -92,7 +92,7 @@ mod custom_pieces {
     #[test]
     fn piece_factory_knight() {
         let dims = BDimensions::new_without_walls(8, 8);
-        let knight = Piece::new(PieceFactory::make_knight(123, 0), 0, &dims);
+        let knight = Piece::new(PieceFactory::make_knight(123), 0, &dims);
         
         assert_eq!(knight.get_piece_id(), 123);
         assert_eq!(knight.get_player(), 0);
@@ -112,7 +112,7 @@ mod custom_pieces {
     #[test]
     fn piece_factory_bishop() {
         let dims = BDimensions::new_without_walls(8, 8);
-        let bishop = Piece::new(PieceFactory::make_bishop(123, 0), 0, &dims);
+        let bishop = Piece::new(PieceFactory::make_bishop(123), 0, &dims);
         
         assert_eq!(bishop.get_piece_id(), 123);
         assert_eq!(bishop.get_player(), 0);
@@ -132,7 +132,7 @@ mod custom_pieces {
     #[test]
     fn piece_factory_rook() {
         let dims = BDimensions::new_without_walls(8, 8);
-        let rook = Piece::new(PieceFactory::make_rook(123, 0), 0, &dims);
+        let rook = Piece::new(PieceFactory::make_rook(123), 0, &dims);
         
         assert_eq!(rook.get_piece_id(), 123);
         assert_eq!(rook.get_player(), 0);
@@ -152,7 +152,7 @@ mod custom_pieces {
     #[test]
     fn piece_factory_queen() {
         let dims = BDimensions::new_without_walls(8, 8);
-        let queen = Piece::new(PieceFactory::make_queen(123, 0), 0, &dims);
+        let queen = Piece::new(PieceFactory::make_queen(123), 0, &dims);
         
         assert_eq!(queen.get_piece_id(), 123);
         assert_eq!(queen.get_player(), 0);
@@ -172,7 +172,7 @@ mod custom_pieces {
     #[test]
     fn piece_factory_king() {
         let dims = BDimensions::new_without_walls(8, 8);
-        let king = Piece::new(PieceFactory::make_king(123, 0), 0, &dims);
+        let king = Piece::new(PieceFactory::make_king(123), 0, &dims);
         
         assert_eq!(king.get_piece_id(), 123);
         assert_eq!(king.get_player(), 0);

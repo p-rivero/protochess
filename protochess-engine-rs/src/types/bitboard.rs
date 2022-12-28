@@ -46,6 +46,11 @@ impl BDimensions {
         false
     }
 }
+impl Default for BDimensions {
+    fn default() -> Self {
+        BDimensions::new_without_walls(0, 0)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bitboard {

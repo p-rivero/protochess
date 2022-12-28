@@ -2,9 +2,7 @@
 
 use std::io::Write;
 
-use protochess_engine_rs::{MoveInfo, MakeMoveResult};
-use protochess_engine_rs::piece::PieceId;
-use protochess_engine_rs::utils::to_long_algebraic_notation;
+use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResult};
 
 pub fn main() {
     
@@ -21,8 +19,6 @@ pub fn main() {
     // By default, <depth> is 12, <fen> is the starting position, and <num_ply> is 500
     // Example: cargo run -- 4 "1Q6/5pk1/2p3p1/1pbbN2p/4n2P/8/r5P1/5K2 b - - 0 1"
     
-    let mut engine = protochess_engine_rs::Engine::default();
-    
     let mut pgn_file = std::fs::File::create("pgn.txt").expect("create failed");
 
     
@@ -32,10 +28,14 @@ pub fn main() {
     if args.len() > 3 {
         max_ply = args[3].parse::<u32>().unwrap();
     }
-    if args.len() > 2 {
-        let fen = args[2].clone();
-        engine = protochess_engine_rs::Engine::from_fen(&fen);
-    }
+    let mut engine = {
+        if args.len() > 2 {
+            pgn_file.write_all(format!("[FEN \"{}\"]\n\n", args[2]).as_bytes()).unwrap();
+            Engine::from_fen(&args[2])
+        } else {
+            Engine::default()
+        }
+    };
     if args.len() > 1 {
         depth = args[1].parse::<u8>().unwrap();
     }
@@ -43,11 +43,11 @@ pub fn main() {
     println!("{}", engine);
 
     let start = instant::Instant::now();
-    for ply in 1..=max_ply {
+    for ply in 0..max_ply {
         let mv = engine.get_best_move(depth);
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
-        print_pgn(&mut pgn_file, ply, &mv, engine.get_piece_at(mv.from).unwrap());
+        print_pgn(&mut pgn_file, ply, to_long_algebraic_notation(&mv, &engine));
         match engine.make_move(&mv) {
             MakeMoveResult::Ok => {
                 println!("{}", engine);
@@ -80,32 +80,40 @@ pub fn main() {
     }
 }
 
-fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, mv: &MoveInfo, piece: PieceId) {
+fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: String) {
     if (ply % 2) == 0 {
         let round = format!("{}. ", ply/2 + 1);
         pgn_file.write_all(round.as_bytes()).expect("write failed");
     }
-    let prom = mv.promotion.map(pieceid_to_char);
-    let move_str = to_long_algebraic_notation(mv.from, mv.to, pieceid_to_char(piece), prom);
     pgn_file.write_all(move_str.as_bytes()).expect("write failed");
+    pgn_file.write_all(b" ").expect("write failed");
 }
 
-// TODO: The user should keep track of the piece IDs.
-const ID_KING: PieceId = 0;
-const ID_QUEEN: PieceId = 1;
-const ID_ROOK: PieceId = 2;
-const ID_BISHOP: PieceId = 3;
-const ID_KNIGHT: PieceId = 4;
-const ID_PAWN: PieceId = 5;
-const BASE_ID_CUSTOM: PieceId = 100;
-fn pieceid_to_char(piece_id: PieceId) -> char {
-    match piece_id {
-        ID_KING => {'K'}
-        ID_QUEEN => {'Q'}
-        ID_ROOK => {'R'}
-        ID_BISHOP => {'B'}
-        ID_KNIGHT => {'N'}
-        ID_PAWN => {'P'}
-        _ => {(piece_id - BASE_ID_CUSTOM) as u8 as char}
+pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
+    // Long algebraic notation for mv
+    let move_string = format!("{}{}{}{}", (b'a' + mv.from.0) as char, mv.from.1 + 1, (b'a' + mv.to.0) as char, mv.to.1 + 1);
+    
+    if let Some(prom) = mv.promotion {
+        let prom_char = engine.get_piece_char(prom).unwrap().to_ascii_uppercase();
+        return format!("{}={}", move_string, prom_char);
+    }
+    
+    let piece_id = engine.get_piece_at(mv.from).unwrap();
+    let piece_char = engine.get_piece_char(piece_id).unwrap().to_ascii_uppercase();
+    let result = {
+        if piece_char == 'P' {
+            move_string
+        } else {
+            // If the piece is not a pawn, write the piece letter
+            format!("{}{}", piece_char, move_string)
+        }
+    };
+    
+    match result.as_str() {
+        "Ke1g1" => "O-O".to_string(),
+        "Ke1c1" => "O-O-O".to_string(),
+        "Ke8g8" => "O-O".to_string(),
+        "Ke8c8" => "O-O-O".to_string(),
+        _ => result
     }
 }

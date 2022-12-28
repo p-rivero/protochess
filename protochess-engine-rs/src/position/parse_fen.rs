@@ -1,6 +1,4 @@
-use crate::constants::fen;
-use crate::constants::piece_scores::*;
-use crate::piece::PieceFactory;
+use crate::piece::{PieceFactory, PieceId};
 use crate::types::*;
 use crate::utils::to_index;
 
@@ -8,19 +6,14 @@ use super::Position;
 use super::piece_set::PieceSet;
 use super::position_properties::PositionProperties;
 
+const BOARD_WIDTH: BCoord = 8;
+const BOARD_HEIGHT: BCoord = 8;
+
 #[allow(clippy::iter_nth_zero)]
 pub fn parse_fen(fen: &str) -> Position {
-    let mut bounds = Bitboard::zero();
-    for x in 0..fen::BOARD_WIDTH {
-        for y in 0..fen::BOARD_HEIGHT {
-            bounds.set_bit_at(x,y);
-        }
-    }
-    let dims = BDimensions{ width: fen::BOARD_WIDTH, height: fen::BOARD_HEIGHT, bounds};
-    
     let mut w_pieces = PieceSet::new(0);
     let mut b_pieces = PieceSet::new(1);
-    register_pieces(&mut w_pieces, &mut b_pieces, &dims);
+    register_pieces(&mut w_pieces, &mut b_pieces);
 
     let fen_parts: Vec<&str> = fen.split_whitespace().collect();
     
@@ -43,7 +36,7 @@ pub fn parse_fen(fen: &str) -> Position {
     
     // Piece placement
     let mut x: BCoord = 0;
-    let mut y: BCoord = fen::BOARD_HEIGHT - 1;
+    let mut y: BCoord = BOARD_HEIGHT - 1;
     for c in fen_parts[0].chars() {
         if c == '/' {
             x = 0;
@@ -123,21 +116,28 @@ pub fn parse_fen(fen: &str) -> Position {
     
     properties.zobrist_key = zobrist_key;
     
-
+    let dims = BDimensions::new_without_walls(BOARD_WIDTH, BOARD_HEIGHT);
     Position::new(dims, vec![w_pieces, b_pieces], whos_turn, properties)
 }
 
-fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet, dims: &BDimensions) {
-    w_pieces.register_piecetype(PieceFactory::make_king(ID_KING, 0), dims);
-    b_pieces.register_piecetype(PieceFactory::make_king(ID_KING, 1), dims);
-    w_pieces.register_piecetype(PieceFactory::make_queen(ID_QUEEN, 0), dims);
-    b_pieces.register_piecetype(PieceFactory::make_queen(ID_QUEEN, 1), dims);
-    w_pieces.register_piecetype(PieceFactory::make_rook(ID_ROOK, 0), dims);
-    b_pieces.register_piecetype(PieceFactory::make_rook(ID_ROOK, 1), dims);
-    w_pieces.register_piecetype(PieceFactory::make_bishop(ID_BISHOP, 0), dims);
-    b_pieces.register_piecetype(PieceFactory::make_bishop(ID_BISHOP, 1), dims);
-    w_pieces.register_piecetype(PieceFactory::make_knight(ID_KNIGHT, 0), dims);
-    b_pieces.register_piecetype(PieceFactory::make_knight(ID_KNIGHT, 1), dims);
-    w_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, 0, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), dims);
-    b_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, 1, dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), dims);
+fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet) {
+    const ID_KING: PieceId = 0;
+    const ID_QUEEN: PieceId = 1;
+    const ID_ROOK: PieceId = 2;
+    const ID_BISHOP: PieceId = 3;
+    const ID_KNIGHT: PieceId = 4;
+    const ID_PAWN: PieceId = 5;
+    let dims = BDimensions::new_without_walls(BOARD_WIDTH, BOARD_HEIGHT);
+    
+    let mut register_piece = |def: crate::PieceDefinition| {
+        w_pieces.register_piecetype(def.clone(), &dims);
+        b_pieces.register_piecetype(def, &dims);
+    };
+    register_piece(PieceFactory::make_king(ID_KING));
+    register_piece(PieceFactory::make_queen(ID_QUEEN));
+    register_piece(PieceFactory::make_rook(ID_ROOK));
+    register_piece(PieceFactory::make_bishop(ID_BISHOP));
+    register_piece(PieceFactory::make_knight(ID_KNIGHT));
+    w_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, true, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
+    b_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, false, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
 }

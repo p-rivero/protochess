@@ -1,12 +1,11 @@
 use super::{PieceDefinition, PieceId};
-use crate::types::{Player, Bitboard, BDimensions};
+use crate::types::{Bitboard, BDimensions};
 
 pub struct PieceFactory { }
 
 impl PieceFactory {
     
-    pub fn make_pawn(id: PieceId, player_num: Player, dims: &BDimensions, promotions: Vec<PieceId>) -> PieceDefinition {
-        let is_white = player_num == 0;
+    pub fn make_pawn(id: PieceId, is_white: bool, dims: &BDimensions, promotions: Vec<PieceId>) -> PieceDefinition {
         let promotion_rank = { if is_white { dims.height - 1 } else { 0 } };
         let double_move_rank = { if is_white { 1 } else { dims.height - 2 } };
         let mut promotion_squares = Bitboard::zero();
@@ -19,7 +18,7 @@ impl PieceFactory {
         
         PieceDefinition {
             id,
-            char_rep: if is_white { 'P' } else { 'p' },
+            char_rep: 'P',
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
@@ -49,10 +48,10 @@ impl PieceFactory {
         }        
     }
     
-    pub fn make_knight(id: PieceId, player_num: Player) -> PieceDefinition {
+    pub fn make_knight(id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
-            char_rep: if player_num == 0 { 'N' } else { 'n' },
+            char_rep: 'N',
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
@@ -82,10 +81,10 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_bishop(id: PieceId, player_num: Player) -> PieceDefinition {
+    pub fn make_bishop(id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
-            char_rep: if player_num == 0 { 'B' } else { 'b' },
+            char_rep: 'B',
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
@@ -115,10 +114,10 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_rook(id: PieceId, player_num: Player) -> PieceDefinition {
+    pub fn make_rook(id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
-            char_rep: if player_num == 0 { 'R' } else { 'r' },
+            char_rep: 'R',
             is_leader: false,
             can_castle: false,
             is_castle_rook: true,
@@ -148,10 +147,10 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_king(id: PieceId, player_num: Player) -> PieceDefinition {
+    pub fn make_king(id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
-            char_rep: if player_num == 0 { 'K' } else { 'k' },
+            char_rep: 'K',
             is_leader: true,
             can_castle: true,
             is_castle_rook: false,
@@ -181,10 +180,10 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_queen(id: PieceId, player_num: Player) -> PieceDefinition {
+    pub fn make_queen(id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
-            char_rep: if player_num == 0 { 'Q' } else { 'q' },
+            char_rep: 'Q',
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,

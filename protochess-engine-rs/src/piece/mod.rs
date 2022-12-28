@@ -47,6 +47,12 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(mut definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
+        // Use uppercase for white pieces and lowercase for black pieces
+        if player_num == 0 {
+            definition.char_rep = definition.char_rep.to_ascii_uppercase();
+        } else {
+            definition.char_rep = definition.char_rep.to_ascii_lowercase();
+        }
         // Make sure that all promotion squares are in bounds
         definition.promotion_squares &= &dims.bounds;
         assert!(&definition.promotion_squares & !&dims.bounds == Bitboard::zero());

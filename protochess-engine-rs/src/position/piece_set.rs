@@ -3,7 +3,7 @@ use std::slice::{Iter, IterMut};
 use crate::PieceDefinition;
 //Pieces that a player has
 use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns};
-use crate::piece::Piece;
+use crate::piece::{Piece, PieceId};
 
 /// Represents a set of pieces for a player
 /// custom is a vec of custom piece
@@ -65,6 +65,10 @@ impl PieceSet {
     
     pub fn search_by_char(&mut self, c: char) -> Option<&mut Piece> {
         self.pieces.iter_mut().find(|p| p.char_rep() == c)
+    }
+    
+    pub fn search_by_id(&self, id: PieceId) -> Option<&Piece> {
+        self.pieces.iter().find(|p| p.get_piece_id() == id)
     }
     
     pub fn get_leader(&self) -> &Piece {

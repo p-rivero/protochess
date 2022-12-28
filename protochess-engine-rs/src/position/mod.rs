@@ -3,7 +3,6 @@ use std::fmt;
 use std::rc::Rc;
 
 use crate::{types::*, PieceDefinition};
-use crate::constants::fen;
 use crate::position::piece_set::PieceSet;
 use crate::utils::{from_index, to_index};
 use crate::piece::{Piece, PieceId};
@@ -14,7 +13,6 @@ pub mod castled_players;
 pub mod piece_set;
 
 use position_properties::PositionProperties;
-use parse_fen::parse_fen;
 
 /// Represents a single position in chess
 #[derive(Clone, Debug)]
@@ -34,24 +32,25 @@ pub struct Position {
 
 impl Position {
     pub fn default() -> Position {        
-        parse_fen(fen::STARTING_POS)
-    }
-    pub fn empty() -> Position {
-        parse_fen(fen::EMPTY)
+        Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     }
     pub fn from_fen(fen: &str) -> Position {
-        parse_fen(fen)
+        parse_fen::parse_fen(fen)
     }
-    
-    ///pieces(owner, index, PieceType)
+    pub fn empty() -> Position {
+        Position::new(BDimensions::default(), vec![], 0, PositionProperties::default())
+    }
     pub fn custom(dims: BDimensions,
                   piece_types: &Vec<PieceDefinition>,
                   pieces: Vec<(Player, BIndex, PieceId)>) -> Position
     {
-        Position::assert_all_players_have_leader(piece_types, &pieces);
+        let num_players = Position::assert_all_players_have_leader(piece_types, &pieces);
+        let mut piece_sets = Vec::with_capacity(num_players as usize);
+        for p in 0..num_players {
+            piece_sets.push(PieceSet::new(p));
+        }
         
-        let mut pos = Position::empty();
-        pos.dimensions = dims;
+        let mut pos = Position::new(dims, piece_sets, 0, PositionProperties::default());
         for definition in piece_types {
             pos.register_piecetype(definition);
         }
@@ -62,7 +61,7 @@ impl Position {
         pos
     }
     
-    pub fn new(dimensions: BDimensions, pieces: Vec<PieceSet>, whos_turn: Player, props: PositionProperties) -> Position {
+    fn new(dimensions: BDimensions, pieces: Vec<PieceSet>, whos_turn: Player, props: PositionProperties) -> Position {
         let mut occupied = Bitboard::zero();
         for piece_set in &pieces {
             occupied |= piece_set.get_occupied();
@@ -85,7 +84,7 @@ impl Position {
 
     /// Registers a new piece type for this position
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
-        // Insert blank for all players
+        // Insert piece for all players
         let dims_copy = self.dimensions.clone();
         for piece_set in &mut self.pieces {
             piece_set.register_piecetype(definition.clone(), &dims_copy);
@@ -350,6 +349,11 @@ impl Position {
         None
     }
     
+    pub fn search_piece_by_id(&self, piece_id: PieceId) -> Option<&Piece> {
+        // Pieces are registered in all piecesets, just search the first one
+        self.pieces[0].search_by_id(piece_id)
+    }
+    
     /// Returns if the point is in bounds
     pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {
         self.dimensions.in_bounds(x, y)
@@ -379,7 +383,8 @@ impl Position {
     
     
     
-    fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) {
+    /// Compute the number of players and assert that each player has a leader. Returns the number of players
+    fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) -> Player {
         let mut leader_pieces = Vec::new();
         for definition in piece_types {
             if definition.is_leader {
@@ -397,6 +402,7 @@ impl Position {
         for (i, has_leader) in player_has_leader.iter().enumerate() {
             assert!(has_leader, "Player {} does not have a leader piece", i);
         }
+        num_players
     }
     
     /// Adds a piece to the position, assuming the piecetype already exists
@@ -452,8 +458,10 @@ impl fmt::Display for Position {
             for x in 0..self.dimensions.width {
                 if let Some(piece) = self.piece_at(to_index(x,y)) {
                     write!(f, "{} ", piece.char_rep())?;
-                } else {
+                } else if self.dimensions.in_bounds(x, y) {
                     write!(f, ". ")?;
+                } else {
+                    write!(f, "X ")?;
                 }
             }
             writeln!(f)?;
