@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::types::{BIndex, Move, Player};
 
@@ -24,12 +24,12 @@ pub struct PositionProperties {
     // Full id (piece type + player num) of the captured piece, if any.
     // Also store whether the captured piece could castle
     pub captured_piece: Option<(PieceId, Player, bool)>,
-    pub prev_properties: Option<Arc<PositionProperties>>,
+    pub prev_properties: Option<Rc<PositionProperties>>,
 }
 
 impl PositionProperties {
-    pub fn get_prev(&self) -> Option<Arc<PositionProperties>> {
-        self.prev_properties.as_ref().cloned()
+    pub fn get_prev(&self) -> Option<Rc<PositionProperties>> {
+        self.prev_properties.clone()
     }
 }
 

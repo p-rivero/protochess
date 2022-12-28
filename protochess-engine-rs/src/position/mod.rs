@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::{types::*, PieceDefinition};
 use crate::constants::fen;
@@ -27,7 +27,7 @@ pub struct Position {
     // Properties relating only to the current position
     // Typically hard-to-recover properties, like castling
     // Similar to state in stockfish
-    pub properties: Arc<PositionProperties>,
+    pub properties: Rc<PositionProperties>,
     // Store the positions that have been played to determine repetition
     pub position_repetitions: HashMap<u64, u8, ahash::RandomState>,
 }
@@ -78,7 +78,7 @@ impl Position {
             whos_turn,
             pieces,
             occupied,
-            properties: Arc::new(props),
+            properties: Rc::new(props),
             position_repetitions: reps,
         }
     }
@@ -115,13 +115,13 @@ impl Position {
             // Since we're passing, there cannot be an ep square
             new_props.ep_square = None;
             new_props.move_played = Some(mv);
-            new_props.prev_properties = Some(Arc::clone(&self.properties));
+            new_props.prev_properties = Some(Rc::clone(&self.properties));
             // Increment number of repetitions of new position
             if update_reps {
                 self.update_repetitions(new_props.zobrist_key, 1);
             }
             
-            self.properties = Arc::new(new_props);
+            self.properties = Rc::new(new_props);
             return;
         }
 
@@ -215,8 +215,8 @@ impl Position {
 
         // Update props
         new_props.move_played = Some(mv);
-        new_props.prev_properties = Some(Arc::clone(&self.properties));
-        self.properties = Arc::new(new_props);
+        new_props.prev_properties = Some(Rc::clone(&self.properties));
+        self.properties = Rc::new(new_props);
         
         // Update occupied bbs for future calculations
         self.update_occupied();
@@ -365,8 +365,8 @@ impl Position {
         let piece = self.add_piece(owner, piece_type, index, true);
         new_props.zobrist_key ^= piece.get_zobrist(index);
         self.update_occupied();
-        new_props.prev_properties = Some(Arc::clone(&self.properties));
-        self.properties = Arc::new(new_props);
+        new_props.prev_properties = Some(Rc::clone(&self.properties));
+        self.properties = Rc::new(new_props);
         
         // Add a repetition for the new position
         self.update_repetitions(self.properties.zobrist_key, 1);
