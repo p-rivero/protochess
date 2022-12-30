@@ -132,9 +132,13 @@ impl Position {
                 let captured_piece = self.player_piece_at(self.whos_turn, capt_index).unwrap();
                 let piece_id = captured_piece.get_piece_id();
                 let capt_player = captured_piece.get_player();
+                let castling_zob = captured_piece.get_castle_zobrist(capt_index);
                 new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
                 
                 let could_castle = self.player_piece_at_mut(capt_player, capt_index).unwrap().remove_piece(capt_index);
+                if could_castle {
+                    new_props.zobrist_key ^= castling_zob
+                }
                 new_props.captured_piece = Some((piece_id, capt_player, could_castle));
             },
             MoveType::KingsideCastle => {

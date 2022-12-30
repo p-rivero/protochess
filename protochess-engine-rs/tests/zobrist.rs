@@ -38,6 +38,67 @@ mod zobrist_test {
     }
     
     #[test]
+    fn zobrist_capture() {
+        let mv = vec!["e2e4", "f7f6", "f1c4", "f6f5", "c4g8"];
+        let expected_fen = "rnbqkbBr/ppppp1pp/8/5p2/4P3/8/PPPP1PPP/RNBQK1NR b KQkq - 0 3";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn zobrist_capture_2() {
+        let mv = vec!["e2e4", "f7f6", "f1c4", "f6f5", "c4g8", "h8g8", "e4f5"];
+        let expected_fen = "rnbqkbr1/ppppp1pp/8/5P2/8/8/PPPP1PPP/RNBQK1NR b KQq - 0 4";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn zobrist_capture_3() {
+        let mv = vec!["e2e4", "f7f6", "f1c4", "f6f5", "c4g8", "h8g8"];
+        let expected_fen = "rnbqkbr1/ppppp1pp/8/5p2/4P3/8/PPPP1PPP/RNBQK1NR w KQq - 0 4";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn zobrist_capture_rook() {
+        // Make sure castling gets disabled for captured rook
+        let mv = vec!["b2b3", "g7g6", "c1b2", "g6g5", "b2h8"];
+        let expected_fen = "rnbqkbnB/pppppp1p/8/6p1/8/1P6/P1PPPPPP/RN1QKBNR b KQq - 0 3";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn zobrist_rook_captures_rook() {
+        // Make sure castling gets disabled for both rooks
+        let mv = vec!["h2h4", "h7h5", "g2g4", "g7g5", "h4g5", "h5g4", "h1h8"];
+        let expected_fen = "rnbqkbnR/pppppp2/8/6P1/6p1/8/PPPPPP2/RNBQKBN1 b Qq - 0 4";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn zobrist_promotion() {
+        // ID_KNIGHT = 4
+        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7g8=4"];
+        let expected_fen = "rnbqkbNr/pppppp2/5n2/7p/8/8/PPPPPPP1/RNBQKBNR b KQkq - 0 5";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn zobrist_promotion_capture() {
+        // ID_BISHOP = 3
+        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7f8=3"];
+        let expected_fen = "rnbqkB1r/pppppp2/5n2/7p/8/8/PPPPPPP1/RNBQKBNR b KQkq - 0 5";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn zobrist_promotion_capture_rook() {
+        // ID_QUEEN = 1
+        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7h8=1"];
+        let expected_fen = "rnbqkb1Q/pppppp2/5n2/7p/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5";
+        test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
     fn zobrist_transposition() {
         let mv1 = vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "e1g1"];
         let mv2 = vec!["g1f3", "e7e5", "e2e4", "g8f6", "f1c4", "b8c6", "e1g1"];
