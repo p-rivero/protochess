@@ -8,7 +8,7 @@ use crate::move_generator::bitboard_moves::BitboardMoves;
 #[allow(clippy::too_many_arguments)]
 #[inline]
 pub fn output_translations(movement: &PieceDefinition, index: BIndex,
-        position: &Position, enemies: &Bitboard,
+        position: &Position, enemies: &Bitboard, promotion_squares: &Bitboard,
         occ_or_not_in_bounds: &Bitboard, can_castle: bool, can_double_jump: bool,
         out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
 {
@@ -36,7 +36,7 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         enemies.clone(),
         slide_moves,
         index,
-        movement.promotion_squares.clone(),
+        promotion_squares.clone(),
         movement.promo_vals.clone(),
     ));
 
@@ -52,7 +52,7 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         let to = to_index(x2 as BCoord, y2 as BCoord);
         if position.in_bounds(x2 as BCoord, y2 as BCoord) && !position.occupied.get_bit(to) {
             // Promotion here?
-            if movement.promotion_at(to) {
+            if promotion_squares.get_bit(to) {
                 // Add all the promotion moves
                 for c in &movement.promo_vals {
                     out_moves.push(Move::new(index, to, None, MoveType::Promotion, Some(*c)));
@@ -71,7 +71,7 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
                     let to2 = to_index(x3 as BCoord, y3 as BCoord);
                     if position.in_bounds(x3 as BCoord, y3 as BCoord) && !position.occupied.get_bit(to2) {
                         // Promotion here?
-                        if movement.promotion_at(to2) {
+                        if promotion_squares.get_bit(to2) {
                             // Add all the promotion moves
                             for c in &movement.promo_vals {
                                 out_moves.push(Move::new(index, to2, None, MoveType::Promotion, Some(*c)));
@@ -101,7 +101,7 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
             if !position.in_bounds(x2 as BCoord, y2 as BCoord) || position.occupied.get_bit(to) {
                 break;
             }
-            if movement.promotion_at(to) {
+            if promotion_squares.get_bit(to) {
                 //Add all the promotion moves
                 for c in &movement.promo_vals {
                     out_moves.push(Move::new(index, to, None, MoveType::Quiet, Some(*c)));
@@ -154,9 +154,10 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
 
 
 /// Outputs all the pseudo-legal capture moves for a piece at a given index
+#[allow(clippy::too_many_arguments)]
 #[inline]
 pub fn output_captures(movement: &PieceDefinition, index: BIndex,
-        position: &Position, enemies: &Bitboard,
+        position: &Position, enemies: &Bitboard, promotion_squares: &Bitboard,
         occ_or_not_in_bounds: &Bitboard, out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
 {
     let attack_tables = MoveGen::attack_tables();
@@ -183,7 +184,7 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
         enemies.clone(),
         slide_attacks,
         index,
-        movement.promotion_squares.clone(),
+        promotion_squares.clone(),
         movement.promo_vals.clone(),
     ));
 
@@ -199,7 +200,7 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
         let to = to_index(x2 as BCoord, y2 as BCoord);
         if enemies.get_bit(to) {
             //Promotion here?
-            if movement.promotion_at(to) {
+            if promotion_squares.get_bit(to) {
                 //Add all the promotion moves
                 for c in &movement.promo_vals {
                     out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
@@ -233,7 +234,7 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
             }
             //If there is an enemy here, we can add an attack move
             if enemies.get_bit(to) {
-                if movement.promotion_at(to) {
+                if promotion_squares.get_bit(to) {
                     //Add all the promotion moves
                     for c in &movement.promo_vals {
                         out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));

@@ -2,24 +2,21 @@
 extern crate lazy_static;
 extern crate impl_ops;
 
-use std::fmt;
-
-pub use crate::piece::PieceId;
-pub use crate::position::Position;
-pub use crate::move_generator::MoveGen;
-use crate::utils::to_index;
-
 pub mod piece;
 pub mod move_generator;
 pub mod types;
 pub mod position;
 pub mod searcher;
 pub mod utils;
-use crate::types::{BCoord, BDimensions, BIndex, Centipawns, Depth, Player};
-use crate::searcher::{Searcher, eval};
-pub use crate::piece::PieceDefinition;
-pub use crate::types::MoveInfo;
 
+use types::{BCoord, BDimensions, BIndex, Centipawns, Depth, Player};
+use searcher::{Searcher, eval};
+use utils::to_index;
+
+pub use position::Position;
+pub use move_generator::MoveGen;
+pub use piece::{PieceId, PieceDefinition};
+pub use types::MoveInfo;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum MakeMoveResult {
@@ -150,23 +147,25 @@ impl Engine {
         (MoveInfo::from_move(mv), search_depth)
     }
 
-    pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<(BCoord, BCoord)>{
-        let moves = MoveGen::get_legal_moves_as_tuples(&mut self.position);
-        let mut possible_moves = Vec::new();
-        for (from, to) in moves {
-            if from == (x, y) {
-                possible_moves.push(to);
-            }
-        }
-        possible_moves
+    pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<MoveInfo>{
+        let target_index = to_index(x,y);
+        MoveGen::get_legal_moves(&mut self.position)
+            .into_iter()
+            .filter(|mv| mv.get_from() == target_index)
+            .map(MoveInfo::from_move)
+            .collect()
     }
 
     pub fn to_move_in_check(&mut self) -> bool {
         MoveGen::in_check(&mut self.position)
     }
 
-    pub fn set_state(&mut self, piece_types: &Vec<PieceDefinition>,
-                     valid_squares: &Vec<(BCoord, BCoord)>, pieces: &[(Player, BCoord, BCoord, PieceId)]) {
+    pub fn set_state(&mut self,
+        piece_types: &Vec<PieceDefinition>,
+        valid_squares: &Vec<(BCoord, BCoord)>,
+        pieces: &[(Player, BCoord, BCoord, PieceId)],
+        whos_turn: Player
+    ) {
         let dims = BDimensions::from_valid_squares(valid_squares);
         
         // Assert that all pieces are placed on valid squares
@@ -179,7 +178,7 @@ impl Engine {
             .map(|(owner, x, y, piece)| (*owner, to_index(*x, *y), *piece))
             .collect();
 
-        self.position = Position::custom(dims, piece_types, pieces);
+        self.position = Position::custom(dims, piece_types, pieces, whos_turn);
     }
     
     pub fn perft(&mut self, depth: Depth) -> u64 {
@@ -190,8 +189,8 @@ impl Engine {
     }
 }
 
-impl fmt::Display for Engine {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for Engine {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.position)
     }
 }

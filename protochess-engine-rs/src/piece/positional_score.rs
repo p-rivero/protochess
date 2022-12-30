@@ -10,7 +10,7 @@ const POSITION_PROMOTION_DIST_MULT: Centipawns = 7;
 pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions) -> Vec<Centipawns> {
     let mut return_vec = Vec::with_capacity(256);
     let center_squares_bb = get_center_squares(dims.width, dims.height);
-    let promotion_squares_bb = (&mp.promotion_squares) & (&dims.bounds); // Keep promotion squares in bounds
+    let promotion_squares_bb = mp.promotion_squares_bb() & &dims.bounds; // Keep promotion squares in bounds
     
     
     for index in 0..=BIndex::MAX {

@@ -15,22 +15,22 @@ lazy_static! {
 
 
 #[derive(Clone, Debug)]
-pub struct MoveGen { }
+pub struct MoveGen;
+
 impl MoveGen {
-    
     pub fn attack_tables() -> &'static AttackTables {
         &ATTACK_TABLES
     }
     
-    pub fn get_legal_moves_as_tuples(position: &mut Position) -> Vec<((BCoord,BCoord), (BCoord,BCoord))> {
-        let mut legal_tuples = Vec::new();
+    pub fn get_legal_moves(position: &mut Position) -> Vec<Move> {
+        let mut legal_moves = Vec::new();
         for mv in MoveGen::get_pseudo_moves(position) {
             if !MoveGen::is_move_legal(&mv, position) {
                 continue;
             }
-            legal_tuples.push((from_index(mv.get_from()), from_index(mv.get_to())));
+            legal_moves.push(mv);
         }
-        legal_tuples
+        legal_moves
     }
 
     /// Iterator that yields pseudo-legal moves from a positon

@@ -1,7 +1,9 @@
 [package]
 name = "protochess-engine-wasm"
-version = "0.1.0"
-authors = ["raymond <raytran@mit.edu>"]
+description = "A wasm wrapper for the protochess engine"
+repository = "https://github.com/p-rivero/protochess"
+version = "1.0.0"
+authors = ["raymond <raytran@mit.edu>", "p-rivero"]
 edition = "2018"
 
 
@@ -16,6 +18,8 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 wasm-bindgen = {version = "0.2.63", features = ["serde-serialize"]}
+serde = {version = "1.0.152", features = ["derive", "serde_derive"]}
+serde_json = "1.0.79"
 protochess-engine-rs = {path = "../protochess-engine-rs"}
 
 

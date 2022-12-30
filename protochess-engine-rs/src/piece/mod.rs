@@ -43,6 +43,10 @@ pub struct Piece {
     
     // Positions at which this piece can castle. Used if can_castle or is_castle_rook are true
     castle_squares: Bitboard,
+    // Positions at which this piece can promote
+    promotion_squares: Bitboard,
+    // Positions at which this piece can double jump
+    double_jump_squares: Bitboard,
 }
 
 impl Piece {
@@ -53,9 +57,10 @@ impl Piece {
         } else {
             definition.char_rep = definition.char_rep.to_ascii_lowercase();
         }
-        // Make sure that all promotion squares are in bounds
-        definition.promotion_squares &= &dims.bounds;
-        assert!(&definition.promotion_squares & !&dims.bounds == Bitboard::zero());
+        // Convert promotion_squares and double_jump_squares to bitboard, make sure they are within bounds
+        let promotion_squares = definition.promotion_squares_bb() & &dims.bounds;
+        let double_jump_squares = definition.double_jump_squares_bb() & &dims.bounds;
+        
         // Cannot be castle rook and can castle at the same time
         assert!(!(definition.can_castle && definition.is_castle_rook));
         
@@ -72,6 +77,8 @@ impl Piece {
             num_pieces: 0,
             total_material_score: 0,
             castle_squares: Bitboard::zero(),
+            promotion_squares,
+            double_jump_squares,
         }
     }
     
@@ -208,10 +215,10 @@ impl Piece {
         let mut bb_copy = self.bitboard.clone();
         while let Some(index) = bb_copy.lowest_one() {
             let can_castle = self.type_def.can_castle && self.castle_squares.get_bit(index);
-            let can_double_jump = self.type_def.double_move_squares.get_bit(index);
-            output_translations(&self.type_def, index, position, enemies,
+            let can_double_jump = self.double_jump_squares.get_bit(index);
+            output_translations(&self.type_def, index, position, enemies, &self.promotion_squares,
                 occ_or_not_in_bounds, can_castle, can_double_jump, out_bb_moves, out_moves);
-            output_captures(&self.type_def, index, position, enemies, 
+            output_captures(&self.type_def, index, position, enemies, &self.promotion_squares,
                 occ_or_not_in_bounds, out_bb_moves, out_moves);
             bb_copy.clear_bit(index);
         }
@@ -222,7 +229,7 @@ impl Piece {
     {
         let mut bb_copy = self.bitboard.clone();
         while let Some(index) = bb_copy.lowest_one() {
-            output_captures(&self.type_def, index, position, enemies, 
+            output_captures(&self.type_def, index, position, enemies, &self.promotion_squares,
                 occ_or_not_in_bounds, out_bb_moves, out_moves);
             bb_copy.clear_bit(index);
         }

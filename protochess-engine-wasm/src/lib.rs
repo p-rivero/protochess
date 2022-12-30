@@ -1,8 +1,11 @@
 mod utils;
+mod serialize_types;
 
-use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResult};
-use serde_wasm_bindgen::to_value;
+use protochess_engine_rs::{Engine, MoveInfo};
+use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
+
+use serialize_types::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -37,30 +40,22 @@ impl Protochess {
     }
 
     #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&mut self) -> String {
+    pub fn to_string(&self) -> String {
         self.engine.to_string()
     }
 
-    pub fn play_best_move(&mut self, depth: u8) -> bool {
+    pub fn play_best_move(&mut self, depth: u8) -> JsValue {
         let best_move = self.engine.get_best_move(depth);
-        let result = self.engine.make_move(&best_move);
-        result == MakeMoveResult::Ok
+        let move_result = self.engine.make_move(&best_move);
+        MakeMoveResultSer::to_js(&move_result)
     }
-    
-    pub fn play_best_move_timeout(&mut self, time: usize) -> String {
+    pub fn play_best_move_timeout(&mut self, time: usize) -> JsValue {
         let (best_move, search_depth) = self.engine.get_best_move_timeout(time as u64);
         let move_result = self.engine.make_move(&best_move);
-        
-        match move_result {
-            MakeMoveResult::Ok => format!("OK. Depth: {}", search_depth),
-            MakeMoveResult::IllegalMove => "ILLEGAL_MOVE".to_string(),
-            MakeMoveResult::Checkmate(player) => format!("CHECKMATE. Player: {}", player),
-            MakeMoveResult::Stalemate => "STALEMATE".to_string(),
-            MakeMoveResult::Repetition => "REPETITION".to_string(),
-        }
+        MakeMoveResultWithDepthSer::to_js(&move_result, search_depth)
     }
 
-    pub fn make_move(&mut self, x1: u8, y1: u8, x2: u8, y2: u8, promotion_id: u32) -> String {
+    pub fn make_move(&mut self, x1: u8, y1: u8, x2: u8, y2: u8, promotion_id: u32) -> JsValue {
         let prom = {
             if promotion_id == 0 {
                 None
@@ -74,44 +69,31 @@ impl Protochess {
             promotion: prom
         };
         let move_result = self.engine.make_move(&mv);
-        
-        match move_result {
-            MakeMoveResult::Ok => "OK".to_string(),
-            MakeMoveResult::IllegalMove => "ILLEGAL_MOVE".to_string(),
-            MakeMoveResult::Checkmate(player) => format!("CHECKMATE. Player: {}", player),
-            MakeMoveResult::Stalemate => "STALEMATE".to_string(),
-            MakeMoveResult::Repetition => "REPETITION".to_string(),
-        }
+        MakeMoveResultSer::to_js(&move_result)
     }
 
-
-    pub fn get_best_move_timeout(&mut self, time: usize) -> String {
+    pub fn get_best_move(&mut self, depth: u8) -> JsValue {
+        let best_move = self.engine.get_best_move(depth);
+        MoveInfoSer::to_js(best_move)
+    }
+    pub fn get_best_move_timeout(&mut self, time: usize) -> JsValue {
         let (best_move, depth) = self.engine.get_best_move_timeout(time as u64);
-        best_move.to_string() + " " + &depth.to_string()
+        MoveInfoWithDepthSer::to_js(best_move, depth)
     }
 
     pub fn to_move_in_check(&mut self) -> bool {
         self.engine.to_move_in_check()
     }
-
-    ///True on succcess
-    pub fn set_state(&mut self, _val: &JsValue) -> bool {
-        // TODO
-        // let request_game_state: GameState = from_value(val.to_owned()).unwrap();
-        // if let Some((movements, valid_squares, valid_pieces)) =
-        // validate_gamestate_request(request_game_state.tiles,
-        //                            request_game_state.pieces,
-        //                            request_game_state.movement_patterns){
-        //     self.engine.set_state(movements,
-        //                         &valid_squares,
-        //                         valid_pieces);
-        //     return true;
-        // }
-        false
+    
+    pub fn set_state(&mut self, val: &JsValue) {
+        let state: GameState = from_value(val.to_owned()).unwrap();
+        let pieces = state.piece_types.into_iter().map(|p| p.unwrap()).collect();
+        self.engine.set_state(&pieces, &state.valid_squares, &state.pieces, state.whos_turn);
     }
-
-    pub fn moves_from(&mut self, x:u8, y:u8) -> JsValue{
+    
+    pub fn moves_from(&mut self, x:u8, y:u8) -> JsValue {
         let moves = self.engine.moves_from(x, y);
-        to_value(&moves).unwrap()
+        let moves_ser: Vec<MoveInfoSer> = moves.into_iter().map(MoveInfoSer::wrap).collect();
+        to_value(&moves_ser).unwrap()
     }
 }

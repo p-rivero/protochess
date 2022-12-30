@@ -1,5 +1,5 @@
 use super::{PieceDefinition, PieceId};
-use crate::types::{Bitboard, BDimensions};
+use crate::types::BDimensions;
 
 pub struct PieceFactory { }
 
@@ -8,11 +8,11 @@ impl PieceFactory {
     pub fn make_pawn(id: PieceId, is_white: bool, dims: &BDimensions, promotions: Vec<PieceId>) -> PieceDefinition {
         let promotion_rank = { if is_white { dims.height - 1 } else { 0 } };
         let double_move_rank = { if is_white { 1 } else { dims.height - 2 } };
-        let mut promotion_squares = Bitboard::zero();
-        let mut double_move_squares = Bitboard::zero();
+        let mut promotion_squares = vec![];
+        let mut double_jump_squares = vec![];
         for i in 0..dims.width {
-            promotion_squares.set_bit_at(i, promotion_rank);
-            double_move_squares.set_bit_at(i, double_move_rank);
+            promotion_squares.push((i, promotion_rank));
+            double_jump_squares.push((i, double_move_rank));
         }
         let move_dir = { if is_white { 1 } else { -1 } };
         
@@ -23,7 +23,7 @@ impl PieceFactory {
             can_castle: false,
             is_castle_rook: false,
             promotion_squares,
-            double_move_squares,
+            double_jump_squares,
             promo_vals: promotions,
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(-1, move_dir), (1, move_dir)],
@@ -55,8 +55,8 @@ impl PieceFactory {
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
-            promotion_squares: Bitboard::zero(),
-            double_move_squares: Bitboard::zero(),
+            promotion_squares: vec![],
+            double_jump_squares: vec![],
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(1, 2), (1, -2), (-1, 2), (-1, -2), (2, 1), (2, -1), (-2, 1), (-2, -1)],
@@ -88,8 +88,8 @@ impl PieceFactory {
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
-            promotion_squares: Bitboard::zero(),
-            double_move_squares: Bitboard::zero(),
+            promotion_squares: vec![],
+            double_jump_squares: vec![],
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
@@ -121,8 +121,8 @@ impl PieceFactory {
             is_leader: false,
             can_castle: false,
             is_castle_rook: true,
-            promotion_squares: Bitboard::zero(),
-            double_move_squares: Bitboard::zero(),
+            promotion_squares: vec![],
+            double_jump_squares: vec![],
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
@@ -154,8 +154,8 @@ impl PieceFactory {
             is_leader: true,
             can_castle: true,
             is_castle_rook: false,
-            promotion_squares: Bitboard::zero(),
-            double_move_squares: Bitboard::zero(),
+            promotion_squares: vec![],
+            double_jump_squares: vec![],
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)],
@@ -187,8 +187,8 @@ impl PieceFactory {
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
-            promotion_squares: Bitboard::zero(),
-            double_move_squares: Bitboard::zero(),
+            promotion_squares: vec![],
+            double_jump_squares: vec![],
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],

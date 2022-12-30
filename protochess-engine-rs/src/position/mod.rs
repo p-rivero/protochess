@@ -42,7 +42,8 @@ impl Position {
     }
     pub fn custom(dims: BDimensions,
                   piece_types: &Vec<PieceDefinition>,
-                  pieces: Vec<(Player, BIndex, PieceId)>) -> Position
+                  pieces: Vec<(Player, BIndex, PieceId)>,
+                  whos_turn: Player) -> Position
     {
         let num_players = Position::assert_all_players_have_leader(piece_types, &pieces);
         let mut piece_sets = Vec::with_capacity(num_players as usize);
@@ -50,7 +51,7 @@ impl Position {
             piece_sets.push(PieceSet::new(p));
         }
         
-        let mut pos = Position::new(dims, piece_sets, 0, PositionProperties::default());
+        let mut pos = Position::new(dims, piece_sets, whos_turn, PositionProperties::default());
         for definition in piece_types {
             pos.register_piecetype(definition);
         }
@@ -385,6 +386,8 @@ impl Position {
     
     /// Compute the number of players and assert that each player has a leader. Returns the number of players
     fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) -> Player {
+        assert!(!piece_types.is_empty(), "No piece types defined");
+        assert!(!pieces.is_empty(), "No pieces in board");
         let mut leader_pieces = Vec::new();
         for definition in piece_types {
             if definition.is_leader {

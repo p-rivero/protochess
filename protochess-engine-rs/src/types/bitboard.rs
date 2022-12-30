@@ -66,6 +66,11 @@ impl Bitboard {
     pub fn one() -> Bitboard {
         Bitboard { board_internal: numext_fixed_uint::U256::one() }
     }
+    pub fn from_coord_list(squares: &[(BCoord, BCoord)]) -> Bitboard {
+        let mut board = Bitboard::zero();
+        squares.iter().for_each(|(x,y)| board.set_bit_at(*x, *y));
+        board
+    }
     #[inline]
     pub fn set_bit(&mut self, index: BIndex) {
         self.board_internal.set_bit(index as usize, true);

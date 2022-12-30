@@ -4,7 +4,7 @@ extern crate protochess_engine_rs;
 mod custom_pieces {
     use protochess_engine_rs::PieceDefinition;
     use protochess_engine_rs::piece::{PieceId, Piece, PieceFactory};
-    use protochess_engine_rs::types::{Bitboard, BDimensions};
+    use protochess_engine_rs::types::BDimensions;
     use protochess_engine_rs::utils::to_index;
 
     #[test]
@@ -18,8 +18,8 @@ mod custom_pieces {
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
-            promotion_squares: Bitboard::zero(),
-            double_move_squares: Bitboard::zero(),
+            promotion_squares: vec![],
+            double_jump_squares: vec![],
             promo_vals: vec![],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],

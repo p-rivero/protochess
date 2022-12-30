@@ -1,9 +1,8 @@
 use std::fmt;
 use crate::piece::PieceId;
 use crate::utils::{to_rank_file, from_index};
-use crate::types::bitboard::BIndex;
 
-use super::BCoord;
+use super::{BCoord, BIndex};
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum MoveType {
@@ -103,6 +102,7 @@ impl fmt::Display for Move {
 }
 
 
+#[derive(Debug, Clone, Copy)]
 pub struct MoveInfo {
     pub from: (BCoord, BCoord),
     pub to: (BCoord, BCoord),
@@ -146,20 +146,5 @@ impl MoveInfo {
         let (from_x, from_y) = from_index(m.get_from());
         let (to_x, to_y) = from_index(m.get_to());
         self.from == (from_x, from_y) && self.to == (to_x, to_y) && self.promotion == m.get_promotion_piece()
-    }
-}
-
-impl fmt::Display for MoveInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}{}{}{}", 
-            (self.from.0 + b'a') as char,
-            (self.from.1 + b'1') as char,
-            (self.to.0 + b'a') as char,
-            (self.to.1 + b'1') as char,
-            match self.promotion {
-                Some(id) => format!("={}", id),
-                None => "".to_string()
-            }
-        )
     }
 }

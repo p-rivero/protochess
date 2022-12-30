@@ -1,4 +1,4 @@
-use crate::types::{Bitboard, BIndex};
+use crate::types::{Bitboard, BCoord};
 use super::PieceId;
 
 
@@ -14,11 +14,11 @@ pub struct PieceDefinition {
     pub is_castle_rook: bool,
     
     // Places where this piece can promote, as well as PieceId for the promotion pieces
-    pub promotion_squares: Bitboard,
+    pub promotion_squares: Vec<(BCoord, BCoord)>,
     pub promo_vals: Vec<PieceId>,
     
     // Places where this piece can double move
-    pub double_move_squares: Bitboard,
+    pub double_jump_squares: Vec<(BCoord, BCoord)>,
 
     // Ways the piece can capture (but not move without capturing)
     pub attack_sliding_deltas: Vec<Vec<(i8, i8)>>,
@@ -46,8 +46,11 @@ pub struct PieceDefinition {
 }
 
 impl PieceDefinition {
-    pub fn promotion_at(&self, index: BIndex) -> bool {
-        self.promotion_squares.get_bit(index)
+    pub fn promotion_squares_bb(&self) -> Bitboard {
+        Bitboard::from_coord_list(&self.promotion_squares)
+    }
+    pub fn double_jump_squares_bb(&self) -> Bitboard {
+        Bitboard::from_coord_list(&self.double_jump_squares)
     }
     pub fn can_slide_north(&self) -> bool {
         self.translate_north || self.attack_north
@@ -89,7 +92,7 @@ impl PieceDefinition {
         self.can_slide_west() || self.can_slide_northwest() || self.can_slide_southwest()
     }
     pub fn can_promote(&self) -> bool {
-        let has_promotion_squares = !self.promotion_squares.is_zero();
+        let has_promotion_squares = !self.promotion_squares.is_empty();
         let has_promo_vals = !self.promo_vals.is_empty();
         assert!(has_promotion_squares == has_promo_vals);
         has_promotion_squares
@@ -98,7 +101,7 @@ impl PieceDefinition {
         !self.translate_jump_deltas.is_empty() || !self.attack_jump_deltas.is_empty()
     }
     pub fn can_double_jump(&self) -> bool {
-        !self.double_move_squares.is_zero()
+        !self.double_jump_squares.is_empty()
     }
     pub fn has_sliding_deltas(&self) -> bool {
         !self.translate_sliding_deltas.is_empty() || !self.attack_sliding_deltas.is_empty()
@@ -136,9 +139,9 @@ impl Default for PieceDefinition {
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
-            promotion_squares: Bitboard::zero(),
+            promotion_squares: vec![],
             promo_vals: Vec::new(),
-            double_move_squares: Bitboard::zero(),
+            double_jump_squares: vec![],
             attack_sliding_deltas: Vec::new(),
             attack_jump_deltas: Vec::new(),
             attack_north: false,
