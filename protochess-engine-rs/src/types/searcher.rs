@@ -13,6 +13,7 @@ pub enum SearchError {
 pub type Depth = u8;
 
 // At most 8 players, since castling rights are stored in a u8
+// Currently only 2 players are supported, since the current alpha-beta search cannot be generalized to more players
 pub type Player = u8;
 
 

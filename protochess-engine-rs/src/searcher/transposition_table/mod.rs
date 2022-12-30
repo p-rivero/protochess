@@ -67,7 +67,8 @@ impl TranspositionTable {
     /// Returns a handle to an Entry in the table, if it exists
     pub fn retrieve(&mut self, zobrist_key:u64) -> Option<&Entry> {
         let cluster = &self.data[zobrist_key as usize % TABLE_SIZE];
-        for entry in &cluster.entries {
+        for i in 0..ENTRIES_PER_CLUSTER {
+            let entry = &cluster.entries[i];
             if entry.key == zobrist_key && entry.flag != EntryFlag::Null {
                 return Some(entry)
             }

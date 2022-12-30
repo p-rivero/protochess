@@ -129,32 +129,32 @@ impl Position {
         match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let capt_index = mv.get_target();
-                let captured_piece = self.piece_at(capt_index).unwrap();
+                let captured_piece = self.player_piece_at(self.whos_turn, capt_index).unwrap();
                 let piece_id = captured_piece.get_piece_id();
-                let player = captured_piece.get_player();
+                let capt_player = captured_piece.get_player();
                 new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
                 
-                let could_castle = self.remove_piece(capt_index);
-                new_props.captured_piece = Some((piece_id, player, could_castle));
+                let could_castle = self.player_piece_at_mut(capt_player, capt_index).unwrap().remove_piece(capt_index);
+                new_props.captured_piece = Some((piece_id, capt_player, could_castle));
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
                 let rook_to = mv.get_to() - 1;
-                let rook_piece = self.pieces[my_player_num as usize].piece_at(rook_from).unwrap();
+                let rook_piece = self.player_piece_at(my_player_num, rook_from).unwrap();
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
                 new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
-                self.move_piece(rook_from, rook_to, false);
+                self.move_piece(my_player_num, rook_from, rook_to, false);
                 new_props.castled_players.set_player_castled(my_player_num);
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
                 let rook_to = mv.get_to() + 1;
-                let rook_piece = self.pieces[my_player_num as usize].piece_at(rook_from).unwrap();
+                let rook_piece = self.player_piece_at(my_player_num, rook_from).unwrap();
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
                 new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
-                self.move_piece(rook_from, rook_to, false);
+                self.move_piece(my_player_num, rook_from, rook_to, false);
                 new_props.castled_players.set_player_castled(my_player_num);
             }
             _ => {}
@@ -162,27 +162,28 @@ impl Position {
 
         let from = mv.get_from();
         let to = mv.get_to();
-        let from_piece = self.piece_at_mut(from).unwrap();
-        let from_piece_type = from_piece.get_piece_id();
-        let from_piece_new_pos_zobrist = from_piece.get_zobrist(to);
-        new_props.zobrist_key ^= from_piece.get_zobrist(from);
-        new_props.zobrist_key ^= from_piece_new_pos_zobrist;
+        let moved_piece = self.player_piece_at_mut(my_player_num, from).unwrap();
+        let moved_piece_type = moved_piece.get_piece_id();
+        let moved_piece_new_pos_zobrist = moved_piece.get_zobrist(to);
+        new_props.zobrist_key ^= moved_piece.get_zobrist(from);
+        new_props.zobrist_key ^= moved_piece_new_pos_zobrist;
         
 
         // Move piece to location
-        new_props.moved_piece_castle = from_piece.move_piece(from, to, false);
+        new_props.moved_piece_castle = moved_piece.move_piece(from, to, false);
         if new_props.moved_piece_castle {
             // A castling piece was moved, so it cannot castle anymore
             // Remove the castling ability from the zobrist key
-            new_props.zobrist_key ^= from_piece.get_castle_zobrist(from);
+            new_props.zobrist_key ^= moved_piece.get_castle_zobrist(from);
         }
         // Promotion
         match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
                 // Remove zobrist hash of the old piece
-                new_props.zobrist_key ^= from_piece_new_pos_zobrist;
-                new_props.promote_from = Some(from_piece_type);
-                self.remove_piece(to);
+                new_props.zobrist_key ^= moved_piece_new_pos_zobrist;
+                new_props.promote_from = Some(moved_piece_type);
+                // Remove old piece
+                self.player_piece_at_mut(my_player_num, to).unwrap().remove_piece(to);
                 // Add new piece
                 let promote_to_pt = mv.get_promotion_piece().unwrap();
                 let piece = self.add_piece(my_player_num, promote_to_pt, to, false);
@@ -251,11 +252,12 @@ impl Position {
 
         //Undo move piece to location
         //Remove piece here
-        self.move_piece(to, from, self.properties.moved_piece_castle);
+        self.move_piece(my_player_num, to, from, self.properties.moved_piece_castle);
         //Undo Promotion
         match mv.get_move_type() {
             MoveType::PromotionCapture | MoveType::Promotion => {
-                self.remove_piece(from);
+                // Remove old piece
+                self.player_piece_at_mut(my_player_num, from).unwrap().remove_piece(from);
                 let promoted_from = self.properties.promote_from.unwrap();
                 // Assume that the piece that promoted must have moved, so it can't castle
                 self.add_piece(my_player_num, promoted_from, from, false);
@@ -275,13 +277,13 @@ impl Position {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x - 1, y);
-                self.move_piece(rook_to,rook_from, true);
+                self.move_piece(self.whos_turn, rook_to, rook_from, true);
             },
             MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
                 let rook_to = to_index(x + 1, y);
-                self.move_piece(rook_to,rook_from, true);
+                self.move_piece(self.whos_turn, rook_to, rook_from, true);
             }
             _ => {}
         }
@@ -332,7 +334,6 @@ impl Position {
         *num_reps.unwrap()
     }
 
-    /// Returns tuple (player_num, Piece)
     pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {
         for ps in &self.pieces {
             if let Some(piece) = ps.piece_at(index) {
@@ -348,6 +349,12 @@ impl Position {
             }
         }
         None
+    }
+    pub fn player_piece_at(&self, player: Player, index: BIndex) -> Option<&Piece> {
+        self.pieces[player as usize].piece_at(index)
+    }
+    pub fn player_piece_at_mut(&mut self, player: Player, index: BIndex) -> Option<&mut Piece> {
+        self.pieces[player as usize].piece_at_mut(index)
     }
     
     pub fn search_piece_by_id(&self, piece_id: PieceId) -> Option<&Piece> {
@@ -377,8 +384,9 @@ impl Position {
         self.update_repetitions(self.properties.zobrist_key, 1);
     }
 
+    /// Removes a piece from the position, assuming the piece is there
     pub fn public_remove_piece(&mut self, index: BIndex) {
-        self.remove_piece(index);
+        self.piece_at_mut(index).unwrap().remove_piece(index);
         self.update_occupied();
     }
     
@@ -416,17 +424,11 @@ impl Position {
         piece
     }
     
-    /// Removes a piece from the position, assuming the piece is there
-    fn remove_piece(&mut self, index: BIndex) -> bool {
-        let piece = self.piece_at_mut(index).unwrap();
-        piece.remove_piece(index)
-    }
-    
     /// Move a piece from one index to another
     /// If set_can_castle is true, set the new index as a castle square.
     /// Returns true if the piece could castle before this move
-    fn move_piece(&mut self, from: BIndex, to: BIndex, can_castle: bool) -> bool {
-        if let Some(piece) = self.piece_at_mut(from) {
+    fn move_piece(&mut self, player: Player,  from: BIndex, to: BIndex, can_castle: bool) -> bool {
+        if let Some(piece) = self.player_piece_at_mut(player, from) {
             piece.move_piece(from, to, can_castle)
         } else {
             panic!("No piece at {} to move to {}", from, to);
@@ -447,7 +449,12 @@ impl Position {
     fn update_repetitions(&mut self, key: u64, delta: i16) {
         let num_reps = self.position_repetitions.get(&key);
         if let Some(old_val) = num_reps {
-            self.position_repetitions.insert(key, (*old_val as i16 + delta) as u8);
+            let new_val = (*old_val as i16 + delta) as u8;
+            if new_val == 0 {
+                self.position_repetitions.remove(&key);
+            } else {
+                self.position_repetitions.insert(key, new_val);
+            }
         } else {
             self.position_repetitions.insert(key, delta as u8);
         }

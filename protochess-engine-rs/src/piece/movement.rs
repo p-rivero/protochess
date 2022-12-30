@@ -120,10 +120,10 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         
         // King side
         let kingside_rook_index = to_index(position.dimensions.width-1, ky);
-        if let Some(rook) = position.piece_at(kingside_rook_index) {
-            // There is a rook (that has not moved) of the same player
-            if rook.is_castle_rook(kingside_rook_index) && rook.get_player() == position.whos_turn {
-                // Rook is on the correct square and can castle
+        if let Some(rook) = position.player_piece_at(position.whos_turn, kingside_rook_index) {
+            // There is a piece of the same player
+            if rook.is_castle_rook(kingside_rook_index){
+                // Rook is on the correct square and can castle (hasn't moved)
                 // Check if the squares between the king and the rook are empty
                 let east = attack_tables.masks.get_east(index);
                 let mut occ = east & &position.occupied;
@@ -137,8 +137,8 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         }
         // Queen side (same as kingside)
         let queenside_rook_index = to_index(0, ky);
-        if let Some(rook) = position.piece_at(queenside_rook_index) {
-            if rook.is_castle_rook(queenside_rook_index) && rook.get_player() == position.whos_turn {
+        if let Some(rook) = position.player_piece_at(position.whos_turn, queenside_rook_index) {
+            if rook.is_castle_rook(queenside_rook_index) {
                 let west = attack_tables.masks.get_west(index);
                 let mut occ = west & &position.occupied;
                 occ.clear_bit(queenside_rook_index);

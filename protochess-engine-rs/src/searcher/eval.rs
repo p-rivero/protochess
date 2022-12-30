@@ -57,8 +57,9 @@ pub fn score_move(history_moves: &[[Centipawns;256];256], killer_moves: &[Move;2
     const CAPTURE_BASE_SCORE: Centipawns = 10000;
     const KILLERMOVE_SCORE: Centipawns = 9000;
     if mv.is_capture() {
-        let attacker = position.piece_at(mv.get_from()).unwrap();
-        let victim = position.piece_at(mv.get_target()).unwrap();
+        let current_player = position.whos_turn;
+        let attacker = position.player_piece_at(current_player, mv.get_from()).unwrap();
+        let victim = position.player_piece_at(1-current_player, mv.get_target()).unwrap();
 
         let attack_score = attacker.get_material_score();
         let victim_score = victim.get_material_score();
