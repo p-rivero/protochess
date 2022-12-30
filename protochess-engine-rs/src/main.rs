@@ -66,6 +66,16 @@ pub fn main() {
                 }
                 break;
             },
+            MakeMoveResult::LeaderCaptured(losing_player) => {
+                if losing_player == 0 {
+                    println!("{}", engine);
+                    println!("KING HAS BEEN CAPTURED! Black wins!");
+                } else {
+                    println!("{}", engine);
+                    println!("KING HAS BEEN CAPTURED! White wins!");
+                }
+                break;
+            },
             MakeMoveResult::Stalemate => {
                 println!("{}", engine);
                 println!("STALEMATE!");

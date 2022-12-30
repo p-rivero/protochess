@@ -337,6 +337,10 @@ impl Position {
         let num_reps = self.position_repetitions.get(&self.properties.zobrist_key);
         *num_reps.unwrap()
     }
+    
+    pub fn leader_is_captured(&self) -> bool {
+        self.pieces[self.whos_turn as usize].get_leader().get_num_pieces() == 0
+    }
 
     pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {
         for ps in &self.pieces {

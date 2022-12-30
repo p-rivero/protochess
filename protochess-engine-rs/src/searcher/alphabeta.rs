@@ -7,6 +7,7 @@ use super::Searcher;
 use super::eval;
 use super::transposition_table::{Entry, EntryFlag};
 
+pub const GAME_OVER_SCORE: Centipawns = -100000;
 
 impl Searcher {
     pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchError> {
@@ -23,6 +24,10 @@ impl Searcher {
         
         if depth == 0 {
             return Ok(self.quiesce(pos, alpha, beta));
+        }
+        
+        if pos.leader_is_captured() {
+            return Ok(GAME_OVER_SCORE);
         }
         
         let is_root = self.nodes_searched == 0;
@@ -151,7 +156,7 @@ impl Searcher {
                 // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
                 // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
                 let current_depth = self.current_searching_depth - depth;
-                Ok(-99999 + current_depth as Centipawns)
+                Ok(GAME_OVER_SCORE + current_depth as Centipawns)
             } else {
                 // No legal moves but also not in check: Stalemate
                 Ok(0)
@@ -190,6 +195,11 @@ impl Searcher {
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
     fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns) -> Centipawns {
+        
+        if pos.leader_is_captured() {
+            return GAME_OVER_SCORE;
+        }
+        
         let score = eval::evaluate(pos);
         
         if score >= beta {
@@ -240,7 +250,9 @@ impl Searcher {
 
     #[inline]
     fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, pos: &mut Position, moves: I, depth: Depth) -> Vec<(Centipawns, Move)> {
-        let killer_moves_at_depth = &self.killer_moves[depth as usize];
+        // Limit depth to the size of the killer moves array
+        let depth = std::cmp::min(self.killer_moves.len() - 1, depth as usize);
+        let killer_moves_at_depth = &self.killer_moves[depth];
         let mut moves_and_score: Vec<(Centipawns, Move)> = moves.map(|mv| 
             (eval::score_move(&self.history_moves, killer_moves_at_depth, pos, &mv), mv))
             .collect();

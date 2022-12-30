@@ -1,7 +1,7 @@
 use instant::{Instant, Duration};
 
 use crate::types::{Move, Depth, Centipawns, SearchError};
-use crate::Position;
+use crate::{Position, MoveGen};
 
 mod alphabeta;
 mod transposition_table;
@@ -45,14 +45,15 @@ impl Searcher {
     
     // Run for some time, then return the best move, its score, and the depth
     fn get_best_move_impl(&mut self, pos: &mut Position, max_depth: Depth, time_sec: u64) -> (Move, Depth) {
-        let end_time = Instant::now() + Duration::from_secs(time_sec);
+        assert!(!pos.leader_is_captured(), "Attempting to get best move but leader is captured");
+        assert!(MoveGen::count_legal_moves(pos) != 0, "Attempting to get best move but there are no legal moves");
         
+        let end_time = Instant::now() + Duration::from_secs(time_sec);
         let mut best_move: Move = Move::null();
         let mut best_depth: Depth = 0;
         
         // Iterative deepening
-        let mut search_depth = 1;
-        loop {
+        for search_depth in 1..=max_depth {
             self.nodes_searched = 0;
             self.current_searching_depth = search_depth;
             match self.search(pos, search_depth, &end_time) {
@@ -66,18 +67,21 @@ impl Searcher {
                     best_depth = search_depth;
                     // Print PV info
                     println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", search_depth, mv, score, self.nodes_searched);
+                    let diff = -(score.abs() + alphabeta::GAME_OVER_SCORE);
+                    if diff < 200 {
+                        println!("Mate in {}", (diff+1) / 2);
+                    }
                 },
                 Err(SearchError::Timeout) => {
                     // Thread timed out, return the best move found so far
                     break;
                 },
             }
-            
-            if Instant::now() >= end_time || search_depth == max_depth {
+
+            if Instant::now() >= end_time {
                 // Return the best move found so far
                 break;
             }
-            search_depth += 1;
         }
 
         (best_move, best_depth)

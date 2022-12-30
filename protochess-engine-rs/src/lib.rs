@@ -23,6 +23,7 @@ pub enum MakeMoveResult {
     Ok,
     IllegalMove,
     Checkmate(Player), // Checkmated player
+    LeaderCaptured(Player), // All leader pieces of the player are captured (only in illegal positions or atomic chess)
     Stalemate,
     Repetition,
 }
@@ -94,6 +95,9 @@ impl Engine {
             self.position.make_move(mv, true);
             
             // Check if the game is over
+            if self.position.leader_is_captured() {
+                return MakeMoveResult::LeaderCaptured(self.position.whos_turn);
+            }
             if MoveGen::count_legal_moves(&mut self.position) == 0 {
                 if MoveGen::in_check(&mut self.position) {
                     return MakeMoveResult::Checkmate(self.position.whos_turn);
@@ -128,22 +132,15 @@ impl Engine {
     
     /// Returns (fromx,fromy,tox,toy,promotion) if there is a move to be made
     pub fn get_best_move(&mut self, depth: Depth) -> MoveInfo {
-        let old_zobrist = self.position.get_zobrist();
+        assert!(depth != 0, "Depth must be greater than 0");
         let (mv, search_depth) = Searcher::get_best_move(&self.position, depth);
-        let new_zobrist = self.position.get_zobrist();
         assert!(search_depth == depth);
-        assert!(old_zobrist == new_zobrist);
-        
         MoveInfo::from_move(mv)
     }
 
     ///Returns ((fromX,fromY,toX,toY,promotion), depth)
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> (MoveInfo, Depth) {
-        let old_zobrist = self.position.get_zobrist();
         let (mv, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec);
-        let new_zobrist = self.position.get_zobrist();
-        assert!(old_zobrist == new_zobrist);
-        
         (MoveInfo::from_move(mv), search_depth)
     }
 
@@ -157,6 +154,9 @@ impl Engine {
     }
 
     pub fn to_move_in_check(&mut self) -> bool {
+        if self.position.leader_is_captured() {
+            return false;
+        }
         MoveGen::in_check(&mut self.position)
     }
 
