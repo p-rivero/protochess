@@ -74,5 +74,73 @@ mod perft {
         assert_eq!(engine.perft(4), 3894594);
         assert_eq!(engine.perft(5), 164075551);
     }
+    
+    
+    // https://github.com/niklasf/python-chess/blob/master/examples/perft/tricky.perft
+    
+    #[test]
+    fn gotta_love_perft_1() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("8/ppp3p1/8/8/3p4/5Q2/1ppp2K1/brk4n w - - 0 1");
+        assert_eq!(engine.perft(1), 27);
+        assert_eq!(engine.perft(2), 390);
+        assert_eq!(engine.perft(3), 9354);
+        assert_eq!(engine.perft(4), 134167);
+    }
+    
+    #[test]
+    fn gotta_love_perft_2() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("8/6kR/8/8/8/bq6/1rqqqqqq/K1nqnbrq b - - 0 1");
+        assert_eq!(engine.perft(1), 7);
+        assert_eq!(engine.perft(2), 52);
+        assert_eq!(engine.perft(3), 4593);
+        assert_eq!(engine.perft(4), 50268);
+    }
+    
+    
+    // https://github.com/niklasf/python-chess/blob/master/examples/perft/atomic.perft
+    
+    #[test]
+    fn atomic_start() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ATOMIC");
+        assert_eq!(engine.perft(1), 20);
+        assert_eq!(engine.perft(2), 400);
+        assert_eq!(engine.perft(3), 8902);
+        assert_eq!(engine.perft(4), 197326);
+        assert_eq!(engine.perft(5), 4864979);
+        assert_eq!(engine.perft(6), 118926425);
+    }
+    
+    #[test]
+    fn atomic_programfox_1() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("rn2kb1r/1pp1p2p/p2q1pp1/3P4/2P3b1/4PN2/PP3PPP/R2QKB1R b KQkq - 0 1 ATOMIC");
+        assert_eq!(engine.perft(1), 40);
+        assert_eq!(engine.perft(2), 1238);
+        assert_eq!(engine.perft(3), 45237);
+        assert_eq!(engine.perft(4), 1434825);
+    }
+    
+    #[test]
+    fn atomic_programfox_2() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("rn1qkb1r/p5pp/2p5/3p4/N3P3/5P2/PPP4P/R1BQK3 w Qkq - 0 1 ATOMIC");
+        assert_eq!(engine.perft(1), 28);
+        assert_eq!(engine.perft(2), 833);
+        assert_eq!(engine.perft(3), 23353);
+        assert_eq!(engine.perft(4), 714499);
+    }
+    
+    #[test]
+    fn shakmaty_bench() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("rn2kb1r/1pp1p2p/p2q1pp1/3P4/2P3b1/4PN2/PP3PPP/R2QKB1R b KQkq - 0 1 ATOMIC");
+        assert_eq!(engine.perft(1), 40);
+        assert_eq!(engine.perft(2), 1238);
+        assert_eq!(engine.perft(3), 45237);
+        assert_eq!(engine.perft(4), 1434825);
+    }
 
 }

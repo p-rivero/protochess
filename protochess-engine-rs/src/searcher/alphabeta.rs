@@ -23,7 +23,7 @@ impl Searcher {
         }
         
         if depth == 0 {
-            return Ok(self.quiesce(pos, alpha, beta));
+            return Ok(self.quiesce(pos, alpha, beta, 0));
         }
         
         if pos.leader_is_captured() {
@@ -196,11 +196,12 @@ impl Searcher {
 
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
-    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns) -> Centipawns {
+    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, quiesce_depth: u8) -> Centipawns {
         
         if pos.leader_is_captured() {
             // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
-            return GAME_OVER_SCORE + self.current_searching_depth as Centipawns
+            // depth in quiesce() is increased by 1 for each ply (in alphabeta it's decreased)
+            return GAME_OVER_SCORE + self.current_searching_depth as Centipawns + quiesce_depth as Centipawns;
         }
         
         let score = eval::evaluate(pos);
@@ -221,7 +222,7 @@ impl Searcher {
             
             // This is a capture move, so there is no need to check for repetition
             pos.make_move(mv, false);
-            let score = -self.quiesce(pos, -beta, -alpha);
+            let score = -self.quiesce(pos, -beta, -alpha, quiesce_depth + 1);
             pos.unmake_move();
 
             if score >= beta {

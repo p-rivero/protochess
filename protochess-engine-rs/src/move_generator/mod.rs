@@ -213,7 +213,8 @@ impl MoveGen {
         position.make_move(*mv, false);
         position.make_move(Move::null(), false);
         // See if we are in check or an explosion has killed the last leader
-        let legal = !position.leader_is_captured() && !MoveGen::in_check(position);
+        // However, if the move causes us to capture the last enemy leader, the move is legal (even if it leaves us in check)
+        let legal = !position.leader_is_captured() && (position.enemy_leader_is_captured() || !MoveGen::in_check(position));
         position.unmake_move();
         position.unmake_move();
         legal
