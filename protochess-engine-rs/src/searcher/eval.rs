@@ -38,7 +38,7 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
         
         //Castling bonus
         // TODO: Keep castling bonus also in the endgame?
-        if position.properties.castled_players.did_player_castle(ps.get_player_num()) && !is_endgame {
+        if position.has_player_castled(ps.get_player_num()) && !is_endgame {
             if ps.get_player_num() == player_num {
                 score += CASTLING_BONUS;
             } else {

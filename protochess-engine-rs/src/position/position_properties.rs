@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::types::{BIndex, Move, Player};
 
 use crate::piece::PieceId;
@@ -25,13 +23,6 @@ pub struct PositionProperties {
     // Also store whether the captured piece could castle and the index where it was captured.
     // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be many.
     pub captured_pieces: Vec<(PieceId, Player, bool, BIndex)>,
-    pub prev_properties: Option<Rc<PositionProperties>>,
-}
-
-impl PositionProperties {
-    pub fn get_prev(&self) -> Option<Rc<PositionProperties>> {
-        self.prev_properties.clone()
-    }
 }
 
 impl Clone for PositionProperties {
@@ -47,7 +38,6 @@ impl Clone for PositionProperties {
             moved_piece_castle: self.moved_piece_castle,
             update_reps: self.update_reps,
             captured_pieces: Vec::new(), // Don't clone captured pieces
-            prev_properties: None, // Don't clone prev properties, sice they are overwritten anyway
         }
     }
 }
@@ -64,7 +54,6 @@ impl Default for PositionProperties {
             moved_piece_castle: false,
             update_reps: false,
             captured_pieces: Vec::new(),
-            prev_properties: None,
         }
     }
 }

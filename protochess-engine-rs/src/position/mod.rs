@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
 
 use crate::{types::*, PieceDefinition};
 use crate::position::piece_set::PieceSet;
@@ -22,12 +21,12 @@ pub struct Position {
     pub whos_turn: Player,
     pub pieces: Vec<PieceSet>, // pieces[0] = white's pieces, pieces[1] black etc
     pub occupied: Bitboard,
-    // Properties relating only to the current position
+    // Stack of properties relating only to the current position
     // Typically hard-to-recover properties, like castling
     // Similar to state in stockfish
-    pub properties: Rc<PositionProperties>,
+    properties_stack: Vec<PositionProperties>,
     // Store the positions that have been played to determine repetition
-    pub position_repetitions: HashMap<u64, u8, ahash::RandomState>,
+    position_repetitions: HashMap<u64, u8, ahash::RandomState>,
 }
 
 impl Position {
@@ -67,10 +66,13 @@ impl Position {
         for piece_set in &pieces {
             occupied |= piece_set.get_occupied();
         }
-        let mut reps = HashMap::with_capacity_and_hasher(4096, ahash::RandomState::new());
+        let mut position_repetitions = HashMap::with_capacity_and_hasher(4096, ahash::RandomState::new());
         
         // Add a repetition for the starting position
-        reps.insert(props.zobrist_key, 1);
+        position_repetitions.insert(props.zobrist_key, 1);
+        
+        let mut properties_stack = Vec::with_capacity(128);
+        properties_stack.push(props);
         
         Position {
             dimensions,
@@ -78,8 +80,8 @@ impl Position {
             whos_turn,
             pieces,
             occupied,
-            properties: Rc::new(props),
-            position_repetitions: reps,
+            properties_stack,
+            position_repetitions,
         }
     }
 
@@ -96,7 +98,7 @@ impl Position {
     /// Modifies the position to make the move
     pub fn make_move(&mut self, mv: Move, update_reps: bool) {
         let my_player_num = self.whos_turn;
-        let mut new_props: PositionProperties = (*self.properties).clone();
+        let mut new_props: PositionProperties = self.get_properties().clone();
         new_props.update_reps = update_reps;
         
         // Update the player
@@ -115,13 +117,11 @@ impl Position {
             // Since we're passing, there cannot be an ep square
             new_props.ep_square = None;
             new_props.move_played = Some(mv);
-            new_props.prev_properties = Some(Rc::clone(&self.properties));
             // Increment number of repetitions of new position
             if update_reps {
                 self.update_repetitions(new_props.zobrist_key, 1);
             }
-            
-            self.properties = Rc::new(new_props);
+            self.properties_stack.push(new_props);
             return;
         }
 
@@ -201,7 +201,7 @@ impl Position {
         // Pawn en-passant
         // Check for a pawn double push to set ep square
         // For simplicity, use the ep index as the zobrist key
-        if let Some(sq) = self.properties.ep_square {
+        if let Some(sq) = new_props.ep_square {
             // If the last prop had some ep square then we want to clear zob by xoring again
             new_props.zobrist_key ^= sq as u64;
         }
@@ -222,8 +222,7 @@ impl Position {
 
         // Update props
         new_props.move_played = Some(mv);
-        new_props.prev_properties = Some(Rc::clone(&self.properties));
-        self.properties = Rc::new(new_props);
+        self.properties_stack.push(new_props);
         
         // Update occupied bbs for future calculations
         self.update_occupied();
@@ -273,10 +272,13 @@ impl Position {
 
     /// Undo the most recent move
     pub fn unmake_move(&mut self) {
+        // Update props
+        // Consume prev props; never to return again
+        let props = self.properties_stack.pop().unwrap();
         
         // Decrement the number of repetitions of old position
-        if self.properties.update_reps {
-            self.update_repetitions(self.properties.zobrist_key, -1);
+        if props.update_reps {
+            self.update_repetitions(props.zobrist_key, -1);
         }
 
         if self.whos_turn == 0 {
@@ -286,20 +288,17 @@ impl Position {
         }
 
         let my_player_num = self.whos_turn;
-        let mv = self.properties.move_played.expect("No move to undo");
+        let mv = props.move_played.expect("No move to undo");
         
         // Undo null moves
         if mv.get_move_type() == MoveType::Null {
-            //Update props
-            //Consume prev props; never to return again
-            self.properties = self.properties.get_prev().unwrap();
             return;
         }
         let from = mv.get_from();
         let to = mv.get_to();
 
         // Undo move piece to location
-        let moved_piece_castle = self.properties.moved_piece_castle;
+        let moved_piece_castle = props.moved_piece_castle;
         if let Some(moved_piece) = self.player_piece_at_mut(my_player_num, to) {
             moved_piece.move_piece(to, from, moved_piece_castle);
             
@@ -308,7 +307,7 @@ impl Position {
                 MoveType::PromotionCapture | MoveType::Promotion => {
                     // Remove old piece
                     moved_piece.remove_piece(from);
-                    let promoted_from = self.properties.promote_from.unwrap();
+                    let promoted_from = props.promote_from.unwrap();
                     // Assume that the piece that promoted must have moved, so it can't castle
                     self.add_piece(my_player_num, promoted_from, from, false);
                 },
@@ -320,9 +319,9 @@ impl Position {
         // Special moves
         match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
-                let num_captures = self.properties.captured_pieces.len();
+                let num_captures = props.captured_pieces.len();
                 for i in 0..num_captures {
-                    let (piece_id, owner, captured_can_castle, capt_index) = self.properties.captured_pieces[i];
+                    let (piece_id, owner, captured_can_castle, capt_index) = props.captured_pieces[i];
                     self.add_piece(owner, piece_id, capt_index, captured_can_castle);
                 }
             },
@@ -340,12 +339,8 @@ impl Position {
             }
             _ => {}
         }
-
-        // Update props
-        // Consume prev props; never to return again
-        self.properties = self.properties.get_prev().unwrap();
-
-        //Update occupied bbs for future calculations
+        
+        // Update occupied bbs for future calculations
         self.update_occupied();
     }
 
@@ -378,18 +373,36 @@ impl Position {
         squares
     }
 
+    #[inline]
     pub fn get_zobrist(&self) -> u64 {
-        self.properties.zobrist_key
+        self.get_properties().zobrist_key
     }
     
+    #[inline]
     pub fn num_repetitions(&self) -> u8 {
-        let num_reps = self.position_repetitions.get(&self.properties.zobrist_key);
+        let num_reps = self.position_repetitions.get(&self.get_zobrist());
         *num_reps.unwrap()
     }
     
+    #[inline]
+    pub fn has_player_castled(&self, player: Player) -> bool {
+        self.get_properties().castled_players.did_player_castle(player)
+    }
+    
+    #[inline]
+    pub fn get_ep_square(&self) -> Option<BIndex> {
+        self.get_properties().ep_square
+    }
+    #[inline]
+    pub fn get_ep_victim(&self) -> BIndex {
+        self.get_properties().ep_victim
+    }
+    
+    #[inline]
     pub fn leader_is_captured(&self) -> bool {
         self.pieces[self.whos_turn as usize].get_leader().get_num_pieces() == 0
     }
+    #[inline]
     pub fn enemy_leader_is_captured(&self) -> bool {
         self.pieces[1 - self.whos_turn as usize].get_leader().get_num_pieces() == 0
     }
@@ -431,17 +444,16 @@ impl Position {
     /// Public interface for modifying the position
     pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex) {
         // Subtract a repetition for the old position
-        self.update_repetitions(self.properties.zobrist_key, -1);
+        self.update_repetitions(self.get_zobrist(), -1);
         
-        let mut new_props = (*self.properties).clone();
+        let mut new_props = self.get_properties().clone();
         let piece = self.add_piece(owner, piece_type, index, true);
         new_props.zobrist_key ^= piece.get_zobrist(index);
         self.update_occupied();
-        new_props.prev_properties = Some(Rc::clone(&self.properties));
-        self.properties = Rc::new(new_props);
-        
         // Add a repetition for the new position
-        self.update_repetitions(self.properties.zobrist_key, 1);
+        self.update_repetitions(new_props.zobrist_key, 1);
+        
+        self.properties_stack.push(new_props);
     }
 
     /// Removes a piece from the position, assuming the piece is there
@@ -451,6 +463,12 @@ impl Position {
     }
     
     
+    
+    /// Get the top of the properties stack
+    #[inline]
+    fn get_properties(&self) -> &PositionProperties {
+        &self.properties_stack[self.properties_stack.len() - 1]
+    }
     
     /// Compute the number of players and assert that each player has a leader. Returns the number of players
     fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) -> Player {
@@ -540,6 +558,6 @@ impl fmt::Display for Position {
         for x in 0..self.dimensions.width {
             write!(f, "{} ", x)?;
         }
-        write!(f, "\nZobrist Key: {}", self.properties.zobrist_key)
+        write!(f, "\nZobrist Key: {}", self.get_zobrist())
     }
 }

@@ -210,8 +210,8 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
             }
         }
         // En passant capture
-        if position.properties.ep_square == Some(to) && movement.can_double_jump() {
-            let target = position.properties.ep_victim;
+        if movement.can_double_jump() && position.get_ep_square() == Some(to) {
+            let target = position.get_ep_victim();
             out_moves.push(Move::new(index, to, Some(target), MoveType::Capture, None));
         }
     }

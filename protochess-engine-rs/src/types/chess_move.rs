@@ -47,6 +47,7 @@ impl Move {
         Move::new(0,0,None,MoveType::Null, None)
     }
     
+    #[inline]
     pub fn is_null(&self) -> bool {
         self.get_move_type() == MoveType::Null
     }
@@ -74,6 +75,7 @@ impl Move {
         ((self.move_fields >> 24) & 1) != 0
     }
 
+    #[inline]
     pub fn get_move_type(&self) -> MoveType {
         // Output a match statement that maps from "x if x == MoveType::XX as u32" to "MoveType::XX"
         macro_rules! match_move_type {

@@ -67,19 +67,63 @@ impl MoveGen {
 
     /// Checks if the player to move is in check
     pub fn in_check(position: &mut Position) -> bool {
-        // Get the leader of the player to move
         let my_pieces = &position.pieces[position.whos_turn as usize];
         let my_leader = my_pieces.get_leader();
         if my_leader.get_num_pieces() > 1 {
             // There are multiple leaders, so the position cannot be in check
             return false;
         }
+        MoveGen::index_in_check(my_leader.get_first_index().unwrap(), position)
+    }
+
+    /// Checks if a move is legal
+    pub fn is_move_legal(mv: &Move, position: &mut Position) -> bool {
+        // If the move is castling, check extra conditions
+        if mv.get_move_type() == MoveType::KingsideCastle || mv.get_move_type() == MoveType::QueensideCastle {
+            // Cannot castle while in check
+            if MoveGen::in_check(position) {
+                return false;
+            }
+            let step_index = { if mv.get_move_type() == MoveType::KingsideCastle { mv.get_from()+1 } else { mv.get_from()-1 } };
+            // Cannot step through check
+            if MoveGen::index_in_check(step_index, position) {
+                return false;
+            }
+        }
+        
+        // Try the move and skip a turn, then see if we are in check
+        position.make_move(*mv, false);
+        position.make_move(Move::null(), false);
+        // See if we are in check or an explosion has killed the last leader
+        // However, if the move causes us to capture the last enemy leader, the move is legal (even if it leaves us in check)
+        let legal = !position.leader_is_captured() && (position.enemy_leader_is_captured() || !MoveGen::in_check(position));
+        position.unmake_move();
+        position.unmake_move();
+        legal
+    }
+
+
+    ///Returns the number of legal moves for a position
+    pub fn count_legal_moves(position: &mut Position) -> u64{
+        let mut nodes = 0u64;
+        for mv in MoveGen::get_pseudo_moves(position) {
+            if !MoveGen::is_move_legal(&mv, position) {
+                continue;
+            }
+            nodes += 1;
+        }
+        nodes
+    }
+    
+    
+    /// Checks if a given square is attacked by the enemy
+    fn index_in_check(index: BIndex, position: &mut Position) -> bool {
+        // Get the leader of the player to move
         let enemy = 1 - position.whos_turn;
         let enemy_pieces = &position.pieces[enemy as usize];
         let enemy_occupied = enemy_pieces.get_occupied();
         let inverse_attack = enemy_pieces.get_inverse_attack();
-        // Use inverse attack pattern to get the squares that can potentially attack the last leader
-        let index = my_leader.get_first_index().unwrap();
+        // Use inverse attack pattern to get the squares that can potentially attack the square
         let attack_tables = MoveGen::attack_tables();
         let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
         
@@ -151,7 +195,6 @@ impl MoveGen {
                 }
             }
         }
-        
         false
     }
     fn slide_targets_index(piece: &Piece, piece_index: BIndex, target_index: BIndex, occ_or_not_in_bounds: &Bitboard) -> bool {
@@ -191,45 +234,5 @@ impl MoveGen {
             }
         }
         false
-    }
-
-    /// Checks if a move is legal
-    pub fn is_move_legal(mv: &Move, position: &mut Position) -> bool {
-        // If the move is castling, check extra conditions
-        if mv.get_move_type() == MoveType::KingsideCastle || mv.get_move_type() == MoveType::QueensideCastle {
-            // Cannot castle while in check
-            if MoveGen::in_check(position) {
-                return false;
-            }
-            let step_index = { if mv.get_move_type() == MoveType::KingsideCastle { mv.get_from()+1 } else { mv.get_from()-1 } };
-            let step_mv = Move::new(mv.get_from(), step_index, None, MoveType::Quiet, None);
-            // Cannot step through check
-            if !MoveGen::is_move_legal(&step_mv, position) {
-                return false;
-            }
-        }
-        
-        // Try the move and skip a turn, then see if we are in check
-        position.make_move(*mv, false);
-        position.make_move(Move::null(), false);
-        // See if we are in check or an explosion has killed the last leader
-        // However, if the move causes us to capture the last enemy leader, the move is legal (even if it leaves us in check)
-        let legal = !position.leader_is_captured() && (position.enemy_leader_is_captured() || !MoveGen::in_check(position));
-        position.unmake_move();
-        position.unmake_move();
-        legal
-    }
-
-
-    ///Returns the number of legal moves for a position
-    pub fn count_legal_moves(position: &mut Position) -> u64{
-        let mut nodes = 0u64;
-        for mv in MoveGen::get_pseudo_moves(position) {
-            if !MoveGen::is_move_legal(&mv, position) {
-                continue;
-            }
-            nodes += 1;
-        }
-        nodes
     }
 }
