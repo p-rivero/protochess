@@ -11,11 +11,13 @@ const BOARD_HEIGHT: BCoord = 8;
 
 #[allow(clippy::iter_nth_zero)]
 pub fn parse_fen(fen: &str) -> Position {
+    let fen_parts: Vec<&str> = fen.split_whitespace().collect();
+    assert!(fen_parts.len() >= 6, "Invalid FEN string: {}", fen);
+    let mode = fen_parts.get(6).unwrap_or(&"STANDARD");
     let mut w_pieces = PieceSet::new(0);
     let mut b_pieces = PieceSet::new(1);
-    register_pieces(&mut w_pieces, &mut b_pieces);
+    register_pieces(&mut w_pieces, &mut b_pieces, mode);
 
-    let fen_parts: Vec<&str> = fen.split_whitespace().collect();
     
     // Next to move
     let whos_turn = if fen_parts[1] == "w" {0} else {1};
@@ -120,7 +122,7 @@ pub fn parse_fen(fen: &str) -> Position {
     Position::new(dims, vec![w_pieces, b_pieces], whos_turn, properties)
 }
 
-fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet) {
+fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet, mode: &str) {
     const ID_KING: PieceId = 0;
     const ID_QUEEN: PieceId = 1;
     const ID_ROOK: PieceId = 2;
@@ -133,11 +135,12 @@ fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet) {
         w_pieces.register_piecetype(def.clone(), &dims);
         b_pieces.register_piecetype(def, &dims);
     };
-    register_piece(PieceFactory::make_king(ID_KING));
-    register_piece(PieceFactory::make_queen(ID_QUEEN));
-    register_piece(PieceFactory::make_rook(ID_ROOK));
-    register_piece(PieceFactory::make_bishop(ID_BISHOP));
-    register_piece(PieceFactory::make_knight(ID_KNIGHT));
-    w_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, true, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
-    b_pieces.register_piecetype(PieceFactory::make_pawn(ID_PAWN, false, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
+    let factory = PieceFactory::new(mode);
+    register_piece(factory.make_king(ID_KING));
+    register_piece(factory.make_queen(ID_QUEEN));
+    register_piece(factory.make_rook(ID_ROOK));
+    register_piece(factory.make_bishop(ID_BISHOP));
+    register_piece(factory.make_knight(ID_KNIGHT));
+    w_pieces.register_piecetype(factory.make_pawn(ID_PAWN, true, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
+    b_pieces.register_piecetype(factory.make_pawn(ID_PAWN, false, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
 }

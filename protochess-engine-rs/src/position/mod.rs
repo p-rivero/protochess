@@ -139,7 +139,10 @@ impl Position {
                 if could_castle {
                     new_props.zobrist_key ^= castling_zob
                 }
-                new_props.captured_piece = Some((piece_id, capt_player, could_castle));
+                new_props.captured_pieces.push((piece_id, capt_player, could_castle, capt_index));
+                
+                // Check if the capturing piece explodes
+                self.explode_piece(mv, my_player_num, &mut new_props);
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();
@@ -166,35 +169,34 @@ impl Position {
 
         let from = mv.get_from();
         let to = mv.get_to();
-        let moved_piece = self.player_piece_at_mut(my_player_num, from).unwrap();
-        let moved_piece_type = moved_piece.get_piece_id();
-        let moved_piece_new_pos_zobrist = moved_piece.get_zobrist(to);
-        new_props.zobrist_key ^= moved_piece.get_zobrist(from);
-        new_props.zobrist_key ^= moved_piece_new_pos_zobrist;
-        
-
-        // Move piece to location
-        new_props.moved_piece_castle = moved_piece.move_piece(from, to, false);
-        if new_props.moved_piece_castle {
-            // A castling piece was moved, so it cannot castle anymore
-            // Remove the castling ability from the zobrist key
-            new_props.zobrist_key ^= moved_piece.get_castle_zobrist(from);
+        // If the piece has exploded, do not move it
+        if let Some(moved_piece) = self.player_piece_at_mut(my_player_num, from) {
+            // Move piece to location
+            new_props.moved_piece_castle = moved_piece.move_piece(from, to, false);
+            new_props.zobrist_key ^= moved_piece.get_zobrist(from);
+            new_props.zobrist_key ^= moved_piece.get_zobrist(to);
+            if new_props.moved_piece_castle {
+                // A castling piece was moved, so it cannot castle anymore
+                // Remove the castling ability from the zobrist key
+                new_props.zobrist_key ^= moved_piece.get_castle_zobrist(from);
+            }
+            
+            // Promotion
+            match mv.get_move_type() {
+                MoveType::PromotionCapture | MoveType::Promotion => {
+                    // Remove zobrist hash of the old piece
+                    new_props.zobrist_key ^= moved_piece.get_zobrist(to);
+                    new_props.promote_from = Some(moved_piece.get_piece_id());
+                    // Remove old piece
+                    self.player_piece_at_mut(my_player_num, to).unwrap().remove_piece(to);
+                    // Add new piece
+                    let promote_to_pt = mv.get_promotion_piece().unwrap();
+                    let piece = self.add_piece(my_player_num, promote_to_pt, to, false);
+                    new_props.zobrist_key ^= piece.get_zobrist(to);
+                },
+                _ => {}
+            };
         }
-        // Promotion
-        match mv.get_move_type() {
-            MoveType::PromotionCapture | MoveType::Promotion => {
-                // Remove zobrist hash of the old piece
-                new_props.zobrist_key ^= moved_piece_new_pos_zobrist;
-                new_props.promote_from = Some(moved_piece_type);
-                // Remove old piece
-                self.player_piece_at_mut(my_player_num, to).unwrap().remove_piece(to);
-                // Add new piece
-                let promote_to_pt = mv.get_promotion_piece().unwrap();
-                let piece = self.add_piece(my_player_num, promote_to_pt, to, false);
-                new_props.zobrist_key ^= piece.get_zobrist(to);
-            },
-            _ => {}
-        };
 
         // Pawn en-passant
         // Check for a pawn double push to set ep square
@@ -227,6 +229,48 @@ impl Position {
         self.update_occupied();
     }
 
+    #[inline]
+    fn explode_piece(&mut self, mv: Move, my_player_num: u8, new_props: &mut PositionProperties) {
+        let from = mv.get_from();
+        let moved_piece = self.player_piece_at_mut(my_player_num, from).unwrap();
+        if !moved_piece.explodes() {
+            return;
+        }
+        // Remove the capturing piece
+        let capturing_could_castle = moved_piece.remove_piece(from);
+        new_props.zobrist_key ^= moved_piece.get_zobrist(from);
+        if capturing_could_castle {
+            new_props.zobrist_key ^= moved_piece.get_castle_zobrist(from);
+        }
+        new_props.captured_pieces.push((moved_piece.get_piece_id(), my_player_num, capturing_could_castle, from));
+        // Remove all pieces in the explosion radius
+        let (x, y) = from_index(mv.get_to());
+        
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
+                let (nx, ny) = (x as i8 + dx, y as i8 + dy);
+                if nx < 0 || ny < 0 || !self.dimensions.in_bounds(nx as BCoord, ny as BCoord) {
+                    continue;
+                }
+                let nindex = to_index(nx as BCoord, ny as BCoord);
+                if let Some(piece) = self.piece_at_mut(nindex) {
+                    if piece.immune_to_explosion() {
+                        continue;
+                    }
+                    let could_castle = piece.remove_piece(nindex);
+                    new_props.zobrist_key ^= piece.get_zobrist(nindex);
+                    if could_castle {
+                        new_props.zobrist_key ^= piece.get_castle_zobrist(nindex);
+                    }
+                    new_props.captured_pieces.push((piece.get_piece_id(), piece.get_player(), could_castle, nindex));
+                }
+            }
+        }
+    }
+
     /// Undo the most recent move
     pub fn unmake_move(&mut self) {
         
@@ -254,28 +298,33 @@ impl Position {
         let from = mv.get_from();
         let to = mv.get_to();
 
-        //Undo move piece to location
-        //Remove piece here
-        self.move_piece(my_player_num, to, from, self.properties.moved_piece_castle);
-        //Undo Promotion
-        match mv.get_move_type() {
-            MoveType::PromotionCapture | MoveType::Promotion => {
-                // Remove old piece
-                self.player_piece_at_mut(my_player_num, from).unwrap().remove_piece(from);
-                let promoted_from = self.properties.promote_from.unwrap();
-                // Assume that the piece that promoted must have moved, so it can't castle
-                self.add_piece(my_player_num, promoted_from, from, false);
-            },
-            _ => {}
-        };
+        // Undo move piece to location
+        let moved_piece_castle = self.properties.moved_piece_castle;
+        if let Some(moved_piece) = self.player_piece_at_mut(my_player_num, to) {
+            moved_piece.move_piece(to, from, moved_piece_castle);
+            
+            // Undo Promotion
+            match mv.get_move_type() {
+                MoveType::PromotionCapture | MoveType::Promotion => {
+                    // Remove old piece
+                    moved_piece.remove_piece(from);
+                    let promoted_from = self.properties.promote_from.unwrap();
+                    // Assume that the piece that promoted must have moved, so it can't castle
+                    self.add_piece(my_player_num, promoted_from, from, false);
+                },
+                _ => {}
+            };
+        }
 
-        //Undo special moves
-        //Special moves
+        // Undo special moves
+        // Special moves
         match mv.get_move_type() {
             MoveType::Capture | MoveType::PromotionCapture => {
-                let capt = mv.get_target();
-                let (piece_id, owner, captured_can_castle) = self.properties.captured_piece.unwrap();
-                self.add_piece(owner, piece_id, capt, captured_can_castle);
+                let num_captures = self.properties.captured_pieces.len();
+                for i in 0..num_captures {
+                    let (piece_id, owner, captured_can_castle, capt_index) = self.properties.captured_pieces[i];
+                    self.add_piece(owner, piece_id, capt_index, captured_can_castle);
+                }
             },
             MoveType::KingsideCastle => {
                 let rook_from = mv.get_target();

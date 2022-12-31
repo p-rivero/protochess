@@ -99,7 +99,7 @@ impl MoveGen {
         while let Some(enemy_piece_index) = slides.lowest_one() {
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // Found an enemy piece that might attack the last leader
-            if MoveGen::slide_targets_index(enemy_piece, enemy_piece_index, index, &occ_or_not_in_bounds) {
+            if MoveGen::slide_targets_index(enemy_piece, enemy_piece_index, index, &occ_or_not_in_bounds) && enemy_piece.attacking_is_legal() {
                 return true;
             }
             slides.clear_bit(enemy_piece_index);
@@ -118,7 +118,7 @@ impl MoveGen {
             }
             // Found an enemy piece that might attack the last leader
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
-            if enemy_piece.get_movement().attack_jump_deltas.contains(&(-dx, -dy)) {
+            if enemy_piece.get_movement().attack_jump_deltas.contains(&(-dx, -dy)) && enemy_piece.attacking_is_legal() {
                 return true;
             }
         }
@@ -140,7 +140,7 @@ impl MoveGen {
                 if enemy_occupied.get_bit(to) {
                     // Found an enemy piece that might attack the last leader
                     let enemy_piece = enemy_pieces.piece_at(to).unwrap();
-                    if MoveGen::sliding_delta_targets_index(enemy_piece, to, index, &occ_or_not_in_bounds) {
+                    if MoveGen::sliding_delta_targets_index(enemy_piece, to, index, &occ_or_not_in_bounds) && enemy_piece.attacking_is_legal() {
                         return true;
                     }
                     break;
@@ -212,8 +212,8 @@ impl MoveGen {
         // Try the move and skip a turn, then see if we are in check
         position.make_move(*mv, false);
         position.make_move(Move::null(), false);
-        // See if we are in check
-        let legal = !MoveGen::in_check(position);
+        // See if we are in check or an explosion has killed the last leader
+        let legal = !position.leader_is_captured() && !MoveGen::in_check(position);
         position.unmake_move();
         position.unmake_move();
         legal

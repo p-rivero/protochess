@@ -72,7 +72,6 @@ impl PieceSet {
     }
     
     pub fn get_leader(&self) -> &Piece {
-        assert!(self.leader_piece_index >= 0);
         &self.pieces[self.leader_piece_index as usize]
     }
     

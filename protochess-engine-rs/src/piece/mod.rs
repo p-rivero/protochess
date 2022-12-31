@@ -131,6 +131,20 @@ impl Piece {
         self.type_def.is_castle_rook && self.castle_squares.get_bit(index)
     }
     
+    pub fn explodes(&self) -> bool {
+        self.type_def.explodes
+    }
+    
+    pub fn immune_to_explosion(&self) -> bool {
+        self.type_def.immune_to_explosion
+    }
+    
+    #[inline]
+    pub fn attacking_is_legal(&self) -> bool {
+        // If this piece is the last leader, self-exploding is illegal
+        !self.type_def.is_leader || !self.type_def.explodes || self.num_pieces > 1
+    }
+    
     // Get the zobrist hash for this piece at the given index
     pub fn get_zobrist(&self, index: BIndex) -> u64 {
         self.zobrist_hashes[index as usize]

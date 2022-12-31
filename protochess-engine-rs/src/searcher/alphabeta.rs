@@ -27,7 +27,9 @@ impl Searcher {
         }
         
         if pos.leader_is_captured() {
-            return Ok(GAME_OVER_SCORE);
+            // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
+            let current_depth = self.current_searching_depth - depth;
+            return Ok(GAME_OVER_SCORE + current_depth as Centipawns)
         }
         
         let is_root = self.nodes_searched == 0;
@@ -197,7 +199,8 @@ impl Searcher {
     fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns) -> Centipawns {
         
         if pos.leader_is_captured() {
-            return GAME_OVER_SCORE;
+            // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
+            return GAME_OVER_SCORE + self.current_searching_depth as Centipawns
         }
         
         let score = eval::evaluate(pos);

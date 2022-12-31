@@ -1,11 +1,26 @@
 use super::{PieceDefinition, PieceId};
 use crate::types::BDimensions;
 
-pub struct PieceFactory { }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GameMode {
+    Standard,
+    Atomic
+}
+pub struct PieceFactory {
+    mode: GameMode
+}
 
 impl PieceFactory {
+    pub fn new(game_mode: &str) -> PieceFactory {
+        let mode = match game_mode {
+            "STANDARD" => GameMode::Standard,
+            "ATOMIC" => GameMode::Atomic,
+            _ => panic!("Invalid game mode: {}", game_mode)
+        };
+        PieceFactory { mode }
+    }
     
-    pub fn make_pawn(id: PieceId, is_white: bool, dims: &BDimensions, promotions: Vec<PieceId>) -> PieceDefinition {
+    pub fn make_pawn(&self, id: PieceId, is_white: bool, dims: &BDimensions, promotions: Vec<PieceId>) -> PieceDefinition {
         let promotion_rank = { if is_white { dims.height - 1 } else { 0 } };
         let double_move_rank = { if is_white { 1 } else { dims.height - 2 } };
         let mut promotion_squares = vec![];
@@ -22,6 +37,8 @@ impl PieceFactory {
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
+            explodes: self.mode == GameMode::Atomic,
+            immune_to_explosion: true,
             promotion_squares,
             double_jump_squares,
             promo_vals: promotions,
@@ -45,16 +62,18 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
-        }        
+        }
     }
     
-    pub fn make_knight(id: PieceId) -> PieceDefinition {
+    pub fn make_knight(&self, id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
             char_rep: 'N',
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
+            explodes: self.mode == GameMode::Atomic,
+            immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
             promo_vals: vec![],
@@ -81,13 +100,15 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_bishop(id: PieceId) -> PieceDefinition {
+    pub fn make_bishop(&self, id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
             char_rep: 'B',
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
+            explodes: self.mode == GameMode::Atomic,
+            immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
             promo_vals: vec![],
@@ -114,13 +135,15 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_rook(id: PieceId) -> PieceDefinition {
+    pub fn make_rook(&self, id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
             char_rep: 'R',
             is_leader: false,
             can_castle: false,
             is_castle_rook: true,
+            explodes: self.mode == GameMode::Atomic,
+            immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
             promo_vals: vec![],
@@ -147,13 +170,15 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_king(id: PieceId) -> PieceDefinition {
+    pub fn make_king(&self, id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
             char_rep: 'K',
             is_leader: true,
             can_castle: true,
             is_castle_rook: false,
+            explodes: self.mode == GameMode::Atomic,
+            immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
             promo_vals: vec![],
@@ -180,13 +205,15 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_queen(id: PieceId) -> PieceDefinition {
+    pub fn make_queen(&self, id: PieceId) -> PieceDefinition {
         PieceDefinition {
             id,
             char_rep: 'Q',
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
+            explodes: self.mode == GameMode::Atomic,
+            immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
             promo_vals: vec![],

@@ -7,7 +7,7 @@ use crate::piece::PieceId;
 use super::castled_players::CastledPlayers;
 
 /// Properties that are hard to recover from a Move
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PositionProperties {
     pub zobrist_key: u64,
     pub move_played: Option<Move>,
@@ -21,15 +21,34 @@ pub struct PositionProperties {
     pub moved_piece_castle: bool,
     // true if make_move() was called with update_reps = true
     pub update_reps: bool,
-    // Full id (piece type + player num) of the captured piece, if any.
-    // Also store whether the captured piece could castle
-    pub captured_piece: Option<(PieceId, Player, bool)>,
+    // Full id (piece type + player num) of the captured pieces, if any.
+    // Also store whether the captured piece could castle and the index where it was captured.
+    // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be many.
+    pub captured_pieces: Vec<(PieceId, Player, bool, BIndex)>,
     pub prev_properties: Option<Rc<PositionProperties>>,
 }
 
 impl PositionProperties {
     pub fn get_prev(&self) -> Option<Rc<PositionProperties>> {
         self.prev_properties.clone()
+    }
+}
+
+impl Clone for PositionProperties {
+    fn clone(&self) -> PositionProperties {
+        PositionProperties{
+            // Copy most fields
+            zobrist_key: self.zobrist_key,
+            move_played: self.move_played,
+            promote_from: self.promote_from,
+            castled_players: self.castled_players,
+            ep_square: self.ep_square,
+            ep_victim: self.ep_victim,
+            moved_piece_castle: self.moved_piece_castle,
+            update_reps: self.update_reps,
+            captured_pieces: Vec::new(), // Don't clone captured pieces
+            prev_properties: None, // Don't clone prev properties, sice they are overwritten anyway
+        }
     }
 }
 
@@ -44,7 +63,7 @@ impl Default for PositionProperties {
             ep_victim: 0,
             moved_piece_castle: false,
             update_reps: false,
-            captured_piece: None,
+            captured_pieces: Vec::new(),
             prev_properties: None,
         }
     }

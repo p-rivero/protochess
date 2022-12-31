@@ -1,6 +1,6 @@
 use crate::types::Player;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct CastledPlayers(u8);
 
 /// Castling rights for up to 8 players

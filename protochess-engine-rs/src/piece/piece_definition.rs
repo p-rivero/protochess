@@ -12,6 +12,8 @@ pub struct PieceDefinition {
     pub is_leader: bool,
     pub can_castle: bool,
     pub is_castle_rook: bool,
+    pub explodes: bool,
+    pub immune_to_explosion: bool,
     
     // Places where this piece can promote, as well as PieceId for the promotion pieces
     pub promotion_squares: Vec<(BCoord, BCoord)>,
@@ -139,6 +141,8 @@ impl Default for PieceDefinition {
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
+            explodes: false,
+            immune_to_explosion: false,
             promotion_squares: vec![],
             promo_vals: Vec::new(),
             double_jump_squares: vec![],

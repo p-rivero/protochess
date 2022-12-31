@@ -4,6 +4,9 @@ extern crate protochess_engine_rs;
 
 #[cfg(test)]
 mod perft {
+    
+    // https://www.chessprogramming.org/Perft_Results
+    
     #[test]
     fn starting_pos() {
         use protochess_engine_rs::Engine;
@@ -19,7 +22,7 @@ mod perft {
     #[test]
     fn kiwipete() {
         use protochess_engine_rs::Engine;
-        let mut engine = Engine::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+        let mut engine = Engine::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
         assert_eq!(engine.perft(1), 48);
         assert_eq!(engine.perft(2), 2039);
         assert_eq!(engine.perft(3), 97862);
@@ -30,7 +33,7 @@ mod perft {
     #[test]
     fn pos3() {
         use protochess_engine_rs::Engine;
-        let mut engine = Engine::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - ");
+        let mut engine = Engine::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
         assert_eq!(engine.perft(1), 14);
         assert_eq!(engine.perft(2), 191);
         assert_eq!(engine.perft(3), 2812);

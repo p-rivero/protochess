@@ -30,8 +30,15 @@ pub fn main() {
     }
     let mut engine = {
         if args.len() > 2 {
-            pgn_file.write_all(format!("[FEN \"{}\"]\n\n", args[2]).as_bytes()).unwrap();
-            Engine::from_fen(&args[2])
+            let fen = args[2].trim();
+            if fen.ends_with("ATOMIC") {
+                pgn_file.write_all(b"[Variant \"Atomic\"]\n").unwrap();
+                let len = fen.len() - " ATOMIC".len();
+                pgn_file.write_all(format!("[FEN \"{}\"]\n\n", &fen[..len]).as_bytes()).unwrap();
+            } else {
+                pgn_file.write_all(format!("[FEN \"{}\"]\n\n", fen).as_bytes()).unwrap();
+            }
+            Engine::from_fen(fen)
         } else {
             Engine::default()
         }
@@ -40,18 +47,20 @@ pub fn main() {
         depth = args[1].parse::<u8>().unwrap();
     }
     
-    println!("{}", engine);
+    println!("Start Position:\n{}", engine);
+    println!("\n----------------------------------------\n");
 
     let start = instant::Instant::now();
     for ply in 0..max_ply {
         let mv = engine.get_best_move(depth);
+        println!("\n========================================\n");
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
         print_pgn(&mut pgn_file, ply, to_long_algebraic_notation(&mv, &engine));
         match engine.make_move(&mv) {
             MakeMoveResult::Ok => {
                 println!("{}", engine);
-                println!("\n========================================\n");
+                println!("\n----------------------------------------\n");
             },
             MakeMoveResult::IllegalMove => {
                 panic!("An illegal move was made");

@@ -66,11 +66,11 @@ impl Searcher {
                     best_move = mv;
                     best_depth = search_depth;
                     // Print PV info
-                    println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", search_depth, mv, score, self.nodes_searched);
                     let diff = -(score.abs() + alphabeta::GAME_OVER_SCORE);
                     if diff < 200 {
-                        println!("Mate in {}", (diff+1) / 2);
+                        print!("[Mate in {}] ", (diff+1) / 2);
                     }
+                    println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", search_depth, mv, score, self.nodes_searched);
                 },
                 Err(SearchError::Timeout) => {
                     // Thread timed out, return the best move found so far
