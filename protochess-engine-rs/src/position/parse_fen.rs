@@ -22,12 +22,6 @@ pub fn parse_fen(fen: &str) -> Position {
     // Next to move
     let whos_turn = if fen_parts[1] == "w" {0} else {1};
     
-    // Castling rights
-    let can_w_castle_k = fen_parts[2].contains('K');
-    let can_b_castle_k = fen_parts[2].contains('k');
-    let can_w_castle_q = fen_parts[2].contains('Q');
-    let can_b_castle_q = fen_parts[2].contains('q');
-    
     // En passant square
     let mut ep_x: i8 = -1;
     let mut ep_y: i8 = -1;
@@ -65,31 +59,58 @@ pub fn parse_fen(fen: &str) -> Position {
     
     let mut zobrist_key = 0;
     
-    let enable_castle = |pieces: &mut PieceSet, x: BCoord, y: BCoord, zob: &mut u64| {
-        let index = to_index(x, y);
-        if let Some(piece) = pieces.piece_at_mut(index) {
-            let could_castle = piece.move_piece(index, index, true);
-            if !could_castle {
-                // Enable the castle square in zobrist key
-                *zob ^= piece.get_castle_zobrist(index);
+    // Castling rights
+    let mut enable_castle = |is_white: bool, kingside: bool, zob: &mut u64| {
+        // If kingside, traverse rank from right to left, otherwise from left to right
+        let x_vals: Vec<_> = {
+            if kingside { (0..BOARD_WIDTH).rev().collect() }
+            else { (0..BOARD_WIDTH).collect() }
+        };
+        let pieces = if is_white { &mut w_pieces } else { &mut b_pieces };
+        let rook_char = if is_white { 'R' } else { 'r' };
+        let king_char = if is_white { 'K' } else { 'k' };
+        let y = if is_white { 0 } else { BOARD_HEIGHT - 1 };
+        let mut found_rook = false;
+        for x in x_vals {
+            let index = to_index(x, y);
+            if let Some(piece) = pieces.piece_at_mut(index) {
+                // Find the first rook and enable it
+                if !found_rook && piece.char_rep() == rook_char {
+                    found_rook = true;
+                    // Enable castling in the rook square
+                    let could_castle = piece.move_piece(index, index, true);
+                    assert!(!could_castle, "Rook should not have been able to castle, FEN might be invalid");
+                    // Enable the castle square in zobrist key
+                    *zob ^= piece.get_castle_zobrist(index);
+                    continue;
+                }
+                // Next search for the king, but stop if we find another rook instead
+                if found_rook && piece.char_rep() == king_char {
+                    // Enable castling in the king square
+                    let could_castle = piece.move_piece(index, index, true);
+                    if !could_castle {
+                        // Enable the castle square in zobrist key
+                        *zob ^= piece.get_castle_zobrist(index);
+                    }
+                    break;
+                }
+                if found_rook && piece.char_rep() == rook_char {
+                    break;
+                }
             }
         }
     };
-    if can_w_castle_k {
-        enable_castle(&mut w_pieces, 7, 0, &mut zobrist_key);
-        enable_castle(&mut w_pieces, 4, 0, &mut zobrist_key);
+    if fen_parts[2].contains('K') {
+        enable_castle(true, true, &mut zobrist_key);
     }
-    if can_b_castle_k {
-        enable_castle(&mut b_pieces, 7, 7, &mut zobrist_key);
-        enable_castle(&mut b_pieces, 4, 7, &mut zobrist_key);
+    if fen_parts[2].contains('k') {
+        enable_castle(false, true, &mut zobrist_key);
     }
-    if can_w_castle_q {
-        enable_castle(&mut w_pieces, 0, 0, &mut zobrist_key);
-        enable_castle(&mut w_pieces, 4, 0, &mut zobrist_key);
+    if fen_parts[2].contains('Q') {
+        enable_castle(true, false, &mut zobrist_key);
     }
-    if can_b_castle_q {
-        enable_castle(&mut b_pieces, 0, 7, &mut zobrist_key);
-        enable_castle(&mut b_pieces, 4, 7, &mut zobrist_key);
+    if fen_parts[2].contains('q') {
+        enable_castle(false, false, &mut zobrist_key);
     }
     
     let mut properties = PositionProperties::default();

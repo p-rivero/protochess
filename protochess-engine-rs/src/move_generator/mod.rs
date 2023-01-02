@@ -73,21 +73,23 @@ impl MoveGen {
             // There are multiple leaders, so the position cannot be in check
             return false;
         }
-        MoveGen::index_in_check(my_leader.get_first_index().unwrap(), position)
+        // There is only one bit set to 1 in the bitboard
+        let index = my_leader.get_bitboard().lowest_one().unwrap();
+        MoveGen::index_in_check(index, position)
     }
 
     /// Checks if a move is legal
     pub fn is_move_legal(mv: &Move, position: &mut Position) -> bool {
         // If the move is castling, check extra conditions
         if mv.get_move_type() == MoveType::KingsideCastle || mv.get_move_type() == MoveType::QueensideCastle {
-            // Cannot castle while in check
-            if MoveGen::in_check(position) {
-                return false;
-            }
-            let step_index = { if mv.get_move_type() == MoveType::KingsideCastle { mv.get_from()+1 } else { mv.get_from()-1 } };
-            // Cannot step through check
-            if MoveGen::index_in_check(step_index, position) {
-                return false;
+            let kingside = mv.get_move_type() == MoveType::KingsideCastle;
+            // Cannot castle while in check or step through check
+            let start_index = { if kingside { mv.get_from() } else { mv.get_to() + 1 } };
+            let end_index = { if kingside { mv.get_to() - 1 } else { mv.get_from() } };
+            for step_index in start_index..=end_index {
+                if MoveGen::index_in_check(step_index, position) {
+                    return false;
+                }
             }
         }
         
@@ -118,9 +120,10 @@ impl MoveGen {
     
     /// Checks if a given square is attacked by the enemy
     fn index_in_check(index: BIndex, position: &mut Position) -> bool {
-        // Get the leader of the player to move
+        let (x, y) = from_index(index);
         let enemy = 1 - position.whos_turn;
         let enemy_pieces = &position.pieces[enemy as usize];
+        let enemy_leader = enemy_pieces.get_leader();
         let enemy_occupied = enemy_pieces.get_occupied();
         let inverse_attack = enemy_pieces.get_inverse_attack();
         // Use inverse attack pattern to get the squares that can potentially attack the square
@@ -141,16 +144,17 @@ impl MoveGen {
         );
         slides &= enemy_occupied;
         while let Some(enemy_piece_index) = slides.lowest_one() {
-            let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // Found an enemy piece that might attack the last leader
-            if MoveGen::slide_targets_index(enemy_piece, enemy_piece_index, index, &occ_or_not_in_bounds) && enemy_piece.attacking_is_legal() {
+            let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
+            // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
+            let kills_remaining_leaders = enemy_piece.explodes() && get_killed_enemy_leaders(x, y, enemy_leader, enemy_piece, enemy_piece_index) == enemy_leader.get_num_pieces();
+            if !kills_remaining_leaders && MoveGen::slide_targets_index(enemy_piece, enemy_piece_index, index, &occ_or_not_in_bounds) {
                 return true;
             }
             slides.clear_bit(enemy_piece_index);
         }
         
         // Check jump attacks
-        let (x, y) = from_index(index);
         for (dx, dy) in &inverse_attack.attack_jump_deltas {
             let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
             if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
@@ -162,7 +166,9 @@ impl MoveGen {
             }
             // Found an enemy piece that might attack the last leader
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
-            if enemy_piece.get_movement().attack_jump_deltas.contains(&(-dx, -dy)) && enemy_piece.attacking_is_legal() {
+            // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
+            let kills_remaining_leaders = enemy_piece.explodes() && get_killed_enemy_leaders(x, y, enemy_leader, enemy_piece, enemy_piece_index) == enemy_leader.get_num_pieces();
+            if !kills_remaining_leaders && enemy_piece.get_movement().attack_jump_deltas.contains(&(-dx, -dy)) {
                 return true;
             }
         }
@@ -184,7 +190,9 @@ impl MoveGen {
                 if enemy_occupied.get_bit(to) {
                     // Found an enemy piece that might attack the last leader
                     let enemy_piece = enemy_pieces.piece_at(to).unwrap();
-                    if MoveGen::sliding_delta_targets_index(enemy_piece, to, index, &occ_or_not_in_bounds) && enemy_piece.attacking_is_legal() {
+                    // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
+                    let kills_remaining_leaders = enemy_piece.explodes() && get_killed_enemy_leaders(x, y, enemy_leader, enemy_piece, to) == enemy_leader.get_num_pieces();
+                    if !kills_remaining_leaders && MoveGen::sliding_delta_targets_index(enemy_piece, to, index, &occ_or_not_in_bounds) {
                         return true;
                     }
                     break;
@@ -235,4 +243,32 @@ impl MoveGen {
         }
         false
     }
+}
+
+
+/// Returns the number of enemy leaders that would be captured if an explosion were to occur at the given coordinates
+fn get_killed_enemy_leaders(x: u8, y: u8, enemy_leader: &Piece, enemy_piece: &Piece, enemy_piece_index: u8) -> u32 {
+    let mut killed_enemy_leaders = 0;
+    for dx in -1..=1 {
+        for dy in -1..=1 {
+            let (x2, y2) = (x as i8 + dx, y as i8 + dy);
+            if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
+                continue;
+            }
+            if enemy_leader.get_bitboard().get_bit_at(x2 as BCoord, y2 as BCoord) {
+                killed_enemy_leaders += 1;
+            }
+        }
+    }
+    // Also take into account that the attacking piece might be a leader from far away
+    if enemy_piece.is_leader() {
+        let (x2, y2) = from_index(enemy_piece_index);
+        let dx = (x2 as i8 - x as i8).abs();
+        let dy = (y2 as i8 - y as i8).abs();
+        if dx > 1 || dy > 1 {
+            // The attacker is far away and has not been taken into account in the previous loop, add 1
+            killed_enemy_leaders += 1;
+        }
+    }
+    killed_enemy_leaders
 }

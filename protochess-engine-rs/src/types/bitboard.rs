@@ -108,6 +108,10 @@ impl Bitboard {
         self.board_internal.lowest_one().map(|x| x as BIndex)
     }
     #[inline]
+    pub fn highest_one(&self) -> Option<BIndex> {
+        self.board_internal.highest_one().map(|x| x as BIndex)
+    }
+    #[inline]
     pub fn count_ones(&self) -> u32 {
         self.board_internal.count_ones()
     }

@@ -116,34 +116,60 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
     
     if can_castle {
         // Able to castle, check if there is a rook on the correct square
-        let (kx, ky) = from_index(index);
+        let (_, ky) = from_index(index);
+        let rank_visibility = attack_tables.get_rank_attack(index, &position.occupied);
         
         // King side
-        let kingside_rook_index = to_index(position.dimensions.width-1, ky);
+        // Index of the closest piece to the east
+        let kingside_rook_index = rank_visibility.highest_one().unwrap();
         if let Some(rook) = position.player_piece_at(position.whos_turn, kingside_rook_index) {
             // There is a piece of the same player
-            if rook.is_castle_rook(kingside_rook_index){
-                // Rook is on the correct square and can castle (hasn't moved)
-                // Check if the squares between the king and the rook are empty
-                let east = attack_tables.masks.get_east(index);
-                let mut occ = east & &position.occupied;
-                occ.clear_bit(kingside_rook_index);
-                if occ.is_zero() {
-                    // See if we can move the king one step east without stepping into check
-                    let to_index = to_index(kx + 2, ky);
+            if rook.is_rook_and_can_castle(kingside_rook_index){
+                // Rook is in direct line of sight of the king and hasn't moved
+                // TODO: Don't hardcode the 6
+                let to_index = to_index(6, ky);
+                // Check that the squares between x=(rook_x + 1) and x=6 (both included) are empty
+                let mut empty = true;
+                for i in (kingside_rook_index as i16 + 1)..=(to_index as i16) {
+                    if position.occupied.get_bit(i as BIndex) {
+                        empty = false;
+                        break;
+                    }
+                }
+                // Check that the squares between x=5 and x=(king_x - 1) (both included) are empty
+                for i in (to_index as i16 - 1)..=(index as i16 - 1) {
+                    if position.occupied.get_bit(i as BIndex) {
+                        empty = false;
+                        break;
+                    }
+                }
+                if empty {
                     out_moves.push(Move::new(index, to_index, Some(kingside_rook_index), MoveType::KingsideCastle, None));
                 }
             }
         }
-        // Queen side (same as kingside)
-        let queenside_rook_index = to_index(0, ky);
+        // Queen side (same logic as kingside)
+        let queenside_rook_index = rank_visibility.lowest_one().unwrap();
         if let Some(rook) = position.player_piece_at(position.whos_turn, queenside_rook_index) {
-            if rook.is_castle_rook(queenside_rook_index) {
-                let west = attack_tables.masks.get_west(index);
-                let mut occ = west & &position.occupied;
-                occ.clear_bit(queenside_rook_index);
-                if occ.is_zero() {
-                    let to_index = to_index(kx - 2, ky);
+            if rook.is_rook_and_can_castle(queenside_rook_index) {
+                // TODO: Don't hardcode the 2
+                let to_index = to_index(2, ky);
+                // Check that the squares between x=2 and x=(rook_x - 1) (both included) are empty
+                let mut empty = true;
+                for i in (to_index as i16)..=(queenside_rook_index as i16 - 1) {
+                    if position.occupied.get_bit(i as BIndex) {
+                        empty = false;
+                        break;
+                    }
+                }
+                // Check that the squares between x=(king_x + 1) and x=3 (both included) are empty
+                for i in (index as i16 + 1)..=(to_index as i16 + 1) {
+                    if position.occupied.get_bit(i as BIndex) {
+                        empty = false;
+                        break;
+                    }
+                }
+                if empty {
                     out_moves.push(Move::new(index, to_index, Some(queenside_rook_index), MoveType::QueensideCastle, None));
                 }
             }

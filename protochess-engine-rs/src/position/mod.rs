@@ -144,9 +144,12 @@ impl Position {
                 // Check if the capturing piece explodes
                 self.explode_piece(mv, my_player_num, &mut new_props);
             },
-            MoveType::KingsideCastle => {
+            MoveType::KingsideCastle | MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
-                let rook_to = mv.get_to() - 1;
+                let rook_to = {
+                    if mv.get_move_type() == MoveType::KingsideCastle { mv.get_to() - 1 }
+                    else { mv.get_to() + 1 }
+                };
                 let rook_piece = self.player_piece_at(my_player_num, rook_from).unwrap();
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
                 new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
@@ -154,16 +157,6 @@ impl Position {
                 self.move_piece(my_player_num, rook_from, rook_to, false);
                 new_props.castled_players.set_player_castled(my_player_num);
             },
-            MoveType::QueensideCastle => {
-                let rook_from = mv.get_target();
-                let rook_to = mv.get_to() + 1;
-                let rook_piece = self.player_piece_at(my_player_num, rook_from).unwrap();
-                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
-                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
-                new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
-                self.move_piece(my_player_num, rook_from, rook_to, false);
-                new_props.castled_players.set_player_castled(my_player_num);
-            }
             _ => {}
         }
 
@@ -325,17 +318,17 @@ impl Position {
                     self.add_piece(owner, piece_id, capt_index, captured_can_castle);
                 }
             },
-            MoveType::KingsideCastle => {
+            MoveType::KingsideCastle | MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x - 1, y);
-                self.move_piece(self.whos_turn, rook_to, rook_from, true);
-            },
-            MoveType::QueensideCastle => {
-                let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to());
-                let rook_to = to_index(x + 1, y);
-                self.move_piece(self.whos_turn, rook_to, rook_from, true);
+                let rook_x = if mv.get_move_type() == MoveType::KingsideCastle { x - 1 } else { x + 1 };
+                let rook_to = to_index(rook_x, y);
+                // At this point, it's possible that in "rook_to" there are 2 pieces at the same time
+                // (the moved king and the rook waiting to be moved). This only happens in chess960.
+                // We want to do: self.move_piece(self.whos_turn, rook_to, rook_from, true);
+                // But we need to make sure that we are moving the rook and not the king
+                let rook = self.pieces[self.whos_turn as usize].rook_at_mut(rook_to).unwrap();
+                rook.move_piece(rook_to, rook_from, true);
             }
             _ => {}
         }

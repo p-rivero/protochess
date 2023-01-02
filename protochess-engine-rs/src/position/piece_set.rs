@@ -62,6 +62,9 @@ impl PieceSet {
     pub fn piece_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
         self.pieces.iter_mut().find(|p| p.is_at_index(index))
     }
+    pub fn rook_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
+        self.pieces.iter_mut().find(|p| p.is_rook() && p.is_at_index(index))
+    }
     
     pub fn search_by_char(&mut self, c: char) -> Option<&mut Piece> {
         self.pieces.iter_mut().find(|p| p.char_rep() == c)

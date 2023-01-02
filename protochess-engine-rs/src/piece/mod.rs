@@ -114,9 +114,6 @@ impl Piece {
         }
         indexes
     }
-    pub fn get_first_index(&self) -> Option<BIndex> {
-        self.bitboard.lowest_one()
-    }
     
     // Returns true if this piece is a leader (king)
     pub fn is_leader(&self) -> bool {
@@ -127,7 +124,10 @@ impl Piece {
         self.num_pieces
     }
     
-    pub fn is_castle_rook(&self, index: BIndex) -> bool {
+    pub fn is_rook(&self) -> bool {
+        self.type_def.is_castle_rook
+    }
+    pub fn is_rook_and_can_castle(&self, index: BIndex) -> bool {
         self.type_def.is_castle_rook && self.castle_squares.get_bit(index)
     }
     
@@ -137,12 +137,6 @@ impl Piece {
     
     pub fn immune_to_explosion(&self) -> bool {
         self.type_def.immune_to_explosion
-    }
-    
-    #[inline]
-    pub fn attacking_is_legal(&self) -> bool {
-        // If this piece is the last leader, self-exploding is illegal
-        !self.type_def.is_leader || !self.type_def.explodes || self.num_pieces > 1
     }
     
     // Get the zobrist hash for this piece at the given index
