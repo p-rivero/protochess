@@ -99,7 +99,13 @@ impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (x1, y1) = from_index(self.get_from());
         let (x2, y2) = from_index(self.get_to());
-        write!(f, "({} -> {})", to_rank_file(x1, y1),to_rank_file(x2, y2))
+        let suffix = match self.get_move_type() {
+            MoveType::KingsideCastle => ", O-O".to_string(),
+            MoveType::QueensideCastle => ", O-O-O".to_string(),
+            MoveType::Promotion => format!(" = {}", self.promotion.unwrap()),
+            _ => "".to_string()
+        };
+        write!(f, "({} -> {}{})", to_rank_file(x1, y1), to_rank_file(x2, y2), suffix)
     }
 }
 

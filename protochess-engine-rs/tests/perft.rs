@@ -79,6 +79,62 @@ mod perft {
     // https://github.com/niklasf/python-chess/blob/master/examples/perft/tricky.perft
     
     #[test]
+    fn xfen960_0() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0 1");
+        assert_eq!(engine.perft(1), 23);
+        assert_eq!(engine.perft(2), 522);
+        assert_eq!(engine.perft(3), 12333);
+        assert_eq!(engine.perft(4), 285754);
+        assert_eq!(engine.perft(5), 7096972);
+    }
+    
+    #[test]
+    fn xfen960_1() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0 1");
+        assert_eq!(engine.perft(1), 28);
+        assert_eq!(engine.perft(2), 738);
+        assert_eq!(engine.perft(3), 20218);
+        assert_eq!(engine.perft(4), 541480);
+        assert_eq!(engine.perft(5), 15194841);
+    }
+    
+    #[test]
+    fn xfen960_2() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0 1");
+        assert_eq!(engine.perft(1), 34);
+        assert_eq!(engine.perft(2), 318);
+        assert_eq!(engine.perft(3), 9002);
+        assert_eq!(engine.perft(4), 118388);
+        assert_eq!(engine.perft(5), 3223406);
+    }
+    
+    #[test]
+    fn xfen960_3() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("2r5/8/8/8/8/8/6PP/k2KR3 w K - 0 1");
+        assert_eq!(engine.perft(1), 17);
+        assert_eq!(engine.perft(2), 242);
+        assert_eq!(engine.perft(3), 3931);
+        assert_eq!(engine.perft(4), 57700);
+        assert_eq!(engine.perft(5), 985298);
+        assert_eq!(engine.perft(6), 14751778);
+    }
+    
+    #[test]
+    fn xfen960_4() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0 1");
+        assert_eq!(engine.perft(1), 19);
+        assert_eq!(engine.perft(2), 628);
+        assert_eq!(engine.perft(3), 12858);
+        assert_eq!(engine.perft(4), 405636);
+        assert_eq!(engine.perft(5), 8992652);
+    }
+    
+    #[test]
     fn gotta_love_perft_1() {
         use protochess_engine_rs::Engine;
         let mut engine = Engine::from_fen("8/ppp3p1/8/8/3p4/5Q2/1ppp2K1/brk4n w - - 0 1");
@@ -86,6 +142,8 @@ mod perft {
         assert_eq!(engine.perft(2), 390);
         assert_eq!(engine.perft(3), 9354);
         assert_eq!(engine.perft(4), 134167);
+        assert_eq!(engine.perft(5), 2922659);
+        assert_eq!(engine.perft(6), 42959630);
     }
     
     #[test]
@@ -96,6 +154,7 @@ mod perft {
         assert_eq!(engine.perft(2), 52);
         assert_eq!(engine.perft(3), 4593);
         assert_eq!(engine.perft(4), 50268);
+        assert_eq!(engine.perft(5), 4634384);
     }
     
     
@@ -121,6 +180,7 @@ mod perft {
         assert_eq!(engine.perft(2), 1238);
         assert_eq!(engine.perft(3), 45237);
         assert_eq!(engine.perft(4), 1434825);
+        assert_eq!(engine.perft(5), 50504249);
     }
     
     #[test]
@@ -131,6 +191,41 @@ mod perft {
         assert_eq!(engine.perft(2), 833);
         assert_eq!(engine.perft(3), 23353);
         assert_eq!(engine.perft(4), 714499);
+        assert_eq!(engine.perft(5), 21134061);
+    }
+    
+    #[test]
+    fn atomic960_castle_1() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("8/8/8/8/8/8/2k5/rR4KR w KQ - 0 1 ATOMIC");
+        assert_eq!(engine.perft(1), 18);
+        assert_eq!(engine.perft(2), 180);
+        assert_eq!(engine.perft(3), 4364);
+        assert_eq!(engine.perft(4), 61401);
+        assert_eq!(engine.perft(5), 1603055);
+        assert_eq!(engine.perft(6), 23969896);
+    }
+    
+    #[test]
+    fn atomic960_castle_2() {
+        use protochess_engine_rs::Engine;        
+        let mut engine = Engine::from_fen("r3k1rR/5K2/8/8/8/8/8/8 b kq - 0 1 ATOMIC");
+        assert_eq!(engine.perft(1), 25);
+        assert_eq!(engine.perft(2), 282);
+        assert_eq!(engine.perft(3), 6753);
+        assert_eq!(engine.perft(4), 98729);
+        assert_eq!(engine.perft(5), 2587730);
+    }
+    
+    #[test]
+    fn atomic960_castle_3() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("Rr2k1rR/3K4/3p4/8/8/8/7P/8 w kq - 0 1 ATOMIC");
+        assert_eq!(engine.perft(1), 21);
+        assert_eq!(engine.perft(2), 465);
+        assert_eq!(engine.perft(3), 10631);
+        assert_eq!(engine.perft(4), 241478);
+        assert_eq!(engine.perft(5), 5800275);
     }
     
     #[test]
@@ -141,6 +236,7 @@ mod perft {
         assert_eq!(engine.perft(2), 1238);
         assert_eq!(engine.perft(3), 45237);
         assert_eq!(engine.perft(4), 1434825);
+        assert_eq!(engine.perft(5), 50504249);
     }
 
 }

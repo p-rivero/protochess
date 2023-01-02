@@ -84,13 +84,24 @@ impl MoveGen {
         if mv.get_move_type() == MoveType::KingsideCastle || mv.get_move_type() == MoveType::QueensideCastle {
             let kingside = mv.get_move_type() == MoveType::KingsideCastle;
             // Cannot castle while in check or step through check
-            let start_index = { if kingside { mv.get_from() } else { mv.get_to() + 1 } };
-            let end_index = { if kingside { mv.get_to() - 1 } else { mv.get_from() } };
+            let from = mv.get_from();
+            let to = mv.get_to();
+            // Edge case in chess960 where castling does not move the king,
+            // in which case the loop below will not check the king's position
+            if from == to && MoveGen::index_in_check(from, position) {
+                return false;
+            }
+            let start_index = { if kingside { from } else { to + 1 } };
+            let end_index = { if kingside { to - 1 } else { from } };
+            // Hide the castling piece from the occupied bitboard so that it doesn't get in the way of check detection
+            position.occupied.clear_bit(from);
             for step_index in start_index..=end_index {
                 if MoveGen::index_in_check(step_index, position) {
+                    position.occupied.set_bit(from);
                     return false;
                 }
             }
+            position.occupied.set_bit(from);
         }
         
         // Try the move and skip a turn, then see if we are in check
