@@ -125,44 +125,29 @@ impl Position {
             return;
         }
 
-        //Special moves
-        match mv.get_move_type() {
-            MoveType::Capture | MoveType::PromotionCapture => {
-                let capt_index = mv.get_target();
-                let captured_piece = self.player_piece_at(self.whos_turn, capt_index).unwrap();
-                let piece_id = captured_piece.get_piece_id();
-                let capt_player = captured_piece.get_player();
-                let castling_zob = captured_piece.get_castle_zobrist(capt_index);
-                new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
-                
-                let could_castle = self.player_piece_at_mut(capt_player, capt_index).unwrap().remove_piece(capt_index);
-                if could_castle {
-                    new_props.zobrist_key ^= castling_zob
-                }
-                new_props.captured_pieces.push((piece_id, capt_player, could_castle, capt_index));
-                
-                // Check if the capturing piece explodes
-                self.explode_piece(mv, my_player_num, &mut new_props);
-            },
-            MoveType::KingsideCastle | MoveType::QueensideCastle => {
-                let rook_from = mv.get_target();
-                let rook_to = {
-                    if mv.get_move_type() == MoveType::KingsideCastle { mv.get_to() - 1 }
-                    else { mv.get_to() + 1 }
-                };
-                let rook_piece = self.player_piece_at(my_player_num, rook_from).unwrap();
-                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
-                new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
-                new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
-                self.move_piece(my_player_num, rook_from, rook_to, false);
-                new_props.castled_players.set_player_castled(my_player_num);
-            },
-            _ => {}
+        // If this move is a capture, remove the captured piece before moving
+        let move_type = mv.get_move_type();
+        if move_type == MoveType::Capture || move_type == MoveType::PromotionCapture {
+            let capt_index = mv.get_target();
+            let captured_piece = self.player_piece_at(self.whos_turn, capt_index).unwrap();
+            let piece_id = captured_piece.get_piece_id();
+            let capt_player = captured_piece.get_player();
+            let castling_zob = captured_piece.get_castle_zobrist(capt_index);
+            new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
+    
+            let could_castle = self.player_piece_at_mut(capt_player, capt_index).unwrap().remove_piece(capt_index);
+            if could_castle {
+                new_props.zobrist_key ^= castling_zob
+            }
+            new_props.captured_pieces.push((piece_id, capt_player, could_castle, capt_index));
+    
+            // Check if the capturing piece explodes
+            self.explode_piece(mv, my_player_num, &mut new_props);
         }
 
         let from = mv.get_from();
         let to = mv.get_to();
-        // If the piece has exploded, do not move it
+        // Move the piece (only if it hasn't exploded)
         if let Some(moved_piece) = self.player_piece_at_mut(my_player_num, from) {
             // Move piece to location
             new_props.moved_piece_castle = moved_piece.move_piece(from, to, false);
@@ -189,6 +174,24 @@ impl Position {
                 },
                 _ => {}
             };
+        }
+        
+        // If this move is a castle, also move the rook
+        if move_type == MoveType::KingsideCastle || move_type == MoveType::QueensideCastle {
+            let rook_from = mv.get_target();
+            let rook_to = {
+                if mv.get_move_type() == MoveType::KingsideCastle { to - 1 }
+                else { to + 1 }
+            };
+            // At this point, it's possible that in "rook_from" there are 2 pieces at the same time
+            // (the moved king and the rook waiting to be moved). This only happens in chess960.
+            // Use rook_at_mut() to make sure that we are moving the rook and not the king
+            let rook_piece = self.pieces[my_player_num as usize].rook_at_mut(rook_from).unwrap();
+            new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
+            new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
+            new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
+            rook_piece.move_piece(rook_from, rook_to, false);
+            new_props.castled_players.set_player_castled(my_player_num);
         }
 
         // Pawn en-passant
@@ -325,8 +328,7 @@ impl Position {
                 let rook_to = to_index(rook_x, y);
                 // At this point, it's possible that in "rook_to" there are 2 pieces at the same time
                 // (the moved king and the rook waiting to be moved). This only happens in chess960.
-                // We want to do: self.move_piece(self.whos_turn, rook_to, rook_from, true);
-                // But we need to make sure that we are moving the rook and not the king
+                // Use rook_at_mut() to make sure that we are moving the rook and not the king
                 let rook = self.pieces[self.whos_turn as usize].rook_at_mut(rook_to).unwrap();
                 rook.move_piece(rook_to, rook_from, true);
             }
@@ -493,17 +495,6 @@ impl Position {
         let piece = self.pieces[owner as usize].iter_mut().find(|c| c.get_piece_id() == piece_id).unwrap();
         piece.add_piece(index, can_castle);
         piece
-    }
-    
-    /// Move a piece from one index to another
-    /// If set_can_castle is true, set the new index as a castle square.
-    /// Returns true if the piece could castle before this move
-    fn move_piece(&mut self, player: Player,  from: BIndex, to: BIndex, can_castle: bool) -> bool {
-        if let Some(piece) = self.player_piece_at_mut(player, from) {
-            piece.move_piece(from, to, can_castle)
-        } else {
-            panic!("No piece at {} to move to {}", from, to);
-        }
     }
 
     /// Updates the occupied bitboard

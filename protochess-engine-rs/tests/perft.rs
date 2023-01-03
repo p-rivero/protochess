@@ -157,6 +157,18 @@ mod perft {
         assert_eq!(engine.perft(5), 4634384);
     }
     
+    #[test]
+    fn chess960_swap_castling() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("2rkr3/8/8/8/8/1PP5/P4PP1/5KR1 b Kkq - 0 2");
+        assert_eq!(engine.perft(1), 22);
+        assert_eq!(engine.perft(2), 222);
+        assert_eq!(engine.perft(3), 5182);
+        assert_eq!(engine.perft(4), 60618);
+        assert_eq!(engine.perft(5), 1499136);
+        assert_eq!(engine.perft(6), 20508951);
+    }
+    
     
     // https://github.com/niklasf/python-chess/blob/master/examples/perft/atomic.perft
     
