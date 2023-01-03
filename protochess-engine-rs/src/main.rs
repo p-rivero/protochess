@@ -129,10 +129,10 @@ pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
     };
     
     match result.as_str() {
-        "Ke1g1" => "O-O".to_string(),
-        "Ke1c1" => "O-O-O".to_string(),
-        "Ke8g8" => "O-O".to_string(),
-        "Ke8c8" => "O-O-O".to_string(),
+        "Ke1h1" => "O-O".to_string(),
+        "Ke1a1" => "O-O-O".to_string(),
+        "Ke8h8" => "O-O".to_string(),
+        "Ke8a8" => "O-O-O".to_string(),
         _ => result
     }
 }
