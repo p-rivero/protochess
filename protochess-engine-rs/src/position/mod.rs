@@ -287,7 +287,7 @@ impl Position {
         let mv = props.move_played.expect("No move to undo");
         
         // Undo null moves
-        if mv.get_move_type() == MoveType::Null {
+        if mv.is_null() {
             return;
         }
         let from = mv.get_from();

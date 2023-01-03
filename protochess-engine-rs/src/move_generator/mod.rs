@@ -80,10 +80,9 @@ impl MoveGen {
 
     /// Checks if a move is legal
     pub fn is_move_legal(mv: &Move, position: &mut Position) -> bool {
-        // If the move is castling, check extra conditions
-        if mv.get_move_type() == MoveType::KingsideCastle || mv.get_move_type() == MoveType::QueensideCastle {
+        // Cannot castle while in check or step through check
+        if mv.is_castling() {
             let kingside = mv.get_move_type() == MoveType::KingsideCastle;
-            // Cannot castle while in check or step through check
             let from = mv.get_from();
             let to = mv.get_to();
             // Edge case in chess960 where castling does not move the king,

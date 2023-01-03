@@ -74,6 +74,11 @@ impl Move {
         // The least significant bit of the move type is used to indicate capture
         ((self.move_fields >> 24) & 1) != 0
     }
+    
+    pub fn is_castling(&self) -> bool {
+        let move_type = self.get_move_type();
+        move_type == MoveType::KingsideCastle || move_type == MoveType::QueensideCastle
+    }
 
     #[inline]
     pub fn get_move_type(&self) -> MoveType {
@@ -120,7 +125,14 @@ pub struct MoveInfo {
 impl MoveInfo {
     pub fn from_move(m: Move) -> MoveInfo {
         let (from_x, from_y) = from_index(m.get_from());
-        let (to_x, to_y) = from_index(m.get_to());
+        let (to_x, to_y) = {
+            if m.is_castling() {
+                // Castling moves are stored as if the king moves to the rook's square
+                from_index(m.get_target())
+            } else {
+                from_index(m.get_to())
+            }
+        };
         MoveInfo {
             from: (from_x, from_y),
             to: (to_x, to_y),
@@ -151,8 +163,15 @@ impl MoveInfo {
     }
     
     pub fn matches_move(&self, m: Move) -> bool {
-        let (from_x, from_y) = from_index(m.get_from());
-        let (to_x, to_y) = from_index(m.get_to());
-        self.from == (from_x, from_y) && self.to == (to_x, to_y) && self.promotion == m.get_promotion_piece()
+        let from = from_index(m.get_from());
+        let to = {
+            if m.is_castling() {
+                // Castling moves are stored as if the king moves to the rook's square
+                from_index(m.get_target())
+            } else {
+                from_index(m.get_to())
+            }
+        };
+        self.from == from && self.to == to && self.promotion == m.get_promotion_piece()
     }
 }
