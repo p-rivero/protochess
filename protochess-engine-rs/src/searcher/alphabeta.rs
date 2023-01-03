@@ -23,7 +23,7 @@ impl Searcher {
         }
         
         if depth == 0 {
-            return Ok(self.quiesce(pos, alpha, beta, 0));
+            return self.quiesce(pos, alpha, beta, end_time, 0);
         }
         
         if pos.leader_is_captured() {
@@ -34,11 +34,9 @@ impl Searcher {
         
         let is_root = self.nodes_searched == 0;
         self.nodes_searched += 1;
-        if self.nodes_searched.trailing_zeros() >= 19 {
-            // Check for timeout periodically (~500k nodes)
-            if Instant::now() >= *end_time {
-                return Err(SearchError::Timeout);
-            }
+        // Check for timeout periodically
+        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
+            return Err(SearchError::Timeout);
         }
 
         let is_pv = alpha != beta - 1;
@@ -196,18 +194,24 @@ impl Searcher {
 
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
-    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, quiesce_depth: u8) -> Centipawns {
+    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, end_time: &Instant, quiesce_depth: u8) -> Result<Centipawns, SearchError> {
         
         if pos.leader_is_captured() {
             // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
             // depth in quiesce() is increased by 1 for each ply (in alphabeta it's decreased)
-            return GAME_OVER_SCORE + self.current_searching_depth as Centipawns + quiesce_depth as Centipawns;
+            return Ok(GAME_OVER_SCORE + self.current_searching_depth as Centipawns + quiesce_depth as Centipawns);
+        }
+        
+        self.nodes_searched += 1;
+        // Check for timeout periodically
+        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
+            return Err(SearchError::Timeout);
         }
         
         let score = eval::evaluate(pos);
         
         if score >= beta {
-            return beta;
+            return Ok(beta);
         }
         if score > alpha {
             alpha = score;
@@ -222,17 +226,17 @@ impl Searcher {
             
             // This is a capture move, so there is no need to check for repetition
             pos.make_move(mv, false);
-            let score = -self.quiesce(pos, -beta, -alpha, quiesce_depth + 1);
+            let score = -self.quiesce(pos, -beta, -alpha, end_time, quiesce_depth + 1)?;
             pos.unmake_move();
 
             if score >= beta {
-                return beta;
+                return Ok(beta);
             }
             if score > alpha {
                 alpha = score;
             }
         }
-        alpha
+        Ok(alpha)
     }
 
     #[inline]
