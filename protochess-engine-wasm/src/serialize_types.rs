@@ -97,6 +97,7 @@ impl MakeMoveResultWithDepthSer {
 generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     id, u32,
     char_rep, char,
+    available_for, Vec<u8>,
     is_leader, bool,
     can_castle, bool,
     is_castle_rook, bool,

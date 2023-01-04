@@ -153,8 +153,12 @@ fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet, mode: &str)
     let dims = BDimensions::new_without_walls(BOARD_WIDTH, BOARD_HEIGHT);
     
     let mut register_piece = |def: crate::PieceDefinition| {
-        w_pieces.register_piecetype(def.clone(), &dims);
-        b_pieces.register_piecetype(def, &dims);
+        if def.available_for.contains(&0) {
+            w_pieces.register_piecetype(def.clone(), &dims);
+        }
+        if def.available_for.contains(&1) {
+            b_pieces.register_piecetype(def, &dims);
+        }
     };
     let factory = PieceFactory::new(mode);
     register_piece(factory.make_king(ID_KING));
@@ -162,6 +166,6 @@ fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet, mode: &str)
     register_piece(factory.make_rook(ID_ROOK));
     register_piece(factory.make_bishop(ID_BISHOP));
     register_piece(factory.make_knight(ID_KNIGHT));
-    w_pieces.register_piecetype(factory.make_pawn(ID_PAWN, true, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
-    b_pieces.register_piecetype(factory.make_pawn(ID_PAWN, false, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]), &dims);
+    register_piece(factory.make_pawn(ID_PAWN, true, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]));
+    register_piece(factory.make_pawn(ID_PAWN, false, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]));
 }

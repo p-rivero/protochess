@@ -4,7 +4,8 @@ use crate::types::BDimensions;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GameMode {
     Standard,
-    Atomic
+    Atomic,
+    Horde,
 }
 pub struct PieceFactory {
     mode: GameMode
@@ -12,9 +13,10 @@ pub struct PieceFactory {
 
 impl PieceFactory {
     pub fn new(game_mode: &str) -> PieceFactory {
-        let mode = match game_mode {
-            "STANDARD" => GameMode::Standard,
-            "ATOMIC" => GameMode::Atomic,
+        let mode = match game_mode.to_ascii_lowercase().as_str() {
+            "standard" => GameMode::Standard,
+            "atomic" => GameMode::Atomic,
+            "horde" => GameMode::Horde,
             _ => panic!("Invalid game mode: {}", game_mode)
         };
         PieceFactory { mode }
@@ -34,7 +36,8 @@ impl PieceFactory {
         PieceDefinition {
             id,
             char_rep: 'P',
-            is_leader: false,
+            available_for: if is_white { vec![0] } else { vec![1] },
+            is_leader: self.mode == GameMode::Horde && is_white,
             can_castle: false,
             is_castle_rook: false,
             explodes: self.mode == GameMode::Atomic,
@@ -69,6 +72,7 @@ impl PieceFactory {
         PieceDefinition {
             id,
             char_rep: 'N',
+            available_for: vec![0, 1],
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
@@ -104,6 +108,7 @@ impl PieceFactory {
         PieceDefinition {
             id,
             char_rep: 'B',
+            available_for: vec![0, 1],
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
@@ -139,6 +144,7 @@ impl PieceFactory {
         PieceDefinition {
             id,
             char_rep: 'R',
+            available_for: vec![0, 1],
             is_leader: false,
             can_castle: false,
             is_castle_rook: true,
@@ -174,6 +180,7 @@ impl PieceFactory {
         PieceDefinition {
             id,
             char_rep: 'K',
+            available_for: if self.mode == GameMode::Horde { vec![1] } else { vec![0, 1] },
             is_leader: true,
             can_castle: true,
             is_castle_rook: false,
@@ -209,6 +216,7 @@ impl PieceFactory {
         PieceDefinition {
             id,
             char_rep: 'Q',
+            available_for: vec![0, 1],
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,
@@ -238,5 +246,11 @@ impl PieceFactory {
             translate_southeast: true,
             translate_southwest: true,
         }
+    }
+}
+
+impl Default for PieceFactory {
+    fn default() -> Self {
+        PieceFactory { mode: GameMode::Standard }
     }
 }

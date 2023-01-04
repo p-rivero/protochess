@@ -1,4 +1,4 @@
-use crate::types::{Bitboard, BCoord};
+use crate::types::{Bitboard, BCoord, Player};
 use super::PieceId;
 
 
@@ -8,6 +8,7 @@ use super::PieceId;
 pub struct PieceDefinition {
     pub id: PieceId,
     pub char_rep: char,
+    pub available_for: Vec<Player>,
     
     pub is_leader: bool,
     pub can_castle: bool,
@@ -138,6 +139,7 @@ impl Default for PieceDefinition {
         PieceDefinition {
             id: 0,
             char_rep: '?',
+            available_for: vec![],
             is_leader: false,
             can_castle: false,
             is_castle_rook: false,

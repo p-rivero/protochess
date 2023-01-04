@@ -30,14 +30,8 @@ pub fn main() {
     }
     let mut engine = {
         if args.len() > 2 {
-            let fen = args[2].trim();
-            if fen.ends_with("ATOMIC") {
-                pgn_file.write_all(b"[Variant \"Atomic\"]\n").unwrap();
-                let len = fen.len() - " ATOMIC".len();
-                pgn_file.write_all(format!("[FEN \"{}\"]\n\n", &fen[..len]).as_bytes()).unwrap();
-            } else {
-                pgn_file.write_all(format!("[FEN \"{}\"]\n\n", fen).as_bytes()).unwrap();
-            }
+            let fen = &args[2];
+            print_pgn_header(fen, &mut pgn_file);
             Engine::from_fen(fen)
         } else {
             Engine::default()
@@ -97,6 +91,18 @@ pub fn main() {
             },
         }
     }
+}
+
+fn print_pgn_header(fen: &String, pgn_file: &mut std::fs::File) {
+    const STD_FEN_SIZE: usize = 6;
+    let fen_vec: Vec<_> = fen.split_whitespace().collect();
+    assert!(fen_vec.len() >= STD_FEN_SIZE);
+    if fen_vec.len() > STD_FEN_SIZE {
+        let variant = fen_vec.last().unwrap();
+        pgn_file.write_all(format!("[Variant \"{}\"]\n", variant).as_bytes()).unwrap();
+    }
+    let std_fen = fen_vec[0..STD_FEN_SIZE].join(" ");
+    pgn_file.write_all(format!("[FEN \"{}\"]\n\n", std_fen).as_bytes()).unwrap();
 }
 
 fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: String) {

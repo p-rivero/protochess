@@ -85,12 +85,11 @@ impl Position {
         }
     }
 
-    /// Registers a new piece type for this position
+    /// Registers a new piece type for a given player in this position
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
-        // Insert piece for all players
-        let dims_copy = self.dimensions.clone();
-        for piece_set in &mut self.pieces {
-            piece_set.register_piecetype(definition.clone(), &dims_copy);
+        // Insert piece for all players specified in the definition
+        for player in &definition.available_for {
+            self.pieces[*player as usize].register_piecetype(definition.clone(), &self.dimensions);
         }
     }
 
@@ -426,8 +425,12 @@ impl Position {
     }
     
     pub fn search_piece_by_id(&self, piece_id: PieceId) -> Option<&Piece> {
-        // Pieces are registered in all piecesets, just search the first one
-        self.pieces[0].search_by_id(piece_id)
+        for ps in &self.pieces {
+            if let Some(piece) = ps.search_by_id(piece_id) {
+                return Some(piece);
+            }
+        }
+        None
     }
     
     /// Returns if the point is in bounds

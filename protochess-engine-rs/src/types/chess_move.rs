@@ -115,7 +115,7 @@ impl fmt::Display for Move {
 }
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MoveInfo {
     pub from: (BCoord, BCoord),
     pub to: (BCoord, BCoord),
@@ -124,8 +124,8 @@ pub struct MoveInfo {
 
 impl MoveInfo {
     pub fn from_move(m: Move) -> MoveInfo {
-        let (from_x, from_y) = from_index(m.get_from());
-        let (to_x, to_y) = {
+        let from = from_index(m.get_from());
+        let to = {
             if m.is_castling() {
                 // Castling moves are stored as if the king moves to the rook's square
                 from_index(m.get_target())
@@ -133,11 +133,7 @@ impl MoveInfo {
                 from_index(m.get_to())
             }
         };
-        MoveInfo {
-            from: (from_x, from_y),
-            to: (to_x, to_y),
-            promotion: m.get_promotion_piece()
-        }
+        MoveInfo { from, to, promotion: m.get_promotion_piece() }
     }
     
     // Create a MoveInfo from a string like "e2e4" or "e7e8=123" (promotion to piece with id 123)
@@ -163,15 +159,6 @@ impl MoveInfo {
     }
     
     pub fn matches_move(&self, m: Move) -> bool {
-        let from = from_index(m.get_from());
-        let to = {
-            if m.is_castling() {
-                // Castling moves are stored as if the king moves to the rook's square
-                from_index(m.get_target())
-            } else {
-                from_index(m.get_to())
-            }
-        };
-        self.from == from && self.to == to && self.promotion == m.get_promotion_piece()
+        self == &MoveInfo::from_move(m)
     }
 }
