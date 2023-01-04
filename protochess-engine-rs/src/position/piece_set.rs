@@ -36,6 +36,9 @@ impl PieceSet {
             assert!(self.leader_piece_index == -1, "Only one leader piece per player");
             self.leader_piece_index = self.pieces.len() as isize;
         }
+        for p in &self.pieces {
+            assert!(p.get_piece_id() != definition.id, "There is already a piece with this id");
+        }
         
         let piece = Piece::new(definition, self.player_num, dims);
         self.pieces.push(piece);
