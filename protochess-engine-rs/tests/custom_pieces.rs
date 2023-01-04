@@ -50,7 +50,7 @@ mod custom_pieces {
         assert_eq!(engine.get_score(), 0);
         // Add a queen to the board
         engine.add_piece(0, 123 as PieceId, 0, 3);
-        let queen_material = 1040;
+        let queen_material = 1014;
         let queen_position = 10;
         assert_eq!(engine.get_score(), queen_material + queen_position);
     }
@@ -122,7 +122,7 @@ mod custom_pieces {
         
         assert_eq!(bishop.get_piece_id(), 123);
         assert_eq!(bishop.get_player(), 0);
-        assert_eq!(bishop.get_material_score(), 370);
+        assert_eq!(bishop.get_material_score(), 336);
         assert_eq!(bishop.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(bishop.get_positional_score_all(), 0); // No pieces on the board
         
@@ -143,7 +143,7 @@ mod custom_pieces {
         
         assert_eq!(rook.get_piece_id(), 123);
         assert_eq!(rook.get_player(), 0);
-        assert_eq!(rook.get_material_score(), 520);
+        assert_eq!(rook.get_material_score(), 528);
         assert_eq!(rook.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(rook.get_positional_score_all(), 0); // No pieces on the board
         
@@ -164,7 +164,7 @@ mod custom_pieces {
         
         assert_eq!(queen.get_piece_id(), 123);
         assert_eq!(queen.get_player(), 0);
-        assert_eq!(queen.get_material_score(), 1040);
+        assert_eq!(queen.get_material_score(), 1014);
         assert_eq!(queen.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(queen.get_positional_score_all(), 0); // No pieces on the board
         
@@ -185,7 +185,7 @@ mod custom_pieces {
         
         assert_eq!(king.get_piece_id(), 123);
         assert_eq!(king.get_player(), 0);
-        assert_eq!(king.get_material_score(), 320 * 2);
+        assert_eq!(king.get_material_score(), 320 * 4);
         assert_eq!(king.get_material_score_all(), 0); // No pieces on the board
         assert_eq!(king.get_positional_score_all(), 0); // No pieces on the board
         

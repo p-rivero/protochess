@@ -1,32 +1,42 @@
 use super::super::PieceDefinition;
-use crate::types::Centipawns;
+use crate::utils::to_index;
+use crate::MoveGen;
+use crate::types::{Centipawns, BDimensions, BIndex, Bitboard};
 
 /// Returns a score value for a piece, given its movement pattern
-pub fn compute_material_score(mp: &PieceDefinition) -> Centipawns {
+pub fn compute_material_score(mp: &PieceDefinition, dims: &BDimensions) -> Centipawns {
+    // This function is called only once, so it's worth it to implement a more complex scoring system
     // https://www.chessprogramming.org/Point_Value
     
-    // This function is called only once, so it's worth it to implement a more complex scoring system
+    const ATTACK_MUL: f32 = 10.0;
+    const TRANSLATE_MUL: f32 = 6.5;
     
-    let mut score: Centipawns = 0;
+    let mut score = 0;
+    
+    let attables = MoveGen::attack_tables();
+    let width = average_dimension(dims, |index, walls| attables.get_rank_attack(index, walls));
+    let height = average_dimension(dims, |index, walls| attables.get_file_attack(index, walls));
+    let diag = 1.4 * average_dimension(dims, |index, walls| attables.get_diagonal_attack(index, walls));
+    let antidiag = 1.4 * average_dimension(dims, |index, walls| attables.get_antidiagonal_attack(index, walls));
     
     // 130 centipawns for each direction (Rook is 4*130 = 520 centipawns, Queen is 8*130 = 1040 centipawns)
-    if mp.attack_north {score += 80}
-    if mp.translate_north {score += 50}
-    if mp.attack_east {score += 80}
-    if mp.translate_east {score += 50}
-    if mp.attack_south {score += 80}
-    if mp.translate_south {score += 50}
-    if mp.attack_west {score += 80}
-    if mp.translate_west {score += 50}
+    if mp.attack_north { score += (ATTACK_MUL * height) as Centipawns }
+    if mp.attack_south { score += (ATTACK_MUL * height) as Centipawns }
+    if mp.attack_east  { score += (ATTACK_MUL * width) as Centipawns }
+    if mp.attack_west  { score += (ATTACK_MUL * width) as Centipawns }
+    if mp.translate_north { score += (TRANSLATE_MUL * height) as Centipawns }
+    if mp.translate_south { score += (TRANSLATE_MUL * height) as Centipawns }
+    if mp.translate_east  { score += (TRANSLATE_MUL * width) as Centipawns }
+    if mp.translate_west  { score += (TRANSLATE_MUL * width) as Centipawns }
     
-    if mp.attack_northeast {score += 80}
-    if mp.translate_northeast {score += 50}
-    if mp.attack_northwest {score += 80}
-    if mp.translate_northwest {score += 50}
-    if mp.attack_southeast {score += 80}
-    if mp.translate_southeast {score += 50}
-    if mp.attack_southwest {score += 80}
-    if mp.translate_southwest {score += 50}
+    if mp.attack_northeast { score += (ATTACK_MUL * diag) as Centipawns }
+    if mp.attack_southwest { score += (ATTACK_MUL * diag) as Centipawns }
+    if mp.attack_northwest { score += (ATTACK_MUL * antidiag) as Centipawns }
+    if mp.attack_southeast { score += (ATTACK_MUL * antidiag) as Centipawns }
+    if mp.translate_northeast { score += (TRANSLATE_MUL * diag) as Centipawns }
+    if mp.translate_southwest { score += (TRANSLATE_MUL * diag) as Centipawns }
+    if mp.translate_northwest { score += (TRANSLATE_MUL * antidiag) as Centipawns }
+    if mp.translate_southeast { score += (TRANSLATE_MUL * antidiag) as Centipawns }
     
     let only_able_to_slide = !mp.can_promote() && !mp.can_jump() && !mp.has_sliding_deltas();
     
@@ -65,10 +75,31 @@ pub fn compute_material_score(mp: &PieceDefinition) -> Centipawns {
     }
     
     if mp.is_leader {
-        // Leader piece is 2x the value of the regular piece
-        score *= 2;
+        // Leader piece is 4x the value of the regular piece
+        score *= 4;
     }
     
     // Minimum score is 10
     std::cmp::max(score, 10)
+}
+
+/// Returns the average dimension (width, height, diagonals) of the board, from all legal indexes
+/// Gets a callback function that returns the desired dimension for a given index
+fn average_dimension<F>(dims: &BDimensions, measure_funct: F) -> f32 
+    where F: Fn(BIndex, &Bitboard) -> Bitboard
+{
+    let walls = !&dims.bounds;
+    let mut total = 0.0;
+    let mut count = 0.0;
+    for x in 0..dims.width {
+        for y in 0..dims.height {
+            let index = to_index(x, y);
+            if !dims.bounds.get_bit(index) {
+                continue; // Skip illegal indexes
+            }
+            total += measure_funct(index, &walls).count_ones() as f32;
+            count += 1.0;
+        }
+    }
+    total / count
 }

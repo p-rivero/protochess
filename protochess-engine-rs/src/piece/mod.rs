@@ -64,7 +64,7 @@ impl Piece {
         // Cannot be castle rook and can castle at the same time
         assert!(!(definition.can_castle && definition.is_castle_rook));
         
-        let material_score = compute_material_score(&definition);
+        let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims);
         Piece {
