@@ -223,9 +223,8 @@ impl Piece {
         let mut bb_copy = self.bitboard.clone();
         while let Some(index) = bb_copy.lowest_one() {
             let can_castle = self.type_def.can_castle && self.castle_squares.get_bit(index);
-            let can_double_jump = self.double_jump_squares.get_bit(index);
             output_translations(&self.type_def, index, position, enemies, &self.promotion_squares,
-                occ_or_not_in_bounds, can_castle, can_double_jump, out_bb_moves, out_moves);
+                occ_or_not_in_bounds, can_castle, &self.double_jump_squares, out_bb_moves, out_moves);
             output_captures(&self.type_def, index, position, enemies, &self.promotion_squares,
                 occ_or_not_in_bounds, out_bb_moves, out_moves);
             bb_copy.clear_bit(index);

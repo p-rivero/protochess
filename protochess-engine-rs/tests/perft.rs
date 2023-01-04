@@ -251,4 +251,42 @@ mod perft {
         assert_eq!(engine.perft(5), 50504249);
     }
 
+    
+    // https://github.com/niklasf/python-chess/blob/master/examples/perft/horde.perft
+    
+    #[test]
+    fn horde_start() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1 HORDE");
+        assert_eq!(engine.perft(1), 8);
+        assert_eq!(engine.perft(2), 128);
+        assert_eq!(engine.perft(3), 1274);
+        assert_eq!(engine.perft(4), 23310);
+        assert_eq!(engine.perft(5), 265223);
+        assert_eq!(engine.perft(6), 5396554);
+    }
+    
+    #[test]
+    fn horde_open_flank() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("4k3/pp4q1/3P2p1/8/P3PP2/PPP2r2/PPP5/PPPP4 b - - 0 1 HORDE");
+        assert_eq!(engine.perft(1), 30);
+        assert_eq!(engine.perft(2), 241);
+        assert_eq!(engine.perft(3), 6633);
+        assert_eq!(engine.perft(4), 56539);
+        assert_eq!(engine.perft(5), 1573347);
+        assert_eq!(engine.perft(6), 14177327);
+    }
+    
+    #[test]
+    fn horde_en_passant() {
+        use protochess_engine_rs::Engine;
+        let mut engine = Engine::from_fen("k7/5p2/4p2P/3p2P1/2p2P2/1p2P2P/p2P2P1/2P2P2 w - - 0 1 HORDE");
+        assert_eq!(engine.perft(1), 13);
+        assert_eq!(engine.perft(2), 172);
+        assert_eq!(engine.perft(3), 2205);
+        assert_eq!(engine.perft(4), 33781);
+        assert_eq!(engine.perft(5), 426584);
+        assert_eq!(engine.perft(6), 7174007);
+    }
 }

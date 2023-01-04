@@ -9,7 +9,7 @@ use crate::move_generator::bitboard_moves::BitboardMoves;
 #[inline]
 pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         position: &Position, enemies: &Bitboard, promotion_squares: &Bitboard,
-        occ_or_not_in_bounds: &Bitboard, can_castle: bool, can_double_jump: bool,
+        occ_or_not_in_bounds: &Bitboard, can_castle: bool, double_jump_squares: &Bitboard,
         out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
 {
     let attack_tables = MoveGen::attack_tables();
@@ -61,7 +61,7 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
                 out_moves.push(Move::new(index, to, None, MoveType::Quiet, None));
             }
             
-            if can_double_jump {
+            if double_jump_squares.get_bit(index) {
                 // Jump again
                 for (dx2, dy2) in &movement.translate_jump_deltas {
                     let (x3, y3) = (x2 as i8 + *dx2, y2 as i8 + *dy2);
@@ -76,8 +76,10 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
                             for c in &movement.promo_vals {
                                 out_moves.push(Move::new(index, to2, None, MoveType::Promotion, Some(*c)));
                             }
+                        } else if double_jump_squares.get_bit(to) {
+                            // In double jump, the first jump index (to) is an en passant square (unless it's also a double jump square)
+                            out_moves.push(Move::new(index, to2, None, MoveType::Quiet, None));
                         } else {
-                            // In double jump, the first jump index (to) is an en passant square
                             out_moves.push(Move::new(index, to2, Some(to), MoveType::DoubleJump, None));
                         }
                     }
