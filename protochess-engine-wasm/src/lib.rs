@@ -1,7 +1,7 @@
 mod utils;
 mod serialize_types;
 
-use protochess_engine_rs::{Engine, MoveInfo};
+use protochess_engine_rs::Engine;
 use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
 
@@ -55,20 +55,9 @@ impl Protochess {
         MakeMoveResultWithDepthSer::to_js(&move_result, search_depth)
     }
 
-    pub fn make_move(&mut self, x1: u8, y1: u8, x2: u8, y2: u8, promotion_id: u32) -> JsValue {
-        let prom = {
-            if promotion_id == 0 {
-                None
-            } else {
-                Some(promotion_id)
-            }
-        };
-        let mv = MoveInfo {
-            from: (x1, y1),
-            to: (x2, y2),
-            promotion: prom
-        };
-        let move_result = self.engine.make_move(&mv);
+    pub fn make_move(&mut self, mv: JsValue) -> JsValue {
+        let mv: MoveInfoSer = from_value(mv.to_owned()).unwrap();
+        let move_result = self.engine.make_move(&mv.unwrap());
         MakeMoveResultSer::to_js(&move_result)
     }
 
