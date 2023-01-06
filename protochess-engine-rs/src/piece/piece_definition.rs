@@ -4,7 +4,7 @@ use super::PieceId;
 
 /// External representation of a piece
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct PieceDefinition {
     pub id: PieceId,
     pub char_rep: char,

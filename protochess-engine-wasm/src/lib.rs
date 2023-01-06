@@ -2,10 +2,11 @@ mod utils;
 mod serialize_types;
 
 use protochess_engine_rs::Engine;
-use serde_wasm_bindgen::{to_value, from_value};
+use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
 use serialize_types::*;
+use utils::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -33,8 +34,8 @@ impl Protochess {
     #[wasm_bindgen(constructor)]
     #[allow(clippy::new_without_default)]
     pub fn new() -> Protochess {
-        utils::set_panic_hook();
-        Protochess{
+        set_panic_hook();
+        Protochess {
             engine: Engine::default()
         }
     }
@@ -56,8 +57,8 @@ impl Protochess {
     }
 
     pub fn make_move(&mut self, mv: JsValue) -> JsValue {
-        let mv: MoveInfoSer = from_value(mv.to_owned()).unwrap();
-        let move_result = self.engine.make_move(&mv.unwrap());
+        let mv = MoveInfoSer::from_js(mv);
+        let move_result = self.engine.make_move(&mv);
         MakeMoveResultSer::to_js(&move_result)
     }
 
@@ -74,15 +75,22 @@ impl Protochess {
         self.engine.to_move_in_check()
     }
     
-    pub fn set_state(&mut self, val: &JsValue) {
-        let state: GameState = from_value(val.to_owned()).unwrap();
-        let pieces = state.piece_types.into_iter().map(|p| p.unwrap()).collect();
-        self.engine.set_state(&pieces, &state.valid_squares, &state.pieces, state.whos_turn);
+    pub fn set_state(&mut self, state: JsValue) {
+        let state = GameStateSer::from_js(state);
+        self.engine.set_state(state);
     }
     
-    pub fn moves_from(&mut self, x:u8, y:u8) -> JsValue {
-        let moves = self.engine.moves_from(x, y);
-        let moves_ser: Vec<MoveInfoSer> = moves.into_iter().map(MoveInfoSer::wrap).collect();
-        to_value(&moves_ser).unwrap()
+    pub fn get_state(&self) -> JsValue {
+        let state = self.engine.get_state();
+        GameStateSer::to_js(state)
+    }
+    
+    pub fn load_fen(&mut self, fen: &str) {
+        self.engine = Engine::from_fen(fen);
+    }
+    
+    pub fn moves_from(&mut self, x: u8, y: u8) -> JsValue {
+        let moves: SerVec<MoveInfoSer> = self.engine.moves_from(x, y).into();
+        to_value(&moves).unwrap()
     }
 }

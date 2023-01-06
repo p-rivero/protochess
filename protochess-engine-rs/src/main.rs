@@ -93,7 +93,7 @@ pub fn main() {
     }
 }
 
-fn print_pgn_header(fen: &String, pgn_file: &mut std::fs::File) {
+fn print_pgn_header(fen: &str, pgn_file: &mut std::fs::File) {
     const STD_FEN_SIZE: usize = 6;
     let fen_vec: Vec<_> = fen.split_whitespace().collect();
     assert!(fen_vec.len() >= STD_FEN_SIZE);

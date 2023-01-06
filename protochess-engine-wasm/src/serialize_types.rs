@@ -1,30 +1,36 @@
-use protochess_engine_rs::{MoveInfo, MakeMoveResult, PieceDefinition};
-use serde_wasm_bindgen::to_value;
+use protochess_engine_rs::{MoveInfo, MakeMoveResult, PieceDefinition, GameState};
+use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
+use super::utils::SerVec;
 
 
 macro_rules! generate_wrapper {
     ($wrapper_name:ident, $wrapped_type:ident, [$($field:ident, $type:ty),*]) => {
         #[derive(serde::Serialize, serde::Deserialize)]
+        #[wasm_bindgen(inspectable)]
         pub struct $wrapper_name {
             $( $field: $type ),*
         }
         impl $wrapper_name {
-            #[allow(dead_code)]
-            pub fn unwrap(self) -> $wrapped_type {
-                $wrapped_type {
-                    $( $field: self.$field ),*
-                }
-            }
-            #[allow(dead_code)]
-            pub fn wrap(val: $wrapped_type) -> $wrapper_name {
-                $wrapper_name {
-                    $( $field: (val.$field) ),*
-                }
-            }
-            #[allow(dead_code)]
             pub fn to_js(val: $wrapped_type) -> JsValue {
-                to_value(&Self::wrap(val)).unwrap()
+                to_value(&Self::from(val)).unwrap()
+            }
+            pub fn from_js(val: JsValue) -> $wrapped_type {
+                from_value::<$wrapper_name>(val).unwrap().into()
+            }
+        }
+        impl From<$wrapped_type> for $wrapper_name {
+            fn from(val: $wrapped_type) -> Self {
+                $wrapper_name {
+                    $( $field: (val.$field).into() ),*
+                }
+            }
+        }
+        impl From<$wrapper_name> for $wrapped_type {
+            fn from(val: $wrapper_name) -> Self {
+                $wrapped_type {
+                    $( $field: (val.$field).into() ),*
+                }
             }
         }
     }
@@ -43,7 +49,12 @@ pub struct MakeMoveResultSer {
     checkmated_player_num: Option<u8>,
 }
 impl MakeMoveResultSer {
-    pub fn wrap(mmr: &MakeMoveResult) -> MakeMoveResultSer {
+    pub fn to_js(mmr: &MakeMoveResult) -> JsValue {
+        to_value(&MakeMoveResultSer::from(mmr)).unwrap()
+    }
+}
+impl From<&MakeMoveResult> for MakeMoveResultSer {
+    fn from(mmr: &MakeMoveResult) -> MakeMoveResultSer {
         if let MakeMoveResult::Checkmate(player_num) = mmr {
             MakeMoveResultSer {
                 result: "Checkmate".to_string(),
@@ -56,10 +67,8 @@ impl MakeMoveResultSer {
             }
         }
     }
-    pub fn to_js(mmr: &MakeMoveResult) -> JsValue {
-        to_value(&MakeMoveResultSer::wrap(mmr)).unwrap()
-    }
 }
+
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct MoveInfoWithDepthSer {
@@ -67,14 +76,12 @@ pub struct MoveInfoWithDepthSer {
     depth: u8
 }
 impl MoveInfoWithDepthSer {
-    pub fn wrap(mv: MoveInfo, depth: u8) -> MoveInfoWithDepthSer {
-        MoveInfoWithDepthSer {
-            move_info: MoveInfoSer::wrap(mv),
-            depth
-        }
-    }
     pub fn to_js(mv: MoveInfo, depth: u8) -> JsValue {
-        to_value(&MoveInfoWithDepthSer::wrap(mv, depth)).unwrap()
+        let val = MoveInfoWithDepthSer {
+            move_info: MoveInfoSer::from(mv),
+            depth
+        };
+        to_value(&val).unwrap()
     }
 }
 
@@ -87,7 +94,7 @@ pub struct MakeMoveResultWithDepthSer {
 impl MakeMoveResultWithDepthSer {
     pub fn to_js(mmr: &MakeMoveResult, depth: u8) -> JsValue {
         let val = MakeMoveResultWithDepthSer {
-            make_move_result: MakeMoveResultSer::wrap(mmr),
+            make_move_result: mmr.into(),
             depth
         };
         to_value(&val).unwrap()
@@ -130,13 +137,10 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
 
 
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct GameState {
-    pub piece_types: Vec<PieceDefinitionSer>,
-    // BCoord, BCoord
-    pub valid_squares: Vec<(u8, u8)>,
-    // Player, BCoord, BCoord, PieceId
-    pub pieces: Vec<(u8, u8, u8, u32)>,
-    // Player
-    pub whos_turn: u8,
-}
+generate_wrapper!(GameStateSer, GameState, [
+    piece_types, SerVec<PieceDefinitionSer>,
+    valid_squares, Vec<(u8, u8)>,
+    pieces, Vec<(u8, u8, u8, u32)>,
+    whos_turn, u8
+]);
+

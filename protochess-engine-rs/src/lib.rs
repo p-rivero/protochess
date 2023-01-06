@@ -9,11 +9,12 @@ pub mod position;
 pub mod searcher;
 pub mod utils;
 
-use types::{BCoord, BDimensions, BIndex, Centipawns, Depth, Player};
+use types::{BCoord, BIndex, Centipawns, Depth, Player};
 use searcher::{Searcher, eval};
 use utils::to_index;
 
 pub use position::Position;
+pub use position::game_state::GameState;
 pub use move_generator::MoveGen;
 pub use piece::{PieceId, PieceDefinition};
 pub use types::MoveInfo;
@@ -43,6 +44,14 @@ impl Engine {
     }
     pub fn from_fen(fen: &str) -> Engine {
         Engine{ position: Position::from_fen(fen) }
+    }
+
+    pub fn set_state(&mut self, state: GameState) {
+        self.position = state.into();
+    }
+    
+    pub fn get_state(&self) -> GameState {
+        (&self.position).into()
     }
 
     /// Returns the zobrist hash key for the current position
@@ -153,27 +162,6 @@ impl Engine {
             return false;
         }
         MoveGen::in_check(&mut self.position)
-    }
-
-    pub fn set_state(&mut self,
-        piece_types: &Vec<PieceDefinition>,
-        valid_squares: &Vec<(BCoord, BCoord)>,
-        pieces: &[(Player, BCoord, BCoord, PieceId)],
-        whos_turn: Player
-    ) {
-        let dims = BDimensions::from_valid_squares(valid_squares);
-        
-        // Assert that all pieces are placed on valid squares
-        for p in pieces {
-            assert!(dims.in_bounds(p.1, p.2));
-        }
-        
-        // For each piece, convert coordnates to index
-        let pieces = pieces.iter()
-            .map(|(owner, x, y, piece)| (*owner, to_index(*x, *y), *piece))
-            .collect();
-
-        self.position = Position::custom(dims, piece_types, pieces, whos_turn);
     }
     
     pub fn perft(&mut self, depth: Depth) -> u64 {
