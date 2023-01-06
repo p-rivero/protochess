@@ -1,32 +1,32 @@
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::fmt;
 
 use crate::{types::*, PieceDefinition};
-use crate::position::piece_set::PieceSet;
 use crate::utils::{from_index, to_index};
 use crate::piece::{Piece, PieceId};
 
 mod position_properties;
 mod parse_fen;
+pub mod game_state;
 pub mod castled_players;
 pub mod piece_set;
 
 use position_properties::PositionProperties;
+use piece_set::PieceSet;
 
 /// Represents a single position in chess
 #[derive(Clone, Debug)]
 pub struct Position {
     pub dimensions: BDimensions,
-    pub num_players: Player,
     pub whos_turn: Player,
-    pub pieces: Vec<PieceSet>, // pieces[0] = white's pieces, pieces[1] black etc
+    pub pieces: [PieceSet; 2], // pieces[0] = white, pieces[1] = black
     pub occupied: Bitboard,
     // Stack of properties relating only to the current position
     // Typically hard-to-recover properties, like castling
     // Similar to state in stockfish
     properties_stack: Vec<PositionProperties>,
     // Store the positions that have been played to determine repetition
-    position_repetitions: HashMap<u64, u8, ahash::RandomState>,
+    position_repetitions: AHashMap<u64, u8>,
 }
 
 impl Position {
@@ -39,34 +39,14 @@ impl Position {
     pub fn empty() -> Position {
         Position::new(BDimensions::default(), vec![], 0, PositionProperties::default())
     }
-    pub fn custom(dims: BDimensions,
-                  piece_types: &Vec<PieceDefinition>,
-                  pieces: Vec<(Player, BIndex, PieceId)>,
-                  whos_turn: Player) -> Position
-    {
-        let num_players = Position::assert_all_players_have_leader(piece_types, &pieces);
-        let mut piece_sets = Vec::with_capacity(num_players as usize);
-        for p in 0..num_players {
-            piece_sets.push(PieceSet::new(p));
-        }
-        
-        let mut pos = Position::new(dims, piece_sets, whos_turn, PositionProperties::default());
-        for definition in piece_types {
-            pos.register_piecetype(definition);
-        }
-
-        for (owner, index, piece_type) in pieces {
-            pos.public_add_piece(owner, piece_type, index);
-        }
-        pos
-    }
     
-    fn new(dimensions: BDimensions, pieces: Vec<PieceSet>, whos_turn: Player, props: PositionProperties) -> Position {
+    // TODO: Remove this function and rename new_2 to new 
+    pub fn new(dimensions: BDimensions, pieces: Vec<PieceSet>, whos_turn: Player, props: PositionProperties) -> Position {
         let mut occupied = Bitboard::zero();
         for piece_set in &pieces {
             occupied |= piece_set.get_occupied();
         }
-        let mut position_repetitions = HashMap::with_capacity_and_hasher(4096, ahash::RandomState::new());
+        let mut position_repetitions = AHashMap::with_capacity(4096);
         
         // Add a repetition for the starting position
         position_repetitions.insert(props.zobrist_key, 1);
@@ -76,10 +56,28 @@ impl Position {
         
         Position {
             dimensions,
-            num_players: pieces.len() as Player,
             whos_turn,
-            pieces,
+            // pieces: [PieceSet::new(0), PieceSet::new(1)],
+            pieces: [pieces[0].clone(), pieces[1].clone()],
+            // occupied: Bitboard::zero(),
             occupied,
+            properties_stack,
+            position_repetitions,
+        }
+    }
+    pub fn new_2(dimensions: BDimensions, whos_turn: Player, props: PositionProperties) -> Position {
+        // Add a repetition for the starting position
+        let mut position_repetitions = AHashMap::with_capacity(4096);
+        position_repetitions.insert(props.zobrist_key, 1);
+        
+        let mut properties_stack = Vec::with_capacity(128);
+        properties_stack.push(props);
+        
+        Position {
+            dimensions,
+            whos_turn,
+            pieces: [PieceSet::new(0), PieceSet::new(1)],
+            occupied: Bitboard::zero(),
             properties_stack,
             position_repetitions,
         }
@@ -101,10 +99,7 @@ impl Position {
         new_props.update_reps = update_reps;
         
         // Update the player
-        self.whos_turn += 1;
-        if self.whos_turn == self.num_players {
-            self.whos_turn = 0;
-        }
+        self.whos_turn = 1 - self.whos_turn;
         // Update the player zobrist key
         // For simplicity, use the top bit to represent the player
         new_props.zobrist_key ^= 0x8000000000000000;
@@ -276,11 +271,8 @@ impl Position {
             self.update_repetitions(props.zobrist_key, -1);
         }
 
-        if self.whos_turn == 0 {
-            self.whos_turn = self.num_players - 1;
-        } else {
-            self.whos_turn -= 1;
-        }
+        // Update player turn
+        self.whos_turn = 1 - self.whos_turn;
 
         let my_player_num = self.whos_turn;
         let mv = props.move_played.expect("No move to undo");
@@ -444,9 +436,11 @@ impl Position {
         // Subtract a repetition for the old position
         self.update_repetitions(self.get_zobrist(), -1);
         
+        // TODO: Do not create new properties
         let mut new_props = self.get_properties().clone();
         let piece = self.add_piece(owner, piece_type, index, true);
         new_props.zobrist_key ^= piece.get_zobrist(index);
+        // TODO: Castling zobrist
         self.update_occupied();
         // Add a repetition for the new position
         self.update_repetitions(new_props.zobrist_key, 1);
@@ -466,30 +460,6 @@ impl Position {
     #[inline]
     fn get_properties(&self) -> &PositionProperties {
         &self.properties_stack[self.properties_stack.len() - 1]
-    }
-    
-    /// Compute the number of players and assert that each player has a leader. Returns the number of players
-    fn assert_all_players_have_leader(piece_types: &Vec<PieceDefinition>, pieces: &Vec<(Player, BIndex, PieceId)>) -> Player {
-        assert!(!piece_types.is_empty(), "No piece types defined");
-        assert!(!pieces.is_empty(), "No pieces in board");
-        let mut leader_pieces = Vec::new();
-        for definition in piece_types {
-            if definition.is_leader {
-                leader_pieces.push(definition.id);
-            }
-        }
-        // The number of players is (max player number) + 1
-        let num_players = pieces.iter().map(|(p, _, _)| p).max().unwrap() + 1;
-        let mut player_has_leader = vec![false; num_players as usize];
-        for (owner, _, piece_type) in pieces {
-            if leader_pieces.contains(piece_type) {
-                player_has_leader[*owner as usize] = true;
-            }
-        }
-        for (i, has_leader) in player_has_leader.iter().enumerate() {
-            assert!(has_leader, "Player {} does not have a leader piece", i);
-        }
-        num_players
     }
     
     /// Adds a piece to the position, assuming the piecetype already exists
@@ -529,7 +499,7 @@ impl Position {
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for y in (0..self.dimensions.height).rev() {
-            write!(f, "{} ", y)?;
+            write!(f, "{:2} ", y+1)?;
             for x in 0..self.dimensions.width {
                 if let Some(piece) = self.piece_at(to_index(x,y)) {
                     write!(f, "{} ", piece.char_rep())?;
@@ -541,9 +511,9 @@ impl fmt::Display for Position {
             }
             writeln!(f)?;
         }
-        write!(f, "  ")?;
+        write!(f, "   ")?;
         for x in 0..self.dimensions.width {
-            write!(f, "{} ", x)?;
+            write!(f, "{} ", (b'A'+x) as char)?;
         }
         write!(f, "\nZobrist Key: {}", self.get_zobrist())
     }

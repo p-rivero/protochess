@@ -2,59 +2,10 @@ extern crate protochess_engine_rs;
 
 #[cfg(test)]
 mod custom_pieces {
-    use protochess_engine_rs::PieceDefinition;
-    use protochess_engine_rs::piece::{PieceId, Piece, PieceFactory};
+    use protochess_engine_rs::piece::{Piece, PieceFactory};
     use protochess_engine_rs::types::BDimensions;
     use protochess_engine_rs::utils::to_index;
 
-    #[test]
-    fn custom_pieces() {
-        let mut engine = protochess_engine_rs::Engine::default();
-
-        // Queen
-        engine.register_piecetype(&PieceDefinition {
-            id: 123,
-            char_rep: 'Q',
-            available_for: vec![0],
-            is_leader: false,
-            can_castle: false,
-            is_castle_rook: false,
-            explodes: false,
-            immune_to_explosion: false,
-            promotion_squares: vec![],
-            double_jump_squares: vec![],
-            promo_vals: vec![],
-            attack_sliding_deltas: vec![],
-            attack_jump_deltas: vec![],
-            attack_north: true,
-            attack_south: true,
-            attack_east: true,
-            attack_west: true,
-            attack_northeast: true,
-            attack_northwest: true,
-            attack_southeast: true,
-            attack_southwest: true,
-            translate_jump_deltas: vec![],
-            translate_sliding_deltas: vec![],
-            translate_north: true,
-            translate_south: true,
-            translate_east: true,
-            translate_west: true,
-            translate_northeast: true,
-            translate_northwest: true,
-            translate_southeast: true,
-            translate_southwest: true
-        });
-        
-        // Initial score should be 0
-        assert_eq!(engine.get_score(), 0);
-        // Add a queen to the board
-        engine.add_piece(0, 123 as PieceId, 0, 3);
-        let queen_material = 1014;
-        let queen_position = 10;
-        assert_eq!(engine.get_score(), queen_material + queen_position);
-    }
-    
     #[test]
     fn piece_factory_pawn() {
         let dims = BDimensions::new_without_walls(8, 8);

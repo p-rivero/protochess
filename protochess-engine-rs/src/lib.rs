@@ -65,11 +65,6 @@ impl Engine {
         self.position.search_piece_by_id(piece_id).map(|p| p.char_rep())
     }
 
-    /// Registers a custom piecetype for the current position
-    pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
-        self.position.register_piecetype(definition);
-    }
-
     /// Adds a new piece on the board
     pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord) {
         self.position.public_add_piece(owner, piece_type, to_index(x,y));
