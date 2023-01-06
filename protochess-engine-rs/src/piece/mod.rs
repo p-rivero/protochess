@@ -61,9 +61,6 @@ impl Piece {
         let promotion_squares = definition.promotion_squares_bb() & &dims.bounds;
         let double_jump_squares = definition.double_jump_squares_bb() & &dims.bounds;
         
-        // Cannot be castle rook and can castle at the same time
-        assert!(!(definition.can_castle && definition.is_castle_rook));
-        
         let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims);
@@ -163,7 +160,7 @@ impl Piece {
         self.bitboard.clear_bit(from);
         self.bitboard.set_bit(to);
         
-        if self.type_def.can_castle || self.type_def.is_castle_rook {
+        if self.type_def.can_castle() || self.type_def.is_castle_rook {
             self.castle_squares.clear_bit(from);
             if set_can_castle {
                 self.castle_squares.set_bit(to);
@@ -180,7 +177,7 @@ impl Piece {
         self.num_pieces += 1;
         self.total_material_score += self.material_score;
         
-        if set_can_castle && (self.type_def.can_castle || self.type_def.is_castle_rook) {
+        if set_can_castle && (self.type_def.can_castle() || self.type_def.is_castle_rook) {
             self.castle_squares.set_bit(index);
         }
     }
@@ -222,11 +219,11 @@ impl Piece {
     {
         let mut bb_copy = self.bitboard.clone();
         while let Some(index) = bb_copy.lowest_one() {
-            let can_castle = self.type_def.can_castle && self.castle_squares.get_bit(index);
-            output_translations(&self.type_def, index, position, enemies, &self.promotion_squares,
-                occ_or_not_in_bounds, can_castle, &self.double_jump_squares, out_bb_moves, out_moves);
             output_captures(&self.type_def, index, position, enemies, &self.promotion_squares,
                 occ_or_not_in_bounds, out_bb_moves, out_moves);
+            let can_castle = self.type_def.can_castle() && self.castle_squares.get_bit(index);
+            output_translations(&self.type_def, index, position, enemies, &self.promotion_squares,
+                occ_or_not_in_bounds, can_castle, &self.double_jump_squares, out_bb_moves, out_moves);
             bb_copy.clear_bit(index);
         }
     }

@@ -128,8 +128,8 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
             // There is a piece of the same player
             if rook.is_rook_and_can_castle(kingside_rook_index){
                 // Rook is in direct line of sight of the king and hasn't moved
-                // TODO: Don't hardcode the 6
-                let to_index = to_index(6, ky);
+                let kingside_file = movement.castle_files.unwrap().1;
+                let to_index = to_index(kingside_file, ky);
                 // Check that the squares between x=(rook_x + 1) and x=6 (both included) are empty
                 let mut empty = true;
                 for i in (kingside_rook_index as i16 + 1)..=(to_index as i16) {
@@ -154,8 +154,8 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         let queenside_rook_index = rank_visibility.lowest_one().unwrap();
         if let Some(rook) = position.player_piece_at(position.whos_turn, queenside_rook_index) {
             if rook.is_rook_and_can_castle(queenside_rook_index) {
-                // TODO: Don't hardcode the 2
-                let to_index = to_index(2, ky);
+                let queenside_file = movement.castle_files.unwrap().0;
+                let to_index = to_index(queenside_file, ky);
                 // Check that the squares between x=2 and x=(rook_x - 1) (both included) are empty
                 let mut empty = true;
                 for i in (to_index as i16)..=(queenside_rook_index as i16 - 1) {

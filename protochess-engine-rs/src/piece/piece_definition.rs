@@ -11,7 +11,9 @@ pub struct PieceDefinition {
     pub available_for: Vec<Player>,
     
     pub is_leader: bool,
-    pub can_castle: bool,
+    // Either None (no castle) or (queenside, kingside) (files where this piece moves when castling)
+    pub castle_files: Option<(BCoord, BCoord)>,
+    // True if this piece works as a rook for castling purposes
     pub is_castle_rook: bool,
     pub explodes: bool,
     pub immune_to_explosion: bool,
@@ -109,6 +111,9 @@ impl PieceDefinition {
     pub fn has_sliding_deltas(&self) -> bool {
         !self.translate_sliding_deltas.is_empty() || !self.attack_sliding_deltas.is_empty()
     }
+    pub fn can_castle(&self) -> bool {
+        self.castle_files.is_some()
+    }
     
     pub fn update_inverse_attack(&mut self, other: &PieceDefinition) {
         self.attack_north |= other.attack_south;
@@ -141,7 +146,7 @@ impl Default for PieceDefinition {
             char_rep: '?',
             available_for: vec![],
             is_leader: false,
-            can_castle: false,
+            castle_files: None,
             is_castle_rook: false,
             explodes: false,
             immune_to_explosion: false,

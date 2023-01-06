@@ -18,6 +18,7 @@ pub struct BDimensions {
 impl BDimensions {
     // Create a BDimensions object of a given width and height, with all squares valid
     pub fn new_without_walls(width: BCoord, height: BCoord) -> BDimensions {
+        assert!(width <= 16 && height <= 16, "Board dimensions must be <= 16x16");
         let mut bounds = Bitboard::zero();
         for x in 0..width {
             for y in 0..height {
@@ -32,6 +33,7 @@ impl BDimensions {
         let mut height = 0;
         let mut bounds = Bitboard::zero();
         for sq in valid_squares {
+            assert!(sq.0 < 16 && sq.1 < 16, "Board dimensions must be <= 16x16");
             if sq.0 >= width { width = sq.0 + 1; }
             if sq.1 >= height { height = sq.1 + 1; }
             bounds.set_bit_at(sq.0, sq.1);

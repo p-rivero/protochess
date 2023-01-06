@@ -434,22 +434,23 @@ impl Position {
     /// Public interface for modifying the position
     pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex) {
         // Subtract a repetition for the old position
-        self.update_repetitions(self.get_zobrist(), -1);
+        let mut zob = self.get_zobrist();
+        self.update_repetitions(zob, -1);
         
-        // TODO: Do not create new properties
-        let mut new_props = self.get_properties().clone();
         let piece = self.add_piece(owner, piece_type, index, true);
-        new_props.zobrist_key ^= piece.get_zobrist(index);
+        zob ^= piece.get_zobrist(index);
         // TODO: Castling zobrist
         self.update_occupied();
         // Add a repetition for the new position
-        self.update_repetitions(new_props.zobrist_key, 1);
+        self.update_repetitions(zob, 1);
         
-        self.properties_stack.push(new_props);
+        let stack_len = self.properties_stack.len();
+        self.properties_stack[stack_len - 1].zobrist_key = zob;
     }
 
     /// Removes a piece from the position, assuming the piece is there
     pub fn public_remove_piece(&mut self, index: BIndex) {
+        // TODO: Castling zobrist
         self.piece_at_mut(index).unwrap().remove_piece(index);
         self.update_occupied();
     }
