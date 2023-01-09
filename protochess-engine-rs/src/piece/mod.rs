@@ -160,7 +160,7 @@ impl Piece {
         self.bitboard.clear_bit(from);
         self.bitboard.set_bit(to);
         
-        if self.type_def.can_castle() || self.type_def.is_castle_rook {
+        if self.used_in_castling() {
             self.castle_squares.clear_bit(from);
             if set_can_castle {
                 self.castle_squares.set_bit(to);
@@ -177,9 +177,12 @@ impl Piece {
         self.num_pieces += 1;
         self.total_material_score += self.material_score;
         
-        if set_can_castle && (self.type_def.can_castle() || self.type_def.is_castle_rook) {
+        if set_can_castle && self.used_in_castling() {
             self.castle_squares.set_bit(index);
         }
+    }
+    pub fn used_in_castling(&self) -> bool {
+        self.type_def.can_castle() || self.type_def.is_castle_rook
     }
     
     // Remove a piece from this piece type

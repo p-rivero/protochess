@@ -13,8 +13,8 @@ pub struct PositionProperties {
     pub promote_from: Option<PieceId>,
     pub castled_players: CastledPlayers,
     //EP square (square behind a double pawn push)
-    pub ep_square: Option<BIndex>,
-    pub ep_victim: BIndex, // Only valid if ep_square is Some
+    ep_square: Option<BIndex>,
+    ep_victim: BIndex, // Only valid if ep_square is Some
     // true if the piece that moved could castle
     pub moved_piece_castle: bool,
     // true if make_move() was called with update_reps = true
@@ -23,6 +23,31 @@ pub struct PositionProperties {
     // Also store whether the captured piece could castle and the index where it was captured.
     // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be many.
     pub captured_pieces: Vec<(PieceId, Player, bool, BIndex)>,
+}
+
+impl PositionProperties {
+    // Access EP square
+    pub fn set_ep_square(&mut self, ep_square: BIndex, ep_victim: BIndex) {
+        self.clear_ep_square();
+        self.ep_square = Some(ep_square);
+        self.ep_victim = ep_victim;
+        // Update zobrist. For simplicity, use the ep index as the zobrist key
+        self.zobrist_key ^= ep_square as u64;
+    }
+    pub fn clear_ep_square(&mut self) {
+        if let Some(sq) = self.ep_square {
+            // If the last prop had some ep square then we want to clear zob by xoring again
+            self.zobrist_key ^= sq as u64;
+        }
+        self.ep_square = None;
+    }
+    pub fn get_ep_square(&self) -> Option<BIndex> {
+        self.ep_square
+    }
+    pub fn get_ep_victim(&self) -> BIndex {
+        assert!(self.ep_square.is_some(), "Attempted to get ep victim when ep square is None");
+        self.ep_victim
+    }
 }
 
 impl Clone for PositionProperties {
@@ -36,7 +61,7 @@ impl Clone for PositionProperties {
             ep_square: self.ep_square,
             ep_victim: self.ep_victim,
             moved_piece_castle: self.moved_piece_castle,
-            update_reps: self.update_reps,
+            update_reps: false,
             captured_pieces: Vec::new(), // Don't clone captured pieces
         }
     }

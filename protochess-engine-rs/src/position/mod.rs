@@ -87,6 +87,7 @@ impl Position {
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
         // Insert piece for all players specified in the definition
         for player in &definition.available_for {
+            assert!(*player < self.pieces.len() as Player, "Player {} does not exist", player);
             self.pieces[*player as usize].register_piecetype(definition.clone(), &self.dimensions);
         }
     }
@@ -96,7 +97,6 @@ impl Position {
     pub fn make_move(&mut self, mv: Move, update_reps: bool) {
         let my_player_num = self.whos_turn;
         let mut new_props: PositionProperties = self.get_properties().clone();
-        new_props.update_reps = update_reps;
         
         // Update the player
         self.whos_turn = 1 - self.whos_turn;
@@ -109,12 +109,8 @@ impl Position {
         if mv.is_null() {
             // Update props
             // Since we're passing, there cannot be an ep square
-            new_props.ep_square = None;
+            new_props.clear_ep_square();
             new_props.move_played = Some(mv);
-            // Increment number of repetitions of new position
-            if update_reps {
-                self.update_repetitions(new_props.zobrist_key, 1);
-            }
             self.properties_stack.push(new_props);
             return;
         }
@@ -190,23 +186,15 @@ impl Position {
 
         // Pawn en-passant
         // Check for a pawn double push to set ep square
-        // For simplicity, use the ep index as the zobrist key
-        if let Some(sq) = new_props.ep_square {
-            // If the last prop had some ep square then we want to clear zob by xoring again
-            new_props.zobrist_key ^= sq as u64;
-        }
-
         if mv.get_move_type() == MoveType::DoubleJump {
-            new_props.ep_square = Some(mv.get_target());
-            new_props.ep_victim = mv.get_to();
-            
-            new_props.zobrist_key ^= mv.get_target() as u64;
+            new_props.set_ep_square(mv.get_target(), mv.get_to())
         } else {
-            new_props.ep_square = None;
+            new_props.clear_ep_square();
         }
         
         // Increment number of repetitions of new position
         if update_reps {
+            new_props.update_reps = true;
             self.update_repetitions(new_props.zobrist_key, 1);
         }
 
@@ -367,7 +355,7 @@ impl Position {
     #[inline]
     pub fn num_repetitions(&self) -> u8 {
         let num_reps = self.position_repetitions.get(&self.get_zobrist());
-        *num_reps.unwrap()
+        *num_reps.unwrap_or(&0)
     }
     
     #[inline]
@@ -377,11 +365,11 @@ impl Position {
     
     #[inline]
     pub fn get_ep_square(&self) -> Option<BIndex> {
-        self.get_properties().ep_square
+        self.get_properties().get_ep_square()
     }
     #[inline]
     pub fn get_ep_victim(&self) -> BIndex {
-        self.get_properties().ep_victim
+        self.get_properties().get_ep_victim()
     }
     
     #[inline]
@@ -438,8 +426,11 @@ impl Position {
         self.update_repetitions(zob, -1);
         
         let piece = self.add_piece(owner, piece_type, index, true);
+        // Update the zobrist key
         zob ^= piece.get_zobrist(index);
-        // TODO: Castling zobrist
+        if piece.used_in_castling() {
+            zob ^= piece.get_castle_zobrist(index);
+        }
         self.update_occupied();
         // Add a repetition for the new position
         self.update_repetitions(zob, 1);
@@ -450,9 +441,23 @@ impl Position {
 
     /// Removes a piece from the position, assuming the piece is there
     pub fn public_remove_piece(&mut self, index: BIndex) {
-        // TODO: Castling zobrist
-        self.piece_at_mut(index).unwrap().remove_piece(index);
+        // Subtract a repetition for the old position
+        let mut zob = self.get_zobrist();
+        self.update_repetitions(zob, -1);
+        
+        let piece = self.piece_at_mut(index).unwrap();
+        let could_casle = piece.remove_piece(index);
+        // Update the zobrist key
+        zob ^= piece.get_zobrist(index);
+        if could_casle {
+            zob ^= piece.get_castle_zobrist(index);
+        }
         self.update_occupied();
+        // Add a repetition for the new position
+        self.update_repetitions(zob, 1);
+        
+        let stack_len = self.properties_stack.len();
+        self.properties_stack[stack_len - 1].zobrist_key = zob;
     }
     
     

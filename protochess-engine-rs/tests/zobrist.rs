@@ -1,6 +1,11 @@
 #[cfg(test)]
 mod zobrist_test {
     use protochess_engine_rs::{Engine, MoveInfo};
+    const ID_KING: u32 = 0;
+    const ID_QUEEN: u32 = 1;
+    const ID_ROOK: u32 = 2;
+    const ID_KNIGHT: u32 = 4;
+    const ID_PAWN: u32 = 5;
     
     #[test]
     fn zobrist_pawn_push() {
@@ -122,6 +127,84 @@ mod zobrist_test {
         let mv = vec!["e2e3", "d7d6", "f1d3", "c8e6", "d3e2"];
         let expected_fen = "rn1qkbnr/ppp1pppp/3pb3/8/8/4P3/PPPPBPPP/RNBQK1NR b KQkq - 2 3";
         test_zobrist_sequence(&mv, expected_fen);
+    }
+    
+    #[test]
+    fn add_one_piece() {
+        let mut engine_start = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.add_piece(0, ID_QUEEN, 3, 0);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
+    }
+    
+    #[test]
+    fn add_pieces() {
+        let mut engine_start = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.add_piece(0, ID_QUEEN, 3, 0);
+        engine_start.add_piece(1, ID_KNIGHT, 6, 7);
+        engine_start.add_piece(1, ID_PAWN, 2, 6);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
+    }
+    
+    #[test]
+    fn add_pieces_rook() {
+        let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.add_piece(0, ID_ROOK, 0, 0);
+        engine_start.add_piece(1, ID_ROOK, 7, 7);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
+    }
+    
+    #[test]
+    fn add_pieces_king() {
+        let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w Kq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.add_piece(0, ID_KING, 3, 0);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
+    }
+    
+    #[test]
+    fn remove_one_piece() {
+        let mut engine_start = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.remove_piece(3, 0);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
+    }
+    
+    #[test]
+    fn remove_pieces() {
+        let mut engine_start = Engine::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.remove_piece(3, 0);
+        engine_start.remove_piece(6, 7);
+        engine_start.remove_piece(2, 6);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
+    }
+    
+    #[test]
+    fn remove_pieces_rook() {
+        let mut engine_start = Engine::from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.remove_piece(0, 0);
+        engine_start.remove_piece(7, 7);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
+    }
+    
+    #[test]
+    fn remove_pieces_king() {
+        let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w Kq - 0 1");
+        let engine_end = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
+        assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
+        engine_start.remove_piece(3, 0);
+        assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
     #[test]

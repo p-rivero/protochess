@@ -9,7 +9,7 @@ pub mod position;
 pub mod searcher;
 pub mod utils;
 
-use types::{BCoord, BIndex, Centipawns, Depth, Player};
+use types::{BCoord, Centipawns, Depth, Player};
 use searcher::{Searcher, eval};
 use utils::to_index;
 
@@ -80,8 +80,8 @@ impl Engine {
     }
 
     /// Removes a piece on the board, if it exists
-    pub fn remove_piece(&mut self, index: BIndex) {
-        self.position.public_remove_piece(index);
+    pub fn remove_piece(&mut self, x: BCoord, y: BCoord) {
+        self.position.public_remove_piece(to_index(x,y));
     }
 
     /// Attempts a move on the current board position

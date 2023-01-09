@@ -1,7 +1,8 @@
 use ahash::AHashSet;
 
+use crate::piece::PieceFactory;
 use crate::{PieceDefinition, PieceId};
-use crate::utils::to_index;
+use crate::utils::{to_index, from_index};
 
 use super::Position;
 use super::position_properties::PositionProperties;
@@ -12,6 +13,7 @@ pub struct GameState {
     pub valid_squares: Vec<(BCoord, BCoord)>,
     pub pieces: Vec<(Player, BCoord, BCoord, PieceId)>,
     pub whos_turn: Player,
+    pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
 }
 
 impl From<&Position> for GameState {
@@ -33,11 +35,21 @@ impl From<&Position> for GameState {
         }
         // Convert set of &PieceDefinition to Vec of PieceDefinition
         let piece_types = piece_types_set.into_iter().cloned().collect::<Vec<_>>(); 
+        // Extract EP square
+        let ep_square_and_victim = {
+            if let Some(ep_square) = pos.get_ep_square() {
+                let ep_victim = pos.get_ep_victim();
+                Some((from_index(ep_square), from_index(ep_victim)))
+            } else {
+                None
+            }
+        };
         GameState {
             piece_types,
             valid_squares,
             pieces,
             whos_turn: pos.whos_turn,
+            ep_square_and_victim,
         }
     }
 }
@@ -50,8 +62,15 @@ impl From<GameState> for Position {
         for p in &state.pieces {
             assert!(dims.in_bounds(p.1, p.2));
         }
+        
+        let mut props = PositionProperties::default();
+        if let Some(((sx,sy),(vx,vy))) = state.ep_square_and_victim {
+            assert!(dims.in_bounds(sx, sy), "Invalid EP square: {:?}", (sx,sy));
+            assert!(dims.in_bounds(vx, vy), "Invalid EP victim: {:?}", (vx,vy));
+            props.set_ep_square(to_index(sx, sy), to_index(vx, vy));
+        }
 
-        let mut pos = Position::new_2(dims, state.whos_turn, PositionProperties::default());
+        let mut pos = Position::new_2(dims, state.whos_turn, props);
         for definition in &state.piece_types {
             pos.register_piecetype(definition);
         }

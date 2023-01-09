@@ -57,8 +57,6 @@ pub fn parse_fen(fen: &str) -> Position {
     w_pieces.update_occupied();
     b_pieces.update_occupied();
     
-    let mut zobrist_key = 0;
-    
     // Castling rights
     let mut enable_castle = |is_white: bool, kingside: bool, zob: &mut u64| {
         // If kingside, traverse rank from right to left, otherwise from left to right
@@ -92,7 +90,6 @@ pub fn parse_fen(fen: &str) -> Position {
                         // Enable the castle square in zobrist key
                         *zob ^= piece.get_castle_zobrist(index);
                     }
-                    break;
                 }
                 if found_rook && piece.char_rep() == rook_char {
                     break;
@@ -100,45 +97,40 @@ pub fn parse_fen(fen: &str) -> Position {
             }
         }
     };
+    let mut properties = PositionProperties::default();
     if fen_parts[2].contains('K') {
-        enable_castle(true, true, &mut zobrist_key);
+        enable_castle(true, true, &mut properties.zobrist_key);
     }
     if fen_parts[2].contains('k') {
-        enable_castle(false, true, &mut zobrist_key);
+        enable_castle(false, true, &mut properties.zobrist_key);
     }
     if fen_parts[2].contains('Q') {
-        enable_castle(true, false, &mut zobrist_key);
+        enable_castle(true, false, &mut properties.zobrist_key);
     }
     if fen_parts[2].contains('q') {
-        enable_castle(false, false, &mut zobrist_key);
+        enable_castle(false, false, &mut properties.zobrist_key);
     }
     
-    let mut properties = PositionProperties::default();
     if ep_x != -1 {
         assert!(ep_y != -1, "Invalid en passant square: {}", fen);
         assert!(ep_y == 2 || ep_y == 5, "Invalid en passant square: {}", fen);
         let ep_index = to_index(ep_x as BCoord, ep_y as BCoord);
         let offset = if whos_turn == 0 {1} else {-1};
-        properties.ep_square = Some(ep_index);
-        properties.ep_victim = to_index(ep_x as BCoord, (ep_y + offset) as BCoord);
-        // Use the en passant square as a zobrist key
-        zobrist_key ^= ep_index as u64;
+        let ep_victim = to_index(ep_x as BCoord, (ep_y + offset) as BCoord);
+        properties.set_ep_square(ep_index, ep_victim);
     }
-
 
     for piece in w_pieces.iter().chain(b_pieces.iter()) {
         for indx in piece.get_indexes() {
-            zobrist_key ^= piece.get_zobrist(indx);
+            properties.zobrist_key ^= piece.get_zobrist(indx);
         }
     }
     
     if whos_turn == 1 {
         // Use the top bit as player zobrist key
-        zobrist_key ^= 0x8000000000000000;
+        properties.zobrist_key ^= 0x8000000000000000;
     }
-    
-    properties.zobrist_key = zobrist_key;
-    
+        
     let dims = BDimensions::new_without_walls(BOARD_WIDTH, BOARD_HEIGHT);
     Position::new(dims, vec![w_pieces, b_pieces], whos_turn, properties)
 }
@@ -166,6 +158,6 @@ fn register_pieces(w_pieces: &mut PieceSet, b_pieces: &mut PieceSet, mode: &str)
     register_piece(factory.make_rook(ID_ROOK));
     register_piece(factory.make_bishop(ID_BISHOP));
     register_piece(factory.make_knight(ID_KNIGHT));
-    register_piece(factory.make_pawn(ID_PAWN, true, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]));
-    register_piece(factory.make_pawn(ID_PAWN, false, &dims, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]));
+    register_piece(factory.make_pawn(ID_PAWN, true, BOARD_WIDTH, BOARD_HEIGHT, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]));
+    register_piece(factory.make_pawn(ID_PAWN, false, BOARD_WIDTH, BOARD_HEIGHT, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]));
 }

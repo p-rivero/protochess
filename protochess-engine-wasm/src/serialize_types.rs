@@ -141,6 +141,7 @@ generate_wrapper!(GameStateSer, GameState, [
     piece_types, SerVec<PieceDefinitionSer>,
     valid_squares, Vec<(u8, u8)>,
     pieces, Vec<(u8, u8, u8, u32)>,
-    whos_turn, u8
+    whos_turn, u8,
+    ep_square_and_victim, Option<((u8, u8), (u8, u8))>
 ]);
 
