@@ -76,7 +76,7 @@ impl From<GameState> for Position {
         }
 
         for (owner, x, y, piece_type) in state.pieces {
-            pos.public_add_piece(owner, piece_type, to_index(x, y));
+            pos.public_add_piece(owner, piece_type, to_index(x, y), false);
         }
         pos
     }

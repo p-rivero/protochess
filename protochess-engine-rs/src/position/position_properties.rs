@@ -5,7 +5,7 @@ use crate::piece::PieceId;
 use super::castled_players::CastledPlayers;
 
 /// Properties that are hard to recover from a Move
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PositionProperties {
     pub zobrist_key: u64,
     pub move_played: Option<Move>,
@@ -26,6 +26,21 @@ pub struct PositionProperties {
 }
 
 impl PositionProperties {
+    pub fn cheap_clone(&self) -> PositionProperties {
+        PositionProperties{
+            // Copy most fields
+            zobrist_key: self.zobrist_key,
+            move_played: self.move_played,
+            promote_from: self.promote_from,
+            castled_players: self.castled_players,
+            ep_square: self.ep_square,
+            ep_victim: self.ep_victim,
+            moved_piece_castle: self.moved_piece_castle,
+            update_reps: false,
+            captured_pieces: Vec::new(), // Don't clone captured pieces
+        }
+    }
+    
     // Access EP square
     pub fn set_ep_square(&mut self, ep_square: BIndex, ep_victim: BIndex) {
         self.clear_ep_square();
@@ -50,22 +65,6 @@ impl PositionProperties {
     }
 }
 
-impl Clone for PositionProperties {
-    fn clone(&self) -> PositionProperties {
-        PositionProperties{
-            // Copy most fields
-            zobrist_key: self.zobrist_key,
-            move_played: self.move_played,
-            promote_from: self.promote_from,
-            castled_players: self.castled_players,
-            ep_square: self.ep_square,
-            ep_victim: self.ep_victim,
-            moved_piece_castle: self.moved_piece_castle,
-            update_reps: false,
-            captured_pieces: Vec::new(), // Don't clone captured pieces
-        }
-    }
-}
 
 impl Default for PositionProperties {
     fn default() -> PositionProperties {

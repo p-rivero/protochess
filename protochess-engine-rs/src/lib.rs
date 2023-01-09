@@ -30,6 +30,7 @@ pub enum MakeMoveResult {
 }
 
 /// Starting point for the engine
+#[derive(Debug, Clone)]
 pub struct Engine{
     pub position: Position,
 }
@@ -74,9 +75,9 @@ impl Engine {
         self.position.search_piece_by_id(piece_id).map(|p| p.char_rep())
     }
 
-    /// Adds a new piece on the board
-    pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord) {
-        self.position.public_add_piece(owner, piece_type, to_index(x,y));
+    /// Adds a new piece on the board. If the piece is not used for castling, has_moved is ignored.
+    pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord, has_moved: bool) {
+        self.position.public_add_piece(owner, piece_type, to_index(x,y), !has_moved);
     }
 
     /// Removes a piece on the board, if it exists

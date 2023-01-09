@@ -96,7 +96,7 @@ impl Position {
     /// Modifies the position to make the move
     pub fn make_move(&mut self, mv: Move, update_reps: bool) {
         let my_player_num = self.whos_turn;
-        let mut new_props: PositionProperties = self.get_properties().clone();
+        let mut new_props: PositionProperties = self.get_properties().cheap_clone();
         
         // Update the player
         self.whos_turn = 1 - self.whos_turn;
@@ -420,15 +420,15 @@ impl Position {
 
     
     /// Public interface for modifying the position
-    pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex) {
+    pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex, can_castle: bool) {
         // Subtract a repetition for the old position
         let mut zob = self.get_zobrist();
         self.update_repetitions(zob, -1);
         
-        let piece = self.add_piece(owner, piece_type, index, true);
+        let piece = self.add_piece(owner, piece_type, index, can_castle);
         // Update the zobrist key
         zob ^= piece.get_zobrist(index);
-        if piece.used_in_castling() {
+        if can_castle && piece.used_in_castling() {
             zob ^= piece.get_castle_zobrist(index);
         }
         self.update_occupied();
@@ -449,7 +449,7 @@ impl Position {
         let could_casle = piece.remove_piece(index);
         // Update the zobrist key
         zob ^= piece.get_zobrist(index);
-        if could_casle {
+        if could_casle && piece.used_in_castling() {
             zob ^= piece.get_castle_zobrist(index);
         }
         self.update_occupied();
@@ -521,6 +521,6 @@ impl fmt::Display for Position {
         for x in 0..self.dimensions.width {
             write!(f, "{} ", (b'A'+x) as char)?;
         }
-        write!(f, "\nZobrist Key: {}", self.get_zobrist())
+        write!(f, "\nZobrist Key: {:x}", self.get_zobrist())
     }
 }
