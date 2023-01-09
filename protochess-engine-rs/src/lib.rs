@@ -92,11 +92,10 @@ impl Engine {
             if !target_move.matches_move(mv) {
                 continue;
             }
-            if !MoveGen::is_move_legal(&mv, &mut self.position) {
+            // Found the move, try to play it
+            if !MoveGen::make_move_only_if_legal(&mv, &mut self.position, true) {
                 continue;
             }
-            // Found the move, try to play it
-            self.position.make_move(mv, true);
             
             // Check if the game is over
             if self.position.leader_is_captured() {

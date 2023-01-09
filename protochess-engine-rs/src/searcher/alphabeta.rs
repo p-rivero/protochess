@@ -87,12 +87,11 @@ impl Searcher {
         let moves = MoveGen::get_pseudo_moves(pos);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, depth) {
             
-            if !MoveGen::is_move_legal(&mv, pos) {
+            if !MoveGen::make_move_only_if_legal(&mv, pos, true) {
                 continue;
             }
 
             num_legal_moves += 1;
-            pos.make_move(mv, true);
             let mut score: Centipawns;
             if num_legal_moves == 1 {
                 score = -self.alphabeta(pos, depth - 1, -beta, -alpha, true, end_time)?;
@@ -220,12 +219,10 @@ impl Searcher {
         // Get only captures, sorted by move ordering heuristics (try the most promising moves first)
         let moves = MoveGen::get_capture_moves(pos);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, 0) {
-            if !MoveGen::is_move_legal(&mv, pos) {
+            // This is a capture move, so there is no need to check for repetition
+            if !MoveGen::make_move_only_if_legal(&mv, pos, false) {
                 continue;
             }
-            
-            // This is a capture move, so there is no need to check for repetition
-            pos.make_move(mv, false);
             let score = -self.quiesce(pos, -beta, -alpha, end_time, quiesce_depth + 1)?;
             pos.unmake_move();
 

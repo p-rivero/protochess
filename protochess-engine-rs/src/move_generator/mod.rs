@@ -78,8 +78,8 @@ impl MoveGen {
         MoveGen::index_in_check(index, position)
     }
 
-    /// Checks if a move is legal
-    pub fn is_move_legal(mv: &Move, position: &mut Position) -> bool {
+    /// Attempts to make a pseudo-legal move, succeeding and returning true only if the move was legal
+    pub fn make_move_only_if_legal(mv: &Move, position: &mut Position, update_reps: bool) -> bool {
         // Cannot castle while in check or step through check
         if mv.is_castling() {
             let kingside = mv.get_move_type() == MoveType::KingsideCastle;
@@ -104,13 +104,26 @@ impl MoveGen {
         }
         
         // Try the move and skip a turn, then see if we are in check
-        position.make_move(*mv, false);
+        position.make_move(*mv, update_reps);
         position.make_move(Move::null(), false);
         // See if we are in check or an explosion has killed the last leader
         // However, if the move causes us to capture the last enemy leader, the move is legal (even if it leaves us in check)
         let legal = !position.leader_is_captured() && (position.enemy_leader_is_captured() || !MoveGen::in_check(position));
         position.unmake_move();
-        position.unmake_move();
+        if !legal {
+            // If the move is illegal, clean up the position
+            position.unmake_move();
+        }
+        legal
+    }
+    
+    /// Checks if a move is legal
+    pub fn is_move_legal(mv: &Move, position: &mut Position) -> bool {
+        let legal = Self::make_move_only_if_legal(mv, position, false);
+        // Restore previous state of the position
+        if legal {
+            position.unmake_move();
+        }
         legal
     }
 
