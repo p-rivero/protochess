@@ -61,16 +61,17 @@ impl AttackTables {
     pub fn get_rank_attack(&self, loc_index: BIndex, occ: &Bitboard) -> Bitboard {
         let (x, y) = from_index(loc_index);
         //Isolate the rank
-        let rank_only = self.masks.shift_south(y, occ);
-        let first_byte = rank_only.get_byte(0);
-        let second_byte = rank_only.get_byte(1);
+        let word_index = y / 4;
+        let word = occ.get_inner()[word_index as usize];
+        let line_index = y % 4;
+        let occ_index = (word >> (line_index * 16)) as u16;
         //Looup the occupancy rank in our table
-        let occ_index = (second_byte as u16) << 8 ^ (first_byte as u16);
         let attack = self.slider_attacks[x as usize][occ_index as usize];
         //Shift attack back to rank
         let mut return_bb = Bitboard::zero();
-        return_bb ^= attack;
-        self.masks.shift_north(y, &return_bb)
+        let new_word = (attack as u64) << (line_index * 16);
+        return_bb.get_inner_mut()[word_index as usize] = new_word;
+        return_bb
     }
 
     pub fn get_file_attack(&self, loc_index: BIndex, occ: &Bitboard) -> Bitboard {

@@ -98,10 +98,6 @@ impl Bitboard {
         self.get_bit(to_index(x, y))
     }
     #[inline]
-    pub fn get_byte(&self, index: usize) -> u8 {
-        self.board_internal.byte(index).unwrap()
-    }
-    #[inline]
     pub fn is_zero(&self) -> bool {
         self.board_internal.is_zero()
     }
@@ -121,6 +117,14 @@ impl Bitboard {
     pub fn overflowing_mul(self, rhs: &Bitboard) -> Bitboard {
         Bitboard { board_internal: self.board_internal.overflowing_mul(&rhs.board_internal).0 }
     }
+    #[inline]
+    pub fn get_inner(&self) -> &[u64; 4] {
+        self.board_internal.get_inner()
+    }
+    #[inline]
+    pub fn get_inner_mut(&mut self) -> &mut [u64; 4] {
+        self.board_internal.get_inner_mut()
+    }
 }
 impl std::fmt::Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -136,6 +140,11 @@ impl std::fmt::Display for Bitboard {
             writeln!(f)?;
         }
         Ok(())
+    }
+}
+impl std::fmt::LowerHex for Bitboard {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:x}", self.board_internal)
     }
 }
 
@@ -156,3 +165,16 @@ impl_op_ex!(^= |a: &mut Bitboard, b: &Bitboard| { a.board_internal ^= &b.board_i
 impl_op_ex!(^= |a: &mut Bitboard, b: u16| { a.board_internal ^= numext_fixed_uint::U256::from(b) });
 impl_op_ex!(<<= |a: &mut Bitboard, b: BCoord| { a.board_internal <<= b });
 impl_op_ex!(>>= |a: &mut Bitboard, b: BCoord| { a.board_internal >>= b });
+
+trait GetBitboardInner {
+    fn get_inner(&self) -> &[u64; 4];
+    fn get_inner_mut(&mut self) -> &mut [u64; 4];
+}
+impl GetBitboardInner for numext_fixed_uint::U256 {
+    fn get_inner(&self) -> &[u64; 4] {
+        &self.0
+    }
+    fn get_inner_mut(&mut self) -> &mut [u64; 4] {
+        &mut self.0
+    }
+}
