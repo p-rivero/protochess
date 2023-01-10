@@ -31,7 +31,7 @@ pub struct Move {
     /// In DoubleJump, target is the index of the generated En Passant square
     move_fields: u32, 
     // Promotion piece
-    promotion: Option<PieceId>
+    promotion: PieceId
 }
 
 impl Move {
@@ -39,7 +39,7 @@ impl Move {
         let target = target_loc.unwrap_or(0);
         Move {
             move_fields: (from as u32) | (to as u32) << 8 | (target as u32) << 16 | (move_type as u32) << 24,
-            promotion
+            promotion: promotion.unwrap_or(0)
         }
     }
 
@@ -96,7 +96,12 @@ impl Move {
     }
 
     pub fn get_promotion_piece(&self) -> Option<PieceId> {
-        self.promotion
+        let move_type = self.get_move_type();
+        if move_type == MoveType::Promotion || move_type == MoveType::PromotionCapture {
+            Some(self.promotion)
+        } else {
+            None
+        }
     }
 }
 
@@ -107,7 +112,7 @@ impl fmt::Display for Move {
         let suffix = match self.get_move_type() {
             MoveType::KingsideCastle => ", O-O".to_string(),
             MoveType::QueensideCastle => ", O-O-O".to_string(),
-            MoveType::Promotion => format!(" = {}", self.promotion.unwrap()),
+            MoveType::Promotion | MoveType::PromotionCapture => format!(" = {}", self.promotion),
             _ => "".to_string()
         };
         write!(f, "({} -> {}{})", to_rank_file(x1, y1), to_rank_file(x2, y2), suffix)

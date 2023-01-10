@@ -20,11 +20,11 @@ mod move_generator_test {
     
     #[test]
     fn test_move_type() {
-        let mv = Move::new(0xAB, 0xCD, Some(0xEF), MoveType::Capture, Some(123));
+        let mv = Move::new(0xAB, 0xCD, Some(0xEF), MoveType::PromotionCapture, Some(123));
         assert_eq!(mv.get_from(), 0xAB);
         assert_eq!(mv.get_to(), 0xCD);
         assert_eq!(mv.get_target(), 0xEF);
-        assert_eq!(mv.get_move_type(), MoveType::Capture);
+        assert_eq!(mv.get_move_type(), MoveType::PromotionCapture);
         assert_eq!(mv.is_capture(), true);
         assert_eq!(mv.is_null(), false);
         assert_eq!(mv.get_promotion_piece(), Some(123));

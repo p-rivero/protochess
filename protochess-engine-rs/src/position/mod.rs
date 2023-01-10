@@ -114,20 +114,16 @@ impl Position {
             }
             
             // Promotion
-            match mv.get_move_type() {
-                MoveType::PromotionCapture | MoveType::Promotion => {
-                    // Remove zobrist hash of the old piece
-                    new_props.zobrist_key ^= moved_piece.get_zobrist(to);
-                    new_props.promote_from = Some(moved_piece.get_piece_id());
-                    // Remove old piece
-                    self.player_piece_at_mut(my_player_num, to).unwrap().remove_piece(to);
-                    // Add new piece
-                    let promote_to_pt = mv.get_promotion_piece().unwrap();
-                    let piece = self.add_piece(my_player_num, promote_to_pt, to, false);
-                    new_props.zobrist_key ^= piece.get_zobrist(to);
-                },
-                _ => {}
-            };
+            if let Some(promo) = mv.get_promotion_piece() {
+                // Remove zobrist hash of the old piece
+                new_props.zobrist_key ^= moved_piece.get_zobrist(to);
+                new_props.promote_from = Some(moved_piece.get_piece_id());
+                // Remove old piece
+                self.player_piece_at_mut(my_player_num, to).unwrap().remove_piece(to);
+                // Add new piece
+                let piece = self.add_piece(my_player_num, promo, to, false);
+                new_props.zobrist_key ^= piece.get_zobrist(to);
+            }
         }
         
         // If this move is a castle, also move the rook
