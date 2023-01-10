@@ -6,7 +6,6 @@ use crate::utils::{from_index, to_index};
 use crate::piece::{Piece, PieceId};
 
 mod position_properties;
-mod parse_fen;
 pub mod game_state;
 pub mod castled_players;
 pub mod piece_set;
@@ -30,42 +29,7 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn default() -> Position {        
-        Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-    }
-    pub fn from_fen(fen: &str) -> Position {
-        parse_fen::parse_fen(fen)
-    }
-    pub fn empty() -> Position {
-        Position::new(BDimensions::default(), vec![], 0, PositionProperties::default())
-    }
-    
-    // TODO: Remove this function and rename new_2 to new 
-    pub fn new(dimensions: BDimensions, pieces: Vec<PieceSet>, whos_turn: Player, props: PositionProperties) -> Position {
-        let mut occupied = Bitboard::zero();
-        for piece_set in &pieces {
-            occupied |= piece_set.get_occupied();
-        }
-        let mut position_repetitions = AHashMap::with_capacity(4096);
-        
-        // Add a repetition for the starting position
-        position_repetitions.insert(props.zobrist_key, 1);
-        
-        let mut properties_stack = Vec::with_capacity(128);
-        properties_stack.push(props);
-        
-        Position {
-            dimensions,
-            whos_turn,
-            // pieces: [PieceSet::new(0), PieceSet::new(1)],
-            pieces: [pieces[0].clone(), pieces[1].clone()],
-            // occupied: Bitboard::zero(),
-            occupied,
-            properties_stack,
-            position_repetitions,
-        }
-    }
-    pub fn new_2(dimensions: BDimensions, whos_turn: Player, props: PositionProperties) -> Position {
+    fn new(dimensions: BDimensions, whos_turn: Player, props: PositionProperties) -> Position {
         // Add a repetition for the starting position
         let mut position_repetitions = AHashMap::with_capacity(4096);
         position_repetitions.insert(props.zobrist_key, 1);

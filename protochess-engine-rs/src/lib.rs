@@ -14,7 +14,7 @@ use searcher::{Searcher, eval};
 use utils::to_index;
 
 pub use position::Position;
-pub use position::game_state::GameState;
+pub use position::game_state::{PiecePlacement, GameState};
 pub use move_generator::MoveGen;
 pub use piece::{PieceId, PieceDefinition};
 pub use types::MoveInfo;
@@ -37,14 +37,11 @@ pub struct Engine{
 
 impl Engine {
     /// Initializes a new engine
-    pub fn empty() -> Engine {
-        Engine{ position: Position::empty() }
-    }
     pub fn default() -> Engine {
-        Engine{ position: Position::default() }
+        Engine{ position: GameState::default().into() }
     }
     pub fn from_fen(fen: &str) -> Engine {
-        Engine{ position: Position::from_fen(fen) }
+        Engine{ position: GameState::from_fen(fen).into() }
     }
 
     pub fn set_state(&mut self, state: GameState) {

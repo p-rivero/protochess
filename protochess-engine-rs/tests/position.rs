@@ -1,13 +1,12 @@
 #[cfg(test)]
 mod position_test {
-    use protochess_engine_rs::Position;
-    use protochess_engine_rs::MoveGen;
+    use protochess_engine_rs::{Position, GameState, MoveGen};
     use protochess_engine_rs::types::Move;
     
     
     #[test]
     fn pieces_tiles_as_tuples() {
-        let pos = Position::default();
+        let pos = Position::from(GameState::default());
         let pieces = pos.pieces_as_tuples();
         assert!(pieces.len() == 32);
         let mut white_pieces = 0;
@@ -42,7 +41,7 @@ mod position_test {
 
     #[test]
     fn null_move_eq() {
-        let mut pos = Position::default();
+        let mut pos = Position::from(GameState::default());
         //let movegen = MoveGenerator::new();
         let zob_0 = pos.get_zobrist();
         pos.make_move(Move::null(), false);
@@ -58,7 +57,7 @@ mod position_test {
     
     #[test]
     fn zobrist_equality() {
-        let mut pos = Position::default();
+        let mut pos = Position::from(GameState::default());
         let zob_0 = pos.get_zobrist();
         for mv in MoveGen::get_pseudo_moves(&mut pos) {
             pos.make_move(mv, false);

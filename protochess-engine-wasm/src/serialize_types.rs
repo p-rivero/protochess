@@ -1,4 +1,4 @@
-use protochess_engine_rs::{MoveInfo, MakeMoveResult, PieceDefinition, GameState};
+use protochess_engine_rs::{MoveInfo, MakeMoveResult, PieceDefinition, GameState, PiecePlacement};
 use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
 use super::utils::SerVec;
@@ -136,11 +136,19 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
 ]);
 
 
+generate_wrapper!(PiecePlacementSer, PiecePlacement, [
+    owner, u8,
+    piece_id, u32,
+    x, u8,
+    y, u8,
+    // True if it has not moved. This is an option so that JS can leave it as undefined
+    can_castle, Option<bool>
+]);
 
 generate_wrapper!(GameStateSer, GameState, [
     piece_types, SerVec<PieceDefinitionSer>,
     valid_squares, Vec<(u8, u8)>,
-    pieces, Vec<(u8, u8, u8, u32)>,
+    pieces, SerVec<PiecePlacementSer>,
     whos_turn, u8,
     ep_square_and_victim, Option<((u8, u8), (u8, u8))>
 ]);

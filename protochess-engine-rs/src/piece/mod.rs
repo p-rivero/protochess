@@ -124,8 +124,8 @@ impl Piece {
     pub fn is_rook(&self) -> bool {
         self.type_def.is_castle_rook
     }
-    pub fn is_rook_and_can_castle(&self, index: BIndex) -> bool {
-        self.type_def.is_castle_rook && self.castle_squares.get_bit(index)
+    pub fn has_not_moved(&self, index: BIndex) -> bool {
+        self.castle_squares.get_bit(index)
     }
     
     pub fn explodes(&self) -> bool {
