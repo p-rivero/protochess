@@ -39,7 +39,7 @@ impl PieceFactory {
             id,
             char_rep: 'P',
             available_for: if is_white { vec![0] } else { vec![1] },
-            is_leader: self.mode == GameMode::Horde && is_white,
+            is_leader: false,
             castle_files: None,
             is_castle_rook: false,
             explodes: self.mode == GameMode::Atomic,

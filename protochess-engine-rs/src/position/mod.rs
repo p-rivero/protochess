@@ -334,11 +334,19 @@ impl Position {
     
     #[inline]
     pub fn leader_is_captured(&self) -> bool {
-        self.pieces[self.whos_turn as usize].get_leader().get_num_pieces() == 0
+        if let Some(leader) = self.pieces[self.whos_turn as usize].get_leader() {
+            leader.get_num_pieces() == 0
+        } else {
+            self.pieces[self.whos_turn as usize].get_occupied().count_ones() == 0
+        }
     }
     #[inline]
     pub fn enemy_leader_is_captured(&self) -> bool {
-        self.pieces[1 - self.whos_turn as usize].get_leader().get_num_pieces() == 0
+        if let Some(leader) = self.pieces[1 - self.whos_turn as usize].get_leader() {
+            leader.get_num_pieces() == 0
+        } else {
+            self.pieces[1 - self.whos_turn as usize].get_occupied().count_ones() == 0
+        }
     }
 
     pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {

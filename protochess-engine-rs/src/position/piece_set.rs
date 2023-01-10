@@ -77,8 +77,11 @@ impl PieceSet {
         self.pieces.iter().find(|p| p.get_piece_id() == id)
     }
     
-    pub fn get_leader(&self) -> &Piece {
-        &self.pieces[self.leader_piece_index as usize]
+    pub fn get_leader(&self) -> Option<&Piece> {
+        if self.leader_piece_index == -1 {
+            return None;
+        }
+        self.pieces.get(self.leader_piece_index as usize)
     }
     
     pub fn get_inverse_attack(&self) -> &PieceDefinition {
