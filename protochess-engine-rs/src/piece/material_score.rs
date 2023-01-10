@@ -15,9 +15,9 @@ pub fn compute_material_score(mp: &PieceDefinition, dims: &BDimensions) -> Centi
     
     let attables = MoveGen::attack_tables();
     let width = average_dimension(dims, |index, walls| attables.get_rank_attack(index, walls));
-    let height = average_dimension(dims, |index, walls| attables.get_file_attack(index, walls));
-    let diag = 1.4 * average_dimension(dims, |index, walls| attables.get_diagonal_attack(index, walls));
-    let antidiag = 1.4 * average_dimension(dims, |index, walls| attables.get_antidiagonal_attack(index, walls));
+    let height = average_dimension(dims, |index, walls| attables.get_file_attack(index, walls).clone());
+    let diag = 1.4 * average_dimension(dims, |index, walls| attables.get_diagonal_attack(index, walls).clone());
+    let antidiag = 1.4 * average_dimension(dims, |index, walls| attables.get_antidiagonal_attack(index, walls).clone());
     
     // 130 centipawns for each direction (Rook is 4*130 = 520 centipawns, Queen is 8*130 = 1040 centipawns)
     if mp.attack_north { score += (ATTACK_MUL * height) as Centipawns }

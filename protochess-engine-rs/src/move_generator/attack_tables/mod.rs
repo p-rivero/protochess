@@ -74,37 +74,32 @@ impl AttackTables {
         return_bb
     }
 
-    pub fn get_file_attack(&self, loc_index: BIndex, occ: &Bitboard) -> Bitboard {
+    pub fn get_file_attack(&self, loc_index: BIndex, occ: &Bitboard) -> &Bitboard {
         let mut occ_index = 0;
         let (x, y_loc) = from_index(loc_index);
         for y in 0..16 {
             occ_index <<= 1;
-            if occ.get_bit(to_index(x, y)) {
+            if occ.get_bit_at(x, y) {
                 occ_index |= 1;
             }
         }
         let rank_index = (15 - y_loc) as usize;
         let attack = self.slider_attacks[rank_index][occ_index];
         //Map the attable back into the file
-        let mut return_bb = Bitboard::zero();
-        for y in 0..16 {
-            if attack & (1 << (15 - y)) != 0 {
-                return_bb.set_bit(to_index(x, y));
-            }
-        }
-        return_bb
+        self.masks.get_file_attack(x, attack)
     }
 
-    pub fn get_diagonal_attack(&self, loc_index: BIndex, occ: &Bitboard) -> Bitboard {
+    pub fn get_diagonal_attack(&self, loc_index: BIndex, occ: &Bitboard) -> &Bitboard {
         let (x, y) = from_index(loc_index);
+        let diagonal_number = 15 + y - x;
         // Start at the top right corner of the diagonal
         let mut index = {
             if x >= y {
                 // Bottom right triangle
-                to_index(15, 15 + y - x) as i16
+                to_index(15, diagonal_number) as i16
             } else {
                 // Top left triangle
-                to_index(15 + x - y, 15) as i16
+                to_index(30 - diagonal_number, 15) as i16
             }
         };
         
@@ -126,21 +121,20 @@ impl AttackTables {
         // Lookup the attack for the first rank
         let attack = self.slider_attacks[x as usize][occ_index as usize];
         //Map attack back to diagonal
-        let mut return_bb = Bitboard::zero();
-        return_bb ^= attack;
-        return_bb.overflowing_mul(self.masks.get_file(0)) & self.masks.get_diagonal(loc_index)
+        self.masks.get_diagonal_attack(diagonal_number, attack)
     }
 
-    pub fn get_antidiagonal_attack(&self, loc_index: BIndex, occ: &Bitboard) -> Bitboard {
+    pub fn get_antidiagonal_attack(&self, loc_index: BIndex, occ: &Bitboard) -> &Bitboard {
         let (x, y) = from_index(loc_index);
+        let antidiagonal_number = x + y;
         // Start at the bottom right corner of the diagonal
         let (mut index, num_iters) = {
-            if y + x <= 15 {
+            if antidiagonal_number <= 15 {
                 // Bottom left triangle
-                (to_index(y + x, 0) as i16, y + x + 1)
+                (to_index(antidiagonal_number, 0) as i16, y + x + 1)
             } else {
                 // Top right triangle
-                (to_index(15, y + x - 15) as i16, 16 + 15 - y - x)
+                (to_index(15, antidiagonal_number - 15) as i16, 16 + 15 - y - x)
             }
         };
         
@@ -160,9 +154,7 @@ impl AttackTables {
         //Lookup the attack for the first rank
         let attack = self.slider_attacks[x as usize][occ_index as usize];
         //Map attack back to diagonal
-        let mut return_bb = Bitboard::zero();
-        return_bb ^= attack;
-        return_bb.overflowing_mul(self.masks.get_file(0)) & self.masks.get_antidiagonal(loc_index)
+        self.masks.get_antidiagonal_attack(antidiagonal_number, attack)
     }
 
     /// Returns a bitboard of the sliding piece moves

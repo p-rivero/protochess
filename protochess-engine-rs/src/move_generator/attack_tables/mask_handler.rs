@@ -13,9 +13,12 @@ pub struct MaskHandler {
     northwest: ArrayVec<[Bitboard;256]>,
     southeast: ArrayVec<[Bitboard;256]>,
     southwest: ArrayVec<[Bitboard;256]>,
-    diagonals: ArrayVec<[Bitboard;256]>,
-    antidiagonals: ArrayVec<[Bitboard;256]>,
-    files: ArrayVec<[Bitboard;16]>,
+    // Precomputed file attacks for a given 16-bit occupancy and column, 32 MB
+    file_attacks: Vec<Vec<Bitboard>>,
+    // Precomputed diagonal attacks for a given 16-bit occupancy and diagonal number, 62 MB
+    diagonal_attacks: Vec<Vec<Bitboard>>,
+    // Precomputed antidiagonal attacks for a given 16-bit occupancy and diagonal number, 62 MB
+    antidiagonal_attacks: Vec<Vec<Bitboard>>,
 }
 
 impl MaskHandler {
@@ -28,9 +31,11 @@ impl MaskHandler {
         let mut northwest = ArrayVec::<[Bitboard;256]>::new();
         let mut southeast = ArrayVec::<[Bitboard;256]>::new();
         let mut southwest = ArrayVec::<[Bitboard;256]>::new();
-        let mut diagonals = ArrayVec::<[Bitboard;256]>::new();
-        let mut antidiagonals = ArrayVec::<[Bitboard;256]>::new();
-        for _i in 0..256 {
+        let mut file_attacks = Vec::with_capacity(16);
+        let mut diagonal_attacks = Vec::with_capacity(31);
+        let mut antidiagonal_attacks = Vec::with_capacity(31);
+        
+        for _ in 0..256 {
             north.push(Bitboard::zero());
             east.push(Bitboard::zero());
             west.push(Bitboard::zero());
@@ -39,8 +44,6 @@ impl MaskHandler {
             northwest.push(Bitboard::zero());
             southeast.push(Bitboard::zero());
             southwest.push(Bitboard::zero());
-            diagonals.push(Bitboard::zero());
-            antidiagonals.push(Bitboard::zero());
         }
 
         for x in 0..16_i8 {
@@ -96,19 +99,65 @@ impl MaskHandler {
                     x2 -= 1;
                     y2 -= 1;
                 }
-
-                diagonals[index] = &northeast[index] ^ &southwest[index];
-                antidiagonals[index] = &northwest[index] ^ &southeast[index];
             }
         }
         
-        let mut files = ArrayVec::<[Bitboard;16]>::new();
-        for i in 0..16 {
-            let mut file = Bitboard::zero();
-            for y in 0..16 {
-                file.set_bit_at(i, y);
+        let mut leftmost_file = Bitboard::zero();
+        for y in 0..16 {
+            leftmost_file.set_bit_at(0, y);
+        }
+        
+        // File attacks
+        for x in 0..16 {
+            let mut v = Vec::with_capacity(65536);
+            for attack in 0..65536 {
+                let mut file = Bitboard::zero();
+                for y in 0..16 {
+                    if attack & (1 << (15 - y)) != 0 {
+                        file.set_bit_at(x, y);
+                    }
+                }
+                v.push(file);
             }
-            files.push(file);
+            file_attacks.push(v);
+        }
+        
+        // Diagonal attacks
+        for d in 0..31 {
+            let mut v = Vec::with_capacity(65536);
+            let mut diagonal_bb = Bitboard::zero();
+            for x in 0..16 {
+                let y: i8 = d + x - 15;
+                if y >= 0 && y < 16 {
+                    diagonal_bb.set_bit_at(x as BCoord, y as BCoord);
+                }
+            }
+            for attack in 0..65536 {
+                let mut attack_bb = Bitboard::zero();
+                attack_bb ^= attack as u16;
+                let result = attack_bb.overflowing_mul(&leftmost_file) & &diagonal_bb;
+                v.push(result);
+            }
+            diagonal_attacks.push(v);
+        }
+        
+        // Antidiagonal attacks
+        for d in 0..31 {
+            let mut v = Vec::with_capacity(65536);
+            let mut diagonal_bb = Bitboard::zero();
+            for x in 0..16 {
+                let y: i8 = d - x;
+                if y >= 0 && y < 16 {
+                    diagonal_bb.set_bit_at(x as BCoord, y as BCoord);
+                }
+            }
+            for attack in 0..65536 {
+                let mut attack_bb = Bitboard::zero();
+                attack_bb ^= attack as u16;
+                let result = attack_bb.overflowing_mul(&leftmost_file) & &diagonal_bb;
+                v.push(result);
+            }
+            antidiagonal_attacks.push(v);
         }
 
         MaskHandler {
@@ -120,14 +169,10 @@ impl MaskHandler {
             northwest,
             southeast,
             southwest,
-            diagonals,
-            antidiagonals,
-            files,
+            file_attacks,
+            diagonal_attacks,
+            antidiagonal_attacks,
         }
-    }
-
-    pub fn get_diagonal(&self, index: BIndex) -> &Bitboard{
-        &self.diagonals[index as usize]
     }
 
     pub fn get_north(&self, index: BIndex) -> &Bitboard{
@@ -161,13 +206,19 @@ impl MaskHandler {
     pub fn get_southwest(&self, index: BIndex) -> &Bitboard{
         &self.southwest[index as usize]
     }
-
-    pub fn get_antidiagonal(&self, index: BIndex) -> &Bitboard{
-        &self.antidiagonals[index as usize]
+    
+    pub fn get_file_attack(&self, x: BCoord, attack: u16) -> &Bitboard {
+        &self.file_attacks[x as usize][attack as usize]
     }
-
-    pub fn get_file(&self, n: BCoord) -> &Bitboard {
-        &self.files[n as usize]
+    
+    /// diagonal = y - x + 15
+    pub fn get_diagonal_attack(&self, diagonal: u8, attack: u16) -> &Bitboard {
+        &self.diagonal_attacks[diagonal as usize][attack as usize]
+    }
+    
+    /// antidiagonal = y + x
+    pub fn get_antidiagonal_attack(&self, antidiagonal: u8, attack: u16) -> &Bitboard {
+        &self.antidiagonal_attacks[antidiagonal as usize][attack as usize]
     }
 }
 
