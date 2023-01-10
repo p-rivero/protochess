@@ -15,39 +15,11 @@ pub struct MaskHandler {
     southwest: ArrayVec<[Bitboard;256]>,
     diagonals: ArrayVec<[Bitboard;256]>,
     antidiagonals: ArrayVec<[Bitboard;256]>,
-    left_masks: ArrayVec<[Bitboard;16]>,
-    right_masks: ArrayVec<[Bitboard;16]>,
     files: ArrayVec<[Bitboard;16]>,
-    ranks: ArrayVec<[Bitboard;16]>,
-    main_diagonal: Bitboard,
-    zero: Bitboard,
 }
 
 impl MaskHandler {
-    pub fn new() -> MaskHandler{
-        let mut left_masks = ArrayVec::<[Bitboard;16]>::new();
-        let mut right_masks = ArrayVec::<[Bitboard;16]>::new();
-        //Initialize left & right file masks
-        let mut cumulative_left = Bitboard::zero();
-        let mut cumulative_right = Bitboard::zero();
-
-        for i in 0..16 {
-            let mut new_left = Bitboard::zero();
-            let mut new_right = Bitboard::zero();
-            new_left |= &cumulative_left;
-            new_right |= &cumulative_right;
-
-            for j in 0..16 {
-                new_left.set_bit_at(i, j);
-                new_right.set_bit_at(16-i-1, j);
-            }
-
-            cumulative_left |= &new_left;
-            cumulative_right |= &new_right;
-            right_masks.push(new_right);
-            left_masks.push(new_left);
-        }
-
+    pub fn new() -> MaskHandler {
         let mut north = ArrayVec::<[Bitboard;256]>::new();
         let mut east = ArrayVec::<[Bitboard;256]>::new();
         let mut west = ArrayVec::<[Bitboard;256]>::new();
@@ -129,26 +101,14 @@ impl MaskHandler {
                 antidiagonals[index] = &northwest[index] ^ &southeast[index];
             }
         }
-
-        let mut main_diagonal = Bitboard::one();
-        main_diagonal ^= &northeast[0];
-
-        let mut ranks = ArrayVec::<[Bitboard;16]>::new();
+        
         let mut files = ArrayVec::<[Bitboard;16]>::new();
         for i in 0..16 {
-
             let mut file = Bitboard::zero();
             for y in 0..16 {
                 file.set_bit_at(i, y);
             }
             files.push(file);
-
-            let mut rank = Bitboard::zero();
-            for x in 0..16 {
-                rank.set_bit_at(x, i);
-            }
-
-            ranks.push(rank);
         }
 
         MaskHandler {
@@ -160,33 +120,10 @@ impl MaskHandler {
             northwest,
             southeast,
             southwest,
-            left_masks,
-            right_masks,
             diagonals,
             antidiagonals,
-            main_diagonal,
-            ranks,
             files,
-            zero: Bitboard::zero()
         }
-    }
-
-    pub fn get_right_mask(&self, num_cols:usize) -> &Bitboard {
-        if num_cols == 0 {
-            return &self.zero;
-        }
-        &self.right_masks[num_cols - 1]
-    }
-
-    pub fn get_left_mask(&self, num_cols:usize) -> &Bitboard {
-        if num_cols == 0 {
-            return &self.zero;
-        }
-        &self.left_masks[num_cols - 1]
-    }
-
-    pub fn get_main_diagonal(&self) -> &Bitboard {
-        &self.main_diagonal
     }
 
     pub fn get_diagonal(&self, index: BIndex) -> &Bitboard{
@@ -232,28 +169,6 @@ impl MaskHandler {
     pub fn get_file(&self, n: BCoord) -> &Bitboard {
         &self.files[n as usize]
     }
-
-    pub fn get_rank(&self, n: BCoord) -> &Bitboard {
-        &self.ranks[n as usize]
-    }
-
-    //bitboard must be same dimensions
-    pub fn shift_north(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
-        bitboard << (amt * 16)
-    }
-
-    pub fn shift_south(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
-        bitboard >> (amt * 16)
-    }
-
-    pub fn shift_east(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
-        (bitboard << amt) & (!self.get_left_mask(amt as usize))
-    }
-
-    pub fn shift_west(&self, amt: BCoord, bitboard: &Bitboard) -> Bitboard {
-        (bitboard >> amt) & (!self.get_right_mask(amt as usize))
-    }
-
 }
 
 impl Default for MaskHandler {

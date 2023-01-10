@@ -29,7 +29,7 @@ pub fn main() {
         max_ply = args[3].parse::<u32>().unwrap();
     }
     let mut engine = {
-        if args.len() > 2 {
+        if args.len() > 2 && args[2] != "default" {
             let fen = &args[2];
             print_pgn_header(fen, &mut pgn_file);
             Engine::from_fen(fen)
