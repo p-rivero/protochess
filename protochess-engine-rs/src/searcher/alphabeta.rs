@@ -7,7 +7,7 @@ use super::Searcher;
 use super::eval;
 use super::transposition_table::{Entry, EntryFlag};
 
-pub const GAME_OVER_SCORE: Centipawns = -100000;
+pub const GAME_OVER_SCORE: Centipawns = -1000000;
 
 impl Searcher {
     pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchError> {
@@ -15,6 +15,8 @@ impl Searcher {
         self.alphabeta(pos, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
     }
     
+    // alpha is the best score that I can currently guarantee at this level or above.
+    // beta is the worst score for me that the opponent can currently guarantee at this level or above.
     fn alphabeta(&mut self, pos: &mut Position, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearchError> {
         
         // If there is repetition, the result is always a draw
@@ -27,9 +29,7 @@ impl Searcher {
         }
         
         if pos.leader_is_captured() {
-            // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
-            let current_depth = self.current_searching_depth - depth;
-            return Ok(GAME_OVER_SCORE + current_depth as Centipawns)
+            return Ok(self.checkmate_score(depth as i16))
         }
         
         let is_root = self.nodes_searched == 0;
@@ -115,7 +115,7 @@ impl Searcher {
                     score = -self.alphabeta(pos, depth - 1, -alpha - 1, -alpha, true, end_time)?;
                     //Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta(pos, depth - 1, -beta, -alpha, true, end_time)?;
+                        score = -self.alphabeta(pos, depth - 1, -beta, -score, true, end_time)?;
                     }
                 }
 
@@ -152,10 +152,7 @@ impl Searcher {
         if num_legal_moves == 0 {
             return if in_check {
                 // No legal moves and in check: Checkmate
-                // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
-                // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
-                let current_depth = self.current_searching_depth - depth;
-                Ok(GAME_OVER_SCORE + current_depth as Centipawns)
+                Ok(self.checkmate_score(depth as i16))
             } else {
                 // No legal moves but also not in check: Stalemate
                 Ok(0)
@@ -196,9 +193,8 @@ impl Searcher {
     fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, end_time: &Instant, quiesce_depth: u8) -> Result<Centipawns, SearchError> {
         
         if pos.leader_is_captured() {
-            // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
             // depth in quiesce() is increased by 1 for each ply (in alphabeta it's decreased)
-            return Ok(GAME_OVER_SCORE + self.current_searching_depth as Centipawns + quiesce_depth as Centipawns);
+            return Ok(self.checkmate_score(-(quiesce_depth as i16)));
         }
         
         self.nodes_searched += 1;
@@ -276,6 +272,14 @@ impl Searcher {
         moves_and_score.sort_unstable_by(|a, b| b.0.cmp(&a.0));
         
         moves_and_score
+    }
+    
+    #[inline]
+    fn checkmate_score(&self, alphabeta_depth: i16) -> Centipawns {
+        // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
+        // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
+        let current_depth = self.current_searching_depth as Centipawns - alphabeta_depth as Centipawns;
+        GAME_OVER_SCORE + 1 * current_depth
     }
 
 }

@@ -274,4 +274,15 @@ mod perft {
         assert_eq!(engine.perft(5), 426584);
         assert_eq!(engine.perft(6), 7174007);
     }
+    
+    #[test]
+    fn horde_endgame() {
+        let mut engine = Engine::from_fen("7r/1b2pppp/P5n1/P4k2/5b2/8/8/5N2 w - - 0 2 HORDE");
+        assert_eq!(engine.perft(1), 6);
+        assert_eq!(engine.perft(2), 164);
+        assert_eq!(engine.perft(3), 1233);
+        assert_eq!(engine.perft(4), 40474);
+        assert_eq!(engine.perft(5), 371518);
+        assert_eq!(engine.perft(6), 11514471);
+    }
 }
