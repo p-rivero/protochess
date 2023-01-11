@@ -17,8 +17,15 @@ impl Searcher {
     
     // alpha is the best score that I can currently guarantee at this level or above.
     // beta is the worst score for me that the opponent can currently guarantee at this level or above.
-    fn alphabeta(&mut self, pos: &mut Position, depth: Depth, mut alpha: Centipawns, beta: Centipawns, do_null: bool, end_time: &Instant) -> Result<Centipawns, SearchError> {
-        
+    fn alphabeta(&mut self,
+            pos: &mut Position,
+            mut depth: Depth,
+            mut alpha: Centipawns,
+            beta: Centipawns,
+            do_null: bool,
+            end_time: &Instant
+        ) -> Result<Centipawns, SearchError>
+    {
         // If there is repetition, the result is always a draw
         if pos.num_repetitions() >= 3 {
             return Ok(0);
@@ -82,6 +89,10 @@ impl Searcher {
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
         let in_check = MoveGen::in_check(pos);
+        if in_check {
+            // If in check, extend search by 1 ply
+            depth += 1;
+        }
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
         let moves = MoveGen::get_pseudo_moves(pos);
@@ -180,7 +191,6 @@ impl Searcher {
         // The root node returns the best move instead of the score
         if is_root {
             assert!(!best_move.is_null());
-            assert!(depth == self.current_searching_depth);
             // This is not an error, but we use the error type to return the best move
             return Err(SearchError::BestMove(best_move, best_score));
         }
@@ -279,7 +289,7 @@ impl Searcher {
         // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
         // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
         let current_depth = self.current_searching_depth as Centipawns - alphabeta_depth as Centipawns;
-        GAME_OVER_SCORE + 1 * current_depth
+        GAME_OVER_SCORE + current_depth
     }
 
 }

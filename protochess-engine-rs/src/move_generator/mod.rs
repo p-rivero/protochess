@@ -69,18 +69,18 @@ impl MoveGen {
     /// Checks if the player to move is in check
     pub fn in_check(position: &mut Position) -> bool {
         let my_pieces = &position.pieces[position.whos_turn as usize];
-        let my_leader = my_pieces.get_leader();
-        if my_leader.is_none() {
-            // If I have no leader, I cannot be in check
-            return false;
+        if let Some(my_leader) = my_pieces.get_leader() {
+            if my_leader.get_num_pieces() > 1 {
+                // There are multiple leaders, so the position cannot be in check
+                return false;
+            }
+            // There is only one bit set to 1 in the bitboard
+            let index = my_leader.get_bitboard().lowest_one().unwrap();
+            MoveGen::index_in_check(index, position)
+        } else {
+            // If I have no leader, I cannot be in check (only lose when all pieces are captured)
+            false
         }
-        if my_leader.unwrap().get_num_pieces() > 1 {
-            // There are multiple leaders, so the position cannot be in check
-            return false;
-        }
-        // There is only one bit set to 1 in the bitboard
-        let index = my_leader.unwrap().get_bitboard().lowest_one().unwrap();
-        MoveGen::index_in_check(index, position)
     }
 
     /// Attempts to make a pseudo-legal move, succeeding and returning true only if the move was legal
