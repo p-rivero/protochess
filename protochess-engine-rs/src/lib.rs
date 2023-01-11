@@ -91,7 +91,7 @@ impl Engine {
                 continue;
             }
             // Found the move, try to play it
-            if !MoveGen::make_move_only_if_legal(&mv, &mut self.position, true) {
+            if !MoveGen::make_move_only_if_legal(&mv, &mut self.position) {
                 continue;
             }
             

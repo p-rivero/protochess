@@ -1,4 +1,3 @@
-use ahash::AHashMap;
 use std::fmt;
 
 use crate::{types::*, PieceDefinition};
@@ -24,16 +23,10 @@ pub struct Position {
     // Typically hard-to-recover properties, like castling
     // Similar to state in stockfish
     properties_stack: Vec<PositionProperties>,
-    // Store the positions that have been played to determine repetition
-    position_repetitions: AHashMap<u64, u8>,
 }
 
 impl Position {
     fn new(dimensions: BDimensions, whos_turn: Player, props: PositionProperties) -> Position {
-        // Add a repetition for the starting position
-        let mut position_repetitions = AHashMap::with_capacity(4096);
-        position_repetitions.insert(props.zobrist_key, 1);
-        
         let mut properties_stack = Vec::with_capacity(128);
         properties_stack.push(props);
         
@@ -43,7 +36,6 @@ impl Position {
             pieces: [PieceSet::new(0), PieceSet::new(1)],
             occupied: Bitboard::zero(),
             properties_stack,
-            position_repetitions,
         }
     }
 
@@ -58,7 +50,7 @@ impl Position {
 
 
     /// Modifies the position to make the move
-    pub fn make_move(&mut self, mv: Move, update_reps: bool) {
+    pub fn make_move(&mut self, mv: Move) {
         let my_player_num = self.whos_turn;
         let mut new_props: PositionProperties = self.get_properties().cheap_clone();
         
@@ -152,12 +144,6 @@ impl Position {
             new_props.clear_ep_square();
         }
         
-        // Increment number of repetitions of new position
-        if update_reps {
-            new_props.update_reps = true;
-            self.update_repetitions(new_props.zobrist_key, 1);
-        }
-
         // Update props
         new_props.move_played = Some(mv);
         self.properties_stack.push(new_props);
@@ -214,11 +200,6 @@ impl Position {
         // Consume prev props; never to return again
         let props = self.properties_stack.pop().unwrap();
         
-        // Decrement the number of repetitions of old position
-        if props.update_reps {
-            self.update_repetitions(props.zobrist_key, -1);
-        }
-
         // Update player turn
         self.whos_turn = 1 - self.whos_turn;
 
@@ -314,8 +295,14 @@ impl Position {
     
     #[inline]
     pub fn num_repetitions(&self) -> u8 {
-        let num_reps = self.position_repetitions.get(&self.get_zobrist());
-        *num_reps.unwrap_or(&0)
+        let mut num_reps = 1;
+        let my_zob = self.get_zobrist();
+        for p in &self.properties_stack {
+            if p.zobrist_key == my_zob {
+                num_reps += 1;
+            }
+        }
+        num_reps
     }
     
     #[inline]
@@ -389,10 +376,7 @@ impl Position {
     
     /// Public interface for modifying the position
     pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex, can_castle: bool) {
-        // Subtract a repetition for the old position
         let mut zob = self.get_zobrist();
-        self.update_repetitions(zob, -1);
-        
         let piece = self.add_piece(owner, piece_type, index, can_castle);
         // Update the zobrist key
         zob ^= piece.get_zobrist(index);
@@ -400,19 +384,13 @@ impl Position {
             zob ^= piece.get_castle_zobrist(index);
         }
         self.update_occupied();
-        // Add a repetition for the new position
-        self.update_repetitions(zob, 1);
-        
         let stack_len = self.properties_stack.len();
         self.properties_stack[stack_len - 1].zobrist_key = zob;
     }
 
     /// Removes a piece from the position, assuming the piece is there
     pub fn public_remove_piece(&mut self, index: BIndex) {
-        // Subtract a repetition for the old position
         let mut zob = self.get_zobrist();
-        self.update_repetitions(zob, -1);
-        
         let piece = self.piece_at_mut(index).unwrap();
         let could_casle = piece.remove_piece(index);
         // Update the zobrist key
@@ -421,9 +399,6 @@ impl Position {
             zob ^= piece.get_castle_zobrist(index);
         }
         self.update_occupied();
-        // Add a repetition for the new position
-        self.update_repetitions(zob, 1);
-        
         let stack_len = self.properties_stack.len();
         self.properties_stack[stack_len - 1].zobrist_key = zob;
     }
@@ -451,21 +426,6 @@ impl Position {
         for (_i, ps) in self.pieces.iter_mut().enumerate() {
             ps.update_occupied();
             self.occupied |= ps.get_occupied();
-        }
-    }
-    
-    #[inline]
-    fn update_repetitions(&mut self, key: u64, delta: i16) {
-        let num_reps = self.position_repetitions.get(&key);
-        if let Some(old_val) = num_reps {
-            let new_val = (*old_val as i16 + delta) as u8;
-            if new_val == 0 {
-                self.position_repetitions.remove(&key);
-            } else {
-                self.position_repetitions.insert(key, new_val);
-            }
-        } else {
-            self.position_repetitions.insert(key, delta as u8);
         }
     }
 }

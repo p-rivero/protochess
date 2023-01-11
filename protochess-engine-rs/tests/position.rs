@@ -44,10 +44,10 @@ mod position_test {
         let mut pos = Position::from(GameState::default());
         //let movegen = MoveGenerator::new();
         let zob_0 = pos.get_zobrist();
-        pos.make_move(Move::null(), false);
-        pos.make_move(Move::null(), false);
-        pos.make_move(Move::null(), false);
-        pos.make_move(Move::null(), false);
+        pos.make_move(Move::null());
+        pos.make_move(Move::null());
+        pos.make_move(Move::null());
+        pos.make_move(Move::null());
         pos.unmake_move();
         pos.unmake_move();
         pos.unmake_move();
@@ -60,11 +60,11 @@ mod position_test {
         let mut pos = Position::from(GameState::default());
         let zob_0 = pos.get_zobrist();
         for mv in MoveGen::get_pseudo_moves(&mut pos) {
-            pos.make_move(mv, false);
+            pos.make_move(mv);
             for mv in MoveGen::get_pseudo_moves(&mut pos) {
-                pos.make_move(mv, false);
+                pos.make_move(mv);
                 for mv in MoveGen::get_pseudo_moves(&mut pos) {
-                    pos.make_move(mv, false);
+                    pos.make_move(mv);
                     pos.unmake_move();
                 }
                 pos.unmake_move();

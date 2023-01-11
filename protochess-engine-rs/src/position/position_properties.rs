@@ -17,8 +17,6 @@ pub struct PositionProperties {
     ep_victim: BIndex, // Only valid if ep_square is Some
     // true if the piece that moved could castle
     pub moved_piece_castle: bool,
-    // true if make_move() was called with update_reps = true
-    pub update_reps: bool,
     // Full id (piece type + player num) of the captured pieces, if any.
     // Also store whether the captured piece could castle and the index where it was captured.
     // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be many.
@@ -36,7 +34,6 @@ impl PositionProperties {
             ep_square: self.ep_square,
             ep_victim: self.ep_victim,
             moved_piece_castle: self.moved_piece_castle,
-            update_reps: false,
             captured_pieces: Vec::new(), // Don't clone captured pieces
         }
     }
@@ -76,7 +73,6 @@ impl Default for PositionProperties {
             ep_square: None,
             ep_victim: 0,
             moved_piece_castle: false,
-            update_reps: false,
             captured_pieces: Vec::new(),
         }
     }

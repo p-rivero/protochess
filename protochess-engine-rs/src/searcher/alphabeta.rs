@@ -69,7 +69,7 @@ impl Searcher {
 
         //Null move pruning
         if !is_pv && do_null && depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
-            pos.make_move(Move::null(), true);
+            pos.make_move(Move::null());
             let nscore = -self.alphabeta(pos, depth - 3, -beta, -beta + 1, false, end_time)?;
             pos.unmake_move();
             if nscore >= beta {
@@ -87,7 +87,7 @@ impl Searcher {
         let moves = MoveGen::get_pseudo_moves(pos);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, depth) {
             
-            if !MoveGen::make_move_only_if_legal(&mv, pos, true) {
+            if !MoveGen::make_move_only_if_legal(&mv, pos) {
                 continue;
             }
 
@@ -216,7 +216,7 @@ impl Searcher {
         let moves = MoveGen::get_capture_moves(pos);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, 0) {
             // This is a capture move, so there is no need to check for repetition
-            if !MoveGen::make_move_only_if_legal(&mv, pos, false) {
+            if !MoveGen::make_move_only_if_legal(&mv, pos) {
                 continue;
             }
             let score = -self.quiesce(pos, -beta, -alpha, end_time, quiesce_depth + 1)?;

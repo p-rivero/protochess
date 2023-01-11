@@ -12,7 +12,7 @@ pub fn perft(position: &mut Position, depth: Depth) -> u64 {
         return MoveGen::count_legal_moves(position);
     }
     for mv in MoveGen::get_pseudo_moves(position) {
-        if !MoveGen::make_move_only_if_legal(&mv, position, false) {
+        if !MoveGen::make_move_only_if_legal(&mv, position) {
             continue;
         }
         nodes += perft(position, depth - 1);
@@ -42,7 +42,7 @@ pub fn perft_divide(position: &mut Position, depth: Depth) -> u64 {
             nodes += 1;
             printing.push(format!("{}{}{}: 1", to_rank_file(x,y), to_rank_file(x2,y2), promo_char));
         } else {
-            position.make_move(mv, false);
+            position.make_move(mv);
             let plus = perft(position, depth - 1);
             nodes += plus;
             position.unmake_move();
