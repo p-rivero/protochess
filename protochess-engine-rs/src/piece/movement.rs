@@ -5,11 +5,18 @@ use crate::types::{Bitboard, Move, MoveType, BCoord, BIndex};
 
 /// Outputs all pseudo-legal translation (non-capture) moves for a piece at a given index
 #[allow(clippy::too_many_arguments)]
-pub fn output_translations(movement: &PieceDefinition, index: BIndex,
-        position: &Position, enemies: &Bitboard, promotion_squares: &Bitboard,
-        occ_or_not_in_bounds: &Bitboard, can_castle: bool,
-        double_jump_squares: &Bitboard, out_moves: &mut Vec<Move>)
-{
+pub fn output_translations(
+    movement: &PieceDefinition,
+    index: BIndex,
+    position: &Position,
+    enemies: &Bitboard,
+    promotion_squares: &Bitboard,
+    occ_or_not_in_bounds: &Bitboard,
+    can_castle: bool,
+    double_jump_squares: &Bitboard,
+    jumps_bitboard: &Vec<Bitboard>,
+    out_moves: &mut Vec<Move>
+) {
     let attack_tables = MoveGen::attack_tables();
     
     // SLIDING MOVES
@@ -34,55 +41,24 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
 
 
     // JUMP MOVES
-    
-    let (x, y) = from_index(index);
-    for (dx, dy) in &movement.translate_jump_deltas {
-        let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-        if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-            continue;
-        }
-        let to = to_index(x2 as BCoord, y2 as BCoord);
-        if position.in_bounds(x2 as BCoord, y2 as BCoord) && !position.occupied.get_bit(to) {
-            // Promotion here?
-            if promotion_squares.get_bit(to) {
-                // Add all the promotion moves
-                for c in &movement.promo_vals {
-                    out_moves.push(Move::new(index, to, None, MoveType::Promotion, Some(*c)));
-                }
-            } else {
-                out_moves.push(Move::new(index, to, None, MoveType::Quiet, None));
-            }
-            
-            if double_jump_squares.get_bit(index) {
-                // Jump again
-                for (dx2, dy2) in &movement.translate_jump_deltas {
-                    let (x3, y3) = (x2 as i8 + *dx2, y2 as i8 + *dy2);
-                    if x3 < 0 || y3 < 0 || x3 > 15 || y3 > 15 {
-                        continue;
-                    }
-                    let to2 = to_index(x3 as BCoord, y3 as BCoord);
-                    if position.in_bounds(x3 as BCoord, y3 as BCoord) && !position.occupied.get_bit(to2) {
-                        // Promotion here?
-                        if promotion_squares.get_bit(to2) {
-                            // Add all the promotion moves
-                            for c in &movement.promo_vals {
-                                out_moves.push(Move::new(index, to2, None, MoveType::Promotion, Some(*c)));
-                            }
-                        } else if double_jump_squares.get_bit(to) {
-                            // In double jump, the first jump index (to) is an en passant square (unless it's also a double jump square)
-                            out_moves.push(Move::new(index, to2, None, MoveType::Quiet, None));
-                        } else {
-                            out_moves.push(Move::new(index, to2, Some(to), MoveType::DoubleJump, None));
-                        }
-                    }
-                }
-            }
+
+    let jump_moves = &jumps_bitboard[index as usize] & !&position.occupied;
+    // Output double jump moves
+    if double_jump_squares.get_bit(index) {
+        let mut jump_moves_copy = jump_moves.clone();
+        while let Some(new_index) = jump_moves_copy.lowest_one() {
+            let double_jump_moves = &jumps_bitboard[new_index as usize] & !&position.occupied;
+            self::flatten_bb_moves_doublejump(double_jump_moves, index, new_index, promotion_squares, double_jump_squares, &movement.promo_vals, out_moves);
+            jump_moves_copy.clear_bit(new_index);
         }
     }
+    // Flatten regular jump moves
+    self::flatten_bb_moves(enemies, jump_moves, index, promotion_squares, &movement.promo_vals, out_moves);
     
     
     // SLIDING DELTAS
     
+    let (x, y) = from_index(index);
     for run in &movement.translate_sliding_deltas {
         for (dx, dy) in run {
             let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
@@ -175,10 +151,16 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
 
 /// Outputs all the pseudo-legal capture moves for a piece at a given index
 #[allow(clippy::too_many_arguments)]
-pub fn output_captures(movement: &PieceDefinition, index: BIndex,
-        position: &Position, enemies: &Bitboard, promotion_squares: &Bitboard,
-        occ_or_not_in_bounds: &Bitboard, out_moves: &mut Vec<Move>)
-{
+pub fn output_captures(
+    movement: &PieceDefinition,
+    index: BIndex,
+    position: &Position,
+    enemies: &Bitboard,
+    promotion_squares: &Bitboard,
+    occ_or_not_in_bounds: &Bitboard,
+    jumps_bitboard: &Bitboard,
+    out_moves: &mut Vec<Move>
+) {
     let attack_tables = MoveGen::attack_tables();
     
     // SLIDING MOVES
@@ -203,35 +185,20 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
 
     
     // JUMP MOVES
-
-    let (x, y) = from_index(index);
-    for (dx, dy) in &movement.attack_jump_deltas {
-        let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-        if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-            continue;
-        }
-        let to = to_index(x2 as BCoord, y2 as BCoord);
-        if enemies.get_bit(to) {
-            //Promotion here?
-            if promotion_squares.get_bit(to) {
-                //Add all the promotion moves
-                for c in &movement.promo_vals {
-                    out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
-                }
-            } else {
-                out_moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
-            }
-        }
-        // En passant capture
-        if movement.can_double_jump() && position.get_ep_square() == Some(to) {
+    
+    let jump_moves = jumps_bitboard & enemies;
+    self::flatten_bb_moves(enemies, jump_moves, index, promotion_squares, &movement.promo_vals, out_moves);
+    // En passant capture
+    if let Some(ep_square) = position.get_ep_square() {
+        if movement.can_double_jump() && jumps_bitboard.get_bit(ep_square) {
             let target = position.get_ep_victim();
-            out_moves.push(Move::new(index, to, Some(target), MoveType::Capture, None));
+            out_moves.push(Move::new(index, ep_square, Some(target), MoveType::Capture, None));
         }
     }
     
     
     // SLIDING DELTAS
-    
+    let (x, y) = from_index(index);
     for run in &movement.attack_sliding_deltas {
         for (dx, dy) in run {
 
@@ -268,11 +235,11 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
 pub fn flatten_bb_moves(
     enemies: &Bitboard,
     mut moves: Bitboard,
-    source_index: BIndex,
+    from_index: BIndex,
     promotion_squares: &Bitboard,
     promo_vals: &Vec<PieceId>,
-    out_moves: &mut Vec<Move>)
-{
+    out_moves: &mut Vec<Move>
+) {
     while let Some(to) = moves.lowest_one() {
         let promo_here = promotion_squares.get_bit(to);
         let capture_here = enemies.get_bit(to);
@@ -287,11 +254,34 @@ pub fn flatten_bb_moves(
         let target = { if capture_here { Some(to) } else { None } };
         if promo_here {
             for promo_val in promo_vals {
-                out_moves.push(Move::new(source_index, to, target, move_type, Some(*promo_val)));
+                out_moves.push(Move::new(from_index, to, target, move_type, Some(*promo_val)));
             }
         } else {
             //No promotion chars left, go to next after this
-            out_moves.push(Move::new(source_index, to, target, move_type, None))
+            out_moves.push(Move::new(from_index, to, target, move_type, None))
+        }
+        moves.clear_bit(to);
+    }
+}
+pub fn flatten_bb_moves_doublejump(
+    mut moves: Bitboard,
+    from_index: BIndex,
+    ep_square: BIndex,
+    promotion_squares: &Bitboard,
+    double_jump_squares: &Bitboard,
+    promo_vals: &Vec<PieceId>,
+    out_moves: &mut Vec<Move>
+) {
+    while let Some(to) = moves.lowest_one() {
+        if promotion_squares.get_bit(to) {
+            for promo_val in promo_vals {
+                out_moves.push(Move::new(from_index, to, None, MoveType::Promotion, Some(*promo_val)));
+            }
+        } else if double_jump_squares.get_bit(ep_square) {
+            // In double jump, the first jump index (to) is an en passant square (unless it's also a double jump square)
+            out_moves.push(Move::new(from_index, to, None, MoveType::Quiet, None))
+        } else {
+            out_moves.push(Move::new(from_index, to, Some(ep_square), MoveType::DoubleJump, None))
         }
         moves.clear_bit(to);
     }

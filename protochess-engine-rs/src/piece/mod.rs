@@ -1,6 +1,7 @@
 use rand::rngs::StdRng;
 use rand::{SeedableRng, Rng};
 
+use crate::utils::from_index;
 use crate::{types::*, Position};
 
 pub type PieceId = u32;
@@ -46,6 +47,10 @@ pub struct Piece {
     promotion_squares: Bitboard,
     // Positions at which this piece can double jump
     double_jump_squares: Bitboard,
+    
+    // Precompute the jump bitboards for this piece
+    jump_bitboards_translate: Vec<Bitboard>,
+    jump_bitboards_capture: Vec<Bitboard>,
 }
 
 impl Piece {
@@ -63,6 +68,8 @@ impl Piece {
         let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims);
+        let jump_bitboards_translate = Piece::precompute_jumps(&definition.translate_jump_deltas, &dims);
+        let jump_bitboards_capture = Piece::precompute_jumps(&definition.attack_jump_deltas, &dims);
         Piece {
             type_def: definition,
             player_num,
@@ -75,6 +82,8 @@ impl Piece {
             castle_squares: Bitboard::zero(),
             promotion_squares,
             double_jump_squares,
+            jump_bitboards_translate,
+            jump_bitboards_capture,
         }
     }
     
@@ -222,8 +231,18 @@ impl Piece {
         let mut bb_copy = self.bitboard.clone();
         while let Some(index) = bb_copy.lowest_one() {
             let can_castle = self.type_def.can_castle() && self.castle_squares.get_bit(index);
-            output_translations(&self.type_def, index, position, enemies, &self.promotion_squares,
-                occ_or_not_in_bounds, can_castle, &self.double_jump_squares, out_moves);
+            output_translations(
+                &self.type_def,
+                index,
+                position,
+                enemies,
+                &self.promotion_squares,
+                occ_or_not_in_bounds,
+                can_castle,
+                &self.double_jump_squares,
+                &self.jump_bitboards_translate,
+                out_moves
+            );
             bb_copy.clear_bit(index);
         }
     }
@@ -233,8 +252,16 @@ impl Piece {
     {
         let mut bb_copy = self.bitboard.clone();
         while let Some(index) = bb_copy.lowest_one() {
-            output_captures(&self.type_def, index, position, enemies, &self.promotion_squares,
-                occ_or_not_in_bounds, out_moves);
+            output_captures(
+                &self.type_def,
+                index,
+                position,
+                enemies,
+                &self.promotion_squares,
+                occ_or_not_in_bounds,
+                &self.jump_bitboards_capture[index as usize],
+                out_moves
+            );
             bb_copy.clear_bit(index);
         }
     }
@@ -253,6 +280,25 @@ impl Piece {
             zobrist.push(rng.gen::<u64>());
         }
         zobrist
+    }
+    
+    fn precompute_jumps(deltas: &Vec<(i8, i8)>, dims: &BDimensions) -> Vec<Bitboard> {
+        let mut jumps = Vec::with_capacity(256);
+        for index in 0..=255 {
+            let mut jump = Bitboard::zero();
+            let (x, y) = from_index(index);
+            for (dx, dy) in deltas {
+                let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
+                if x2 < 0 || y2 < 0 {
+                    continue;
+                }
+                if dims.in_bounds(x2 as BCoord, y2 as BCoord) {
+                    jump.set_bit_at(x2 as BCoord, y2 as BCoord);
+                }
+            }
+            jumps.push(jump);
+        }
+        jumps
     }
 }
 
