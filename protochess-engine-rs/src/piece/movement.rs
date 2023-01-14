@@ -1,16 +1,14 @@
 use crate::utils::{to_index, from_index};
-use crate::{PieceDefinition, MoveGen, Position};
+use crate::{PieceDefinition, MoveGen, Position, PieceId};
 use crate::types::{Bitboard, Move, MoveType, BCoord, BIndex};
-use crate::move_generator::bitboard_moves::BitboardMoves;
 
 
 /// Outputs all pseudo-legal translation (non-capture) moves for a piece at a given index
 #[allow(clippy::too_many_arguments)]
-#[inline]
 pub fn output_translations(movement: &PieceDefinition, index: BIndex,
         position: &Position, enemies: &Bitboard, promotion_squares: &Bitboard,
-        occ_or_not_in_bounds: &Bitboard, can_castle: bool, double_jump_squares: &Bitboard,
-        out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
+        occ_or_not_in_bounds: &Bitboard, can_castle: bool,
+        double_jump_squares: &Bitboard, out_moves: &mut Vec<Move>)
 {
     let attack_tables = MoveGen::attack_tables();
     
@@ -32,13 +30,7 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
     slide_moves &= !&position.occupied;
     // Keep only in bounds
     slide_moves &= &position.dimensions.bounds;
-    out_bb_moves.push(BitboardMoves::new(
-        enemies.clone(),
-        slide_moves,
-        index,
-        promotion_squares.clone(),
-        movement.promo_vals.clone(),
-    ));
+    self::flatten_bb_moves(enemies, slide_moves, index, promotion_squares, &movement.promo_vals, out_moves);
 
 
     // JUMP MOVES
@@ -183,16 +175,15 @@ pub fn output_translations(movement: &PieceDefinition, index: BIndex,
 
 /// Outputs all the pseudo-legal capture moves for a piece at a given index
 #[allow(clippy::too_many_arguments)]
-#[inline]
 pub fn output_captures(movement: &PieceDefinition, index: BIndex,
         position: &Position, enemies: &Bitboard, promotion_squares: &Bitboard,
-        occ_or_not_in_bounds: &Bitboard, out_bb_moves: &mut Vec<BitboardMoves>, out_moves: &mut Vec<Move>)
+        occ_or_not_in_bounds: &Bitboard, out_moves: &mut Vec<Move>)
 {
     let attack_tables = MoveGen::attack_tables();
     
     // SLIDING MOVES
     
-    let mut slide_attacks = attack_tables.get_sliding_moves_bb(
+    let mut slide_moves = attack_tables.get_sliding_moves_bb(
         index,
         occ_or_not_in_bounds,
         movement.attack_north,
@@ -205,16 +196,10 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
         movement.attack_southwest
     );
     // Attacks only
-    slide_attacks &= enemies;
+    slide_moves &= enemies;
     // Keep only in bounds
-    slide_attacks &= &position.dimensions.bounds;
-    out_bb_moves.push(BitboardMoves::new(
-        enemies.clone(),
-        slide_attacks,
-        index,
-        promotion_squares.clone(),
-        movement.promo_vals.clone(),
-    ));
+    slide_moves &= &position.dimensions.bounds;
+    self::flatten_bb_moves(enemies, slide_moves, index, promotion_squares, &movement.promo_vals, out_moves);
 
     
     // JUMP MOVES
@@ -277,5 +262,37 @@ pub fn output_captures(movement: &PieceDefinition, index: BIndex,
                 break;
             }
         }
+    }
+}
+
+pub fn flatten_bb_moves(
+    enemies: &Bitboard,
+    mut moves: Bitboard,
+    source_index: BIndex,
+    promotion_squares: &Bitboard,
+    promo_vals: &Vec<PieceId>,
+    out_moves: &mut Vec<Move>)
+{
+    while let Some(to) = moves.lowest_one() {
+        let promo_here = promotion_squares.get_bit(to);
+        let capture_here = enemies.get_bit(to);
+        let move_type = {
+            match (capture_here, promo_here) {
+                (true, true) => { MoveType::PromotionCapture },
+                (true, false) => { MoveType::Capture },
+                (false, true) => { MoveType::Promotion },
+                (false, false) => { MoveType::Quiet },
+            }
+        };
+        let target = { if capture_here { Some(to) } else { None } };
+        if promo_here {
+            for promo_val in promo_vals {
+                out_moves.push(Move::new(source_index, to, target, move_type, Some(*promo_val)));
+            }
+        } else {
+            //No promotion chars left, go to next after this
+            out_moves.push(Move::new(source_index, to, target, move_type, None))
+        }
+        moves.clear_bit(to);
     }
 }

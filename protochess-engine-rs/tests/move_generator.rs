@@ -12,7 +12,7 @@ mod move_generator_test {
         assert!(MoveGen::in_check(&mut pos));
         let z2 = pos.get_zobrist();
         assert_eq!(z1, z2);
-        for mv in MoveGen::get_capture_moves(&mut pos) {
+        for mv in MoveGen::get_pseudo_moves(&mut pos, false) {
             println!("{}", mv);
             assert!(mv.is_capture());
         }

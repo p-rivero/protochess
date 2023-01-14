@@ -4,7 +4,7 @@ use crate::utils::{to_rank_file, from_index};
 
 use super::{BCoord, BIndex};
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum MoveType {
     // The least significant bit is used to indicate capture
     Quiet = 0b0000,

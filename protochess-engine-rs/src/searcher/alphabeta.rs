@@ -97,7 +97,7 @@ impl Searcher {
         }
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
-        let moves = MoveGen::get_pseudo_moves(pos);
+        let moves = MoveGen::get_pseudo_moves(pos, true);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, depth) {
             
             if !MoveGen::make_move_only_if_legal(&mv, pos) {
@@ -221,7 +221,7 @@ impl Searcher {
         }
 
         // Get only captures, sorted by move ordering heuristics (try the most promising moves first)
-        let moves = MoveGen::get_capture_moves(pos);
+        let moves = MoveGen::get_pseudo_moves(pos, false);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, 0) {
             // This is a capture move, so there is no need to check for repetition
             if !MoveGen::make_move_only_if_legal(&mv, pos) {
@@ -258,13 +258,15 @@ impl Searcher {
     }
 
     #[inline]
-    fn sort_moves_by_score<I: Iterator<Item=Move>>(&mut self, pos: &mut Position, moves: I, depth: Depth) -> Vec<(Centipawns, Move)> {
+    fn sort_moves_by_score(&mut self, pos: &mut Position, moves: Vec<Move>, depth: Depth) -> Vec<(Centipawns, Move)> {
         // Limit depth to the size of the killer moves array
         let depth = std::cmp::min(self.killer_moves.len() - 1, depth as usize);
         let killer_moves_at_depth = &self.killer_moves[depth];
-        let mut moves_and_score: Vec<(Centipawns, Move)> = moves.map(|mv| 
-            (eval::score_move(&self.history_moves, killer_moves_at_depth, pos, &mv), mv))
-            .collect();
+        let mut moves_and_score = Vec::with_capacity(moves.len());
+        for mv in moves {
+            let score = eval::score_move(&self.history_moves, killer_moves_at_depth, pos, &mv);
+            moves_and_score.push((score, mv));
+        }
 
         // Assign PV/hash moves to Centipawns::MAX (search first in the PV)
         if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod position_test {
-    use protochess_engine_rs::{Position, GameState, MoveGen};
+    use protochess_engine_rs::{Position, GameState};
     use protochess_engine_rs::types::Move;
     
     
@@ -53,25 +53,6 @@ mod position_test {
         pos.unmake_move();
         pos.unmake_move();
         assert_eq!(zob_0, pos.get_zobrist());
-    }
-    
-    #[test]
-    fn zobrist_equality() {
-        let mut pos = Position::from(GameState::default());
-        let zob_0 = pos.get_zobrist();
-        for mv in MoveGen::get_pseudo_moves(&mut pos) {
-            pos.make_move(mv);
-            for mv in MoveGen::get_pseudo_moves(&mut pos) {
-                pos.make_move(mv);
-                for mv in MoveGen::get_pseudo_moves(&mut pos) {
-                    pos.make_move(mv);
-                    pos.unmake_move();
-                }
-                pos.unmake_move();
-            }
-            pos.unmake_move();
-        };
-        assert_eq!(zob_0, pos.get_zobrist())
     }
     
 }

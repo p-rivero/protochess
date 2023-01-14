@@ -85,7 +85,7 @@ impl Engine {
     /// Attempts a move on the current board position
     /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
     pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
-        let moves = MoveGen::get_pseudo_moves(&mut self.position);
+        let moves = MoveGen::get_pseudo_moves(&mut self.position, true);
         for mv in moves {
             if !target_move.matches_move(mv) {
                 continue;

@@ -3,11 +3,9 @@ use crate::position::piece_set::PieceSet;
 use crate::types::*;
 use crate::position::Position;
 use crate::move_generator::attack_tables::AttackTables;
-use crate::move_generator::bitboard_moves::BitboardMoves;
 use crate::utils::{from_index, to_index};
 
 pub mod attack_tables;
-pub mod bitboard_moves;
 
 
 lazy_static! {
@@ -25,7 +23,7 @@ impl MoveGen {
     
     pub fn get_legal_moves(position: &mut Position) -> Vec<Move> {
         let mut legal_moves = Vec::new();
-        for mv in MoveGen::get_pseudo_moves(position) {
+        for mv in MoveGen::get_pseudo_moves(position, true) {
             if !MoveGen::is_move_legal(&mv, position) {
                 continue;
             }
@@ -35,35 +33,23 @@ impl MoveGen {
     }
 
     /// Iterator that yields pseudo-legal moves from a positon
-    pub fn get_pseudo_moves(position: &mut Position) -> impl Iterator<Item=Move> {
+    pub fn get_pseudo_moves(position: &mut Position, output_translations: bool) -> Vec<Move> {
         let my_pieces = &position.pieces[position.whos_turn as usize];
 
-        let mut out_bb_moves: Vec<BitboardMoves> = Vec::with_capacity(50);
         let mut out_moves = Vec::with_capacity(50);
 
         let enemies = &position.occupied & !my_pieces.get_occupied();
         let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
-
+        
         for p in my_pieces.iter() {
-            p.output_moves(position, &enemies, &occ_or_not_in_bounds, &mut out_bb_moves, &mut out_moves);
+            p.output_captures(position, &enemies, &occ_or_not_in_bounds, &mut out_moves);
         }
-        out_bb_moves.into_iter().flatten().chain(out_moves.into_iter())
-    }
-    
-    ///Iterator that yields only pseudo-legal capture moves
-    pub fn get_capture_moves(position: &mut Position) -> impl Iterator<Item=Move> {
-        let my_pieces = &position.pieces[position.whos_turn as usize];
-
-        let mut out_bb_moves: Vec<BitboardMoves> = Vec::with_capacity(50);
-        let mut out_moves = Vec::with_capacity(50);
-
-        let enemies = &position.occupied & !my_pieces.get_occupied();
-        let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
-
-        for p in my_pieces.iter() {
-            p.output_captures(position, &enemies, &occ_or_not_in_bounds, &mut out_bb_moves, &mut out_moves);
+        if output_translations {
+            for p in my_pieces.iter() {
+                p.output_translations(position, &enemies, &occ_or_not_in_bounds, &mut out_moves);
+            }
         }
-        out_bb_moves.into_iter().flatten().chain(out_moves.into_iter())
+        out_moves
     }
 
     /// Checks if the player to move is in check
@@ -136,7 +122,7 @@ impl MoveGen {
     ///Returns the number of legal moves for a position
     pub fn count_legal_moves(position: &mut Position) -> u64{
         let mut nodes = 0u64;
-        for mv in MoveGen::get_pseudo_moves(position) {
+        for mv in MoveGen::get_pseudo_moves(position, true) {
             if !MoveGen::is_move_legal(&mv, position) {
                 continue;
             }
