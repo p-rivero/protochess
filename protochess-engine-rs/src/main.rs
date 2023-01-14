@@ -46,7 +46,7 @@ pub fn main() {
 
     let start = instant::Instant::now();
     for ply in 0..max_ply {
-        let mv = engine.get_best_move(depth);
+        let (mv, _) = engine.get_best_move(depth);
         println!("\n========================================\n");
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);

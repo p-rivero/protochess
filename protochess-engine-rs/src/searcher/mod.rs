@@ -1,6 +1,6 @@
 use instant::{Instant, Duration};
 
-use crate::types::{Move, Depth, Centipawns, SearchError};
+use crate::types::{Move, Depth, Centipawns};
 use crate::{Position, MoveGen};
 
 mod alphabeta;
@@ -19,6 +19,7 @@ pub struct Searcher {
     // Stats
     nodes_searched: u64,
     current_searching_depth: Depth,
+    principal_variation: [Move; Depth::MAX as usize + 1],
 }
 
 impl Searcher {
@@ -29,50 +30,56 @@ impl Searcher {
             transposition_table: TranspositionTable::new(),
             nodes_searched: 0,
             current_searching_depth: 0,
+            principal_variation: [Move::null(); Depth::MAX as usize + 1],
         }
     }
     
-    pub fn get_best_move(position: &Position, depth: Depth) -> (Move, Depth) {
+    pub fn get_best_move(position: &Position, depth: Depth) -> (Vec<Move>, Centipawns, Depth) {
         // Create a new copy of the heuristics for each search
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
         Searcher::new().get_best_move_impl(&mut position.clone(), depth, 1_000_000)
     }
 
-    pub fn get_best_move_timeout(position: &Position, time_sec: u64) -> (Move, Depth) {
+    pub fn get_best_move_timeout(position: &Position, time_sec: u64) -> (Vec<Move>, Centipawns, Depth) {
         // Create a new copy of the heuristics for each search
         Searcher::new().get_best_move_impl(&mut position.clone(), Depth::MAX, time_sec)
     }
     
-    // Run for some time, then return the best move, its score, and the depth
-    fn get_best_move_impl(&mut self, pos: &mut Position, max_depth: Depth, time_sec: u64) -> (Move, Depth) {
+    // Run for some time, then return the PV, the position score, and the depth
+    fn get_best_move_impl(&mut self, pos: &mut Position, max_depth: Depth, time_sec: u64) -> (Vec<Move>, Centipawns, Depth) {
         assert!(!pos.leader_is_captured(), "Attempting to get best move but leader is captured");
         assert!(MoveGen::count_legal_moves(pos) != 0, "Attempting to get best move but there are no legal moves");
         
         let end_time = Instant::now() + Duration::from_secs(time_sec);
-        let mut best_move: Move = Move::null();
-        let mut best_depth: Depth = 0;
+        let mut pv = Vec::with_capacity(max_depth as usize);
+        let mut pv_depth: Depth = 0;
+        let mut pv_score: Centipawns = 0;
         
         // Iterative deepening
         for search_depth in 1..=max_depth {
             self.nodes_searched = 0;
             self.current_searching_depth = search_depth;
             match self.search(pos, search_depth, &end_time) {
-                Ok(_) => {
-                    // This should not happen, scores are only passad between inner nodes
-                    panic!("Root call to alphabeta() returned a score instead of a move");
-                },
-                Err(SearchError::BestMove(mv, score)) => {
-                    // This is not an error, but a signal to return the best move
-                    best_move = mv;
-                    best_depth = search_depth;
+                Ok(score) => {
+                    pv.clear();
+                    for i in 0..search_depth {
+                        pv.push(self.principal_variation[i as usize]);
+                    }
+                    pv_depth = search_depth;
+                    pv_score = score;
                     // Print PV info
                     let diff = -(score.abs() + alphabeta::GAME_OVER_SCORE);
                     if diff < 200 {
                         print!("[Mate in {}] ", (diff+1) / 2);
                     }
-                    println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", search_depth, mv, score, self.nodes_searched);
+                    println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", search_depth, self.principal_variation[0], score, self.nodes_searched);
+                    print!("  PV: ");
+                    for m in &pv {
+                        print!("{} ", m);
+                    }
+                    println!();
                 },
-                Err(SearchError::Timeout) => {
+                Err(_) => {
                     // Thread timed out, return the best move found so far
                     break;
                 },
@@ -83,7 +90,6 @@ impl Searcher {
                 break;
             }
         }
-
-        (best_move, best_depth)
+        (pv, pv_score, pv_depth)
     }
 }

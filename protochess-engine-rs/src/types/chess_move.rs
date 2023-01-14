@@ -75,6 +75,11 @@ impl Move {
         ((self.move_fields >> 24) & 1) != 0
     }
     
+    pub fn is_promotion(&self) -> bool {
+        let move_type = self.get_move_type();
+        move_type == MoveType::Promotion || move_type == MoveType::PromotionCapture
+    }
+    
     pub fn is_castling(&self) -> bool {
         let move_type = self.get_move_type();
         move_type == MoveType::KingsideCastle || move_type == MoveType::QueensideCastle
@@ -96,8 +101,7 @@ impl Move {
     }
 
     pub fn get_promotion_piece(&self) -> Option<PieceId> {
-        let move_type = self.get_move_type();
-        if move_type == MoveType::Promotion || move_type == MoveType::PromotionCapture {
+        if self.is_promotion() {
             Some(self.promotion)
         } else {
             None
@@ -108,14 +112,16 @@ impl Move {
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (x1, y1) = from_index(self.get_from());
-        let (x2, y2) = from_index(self.get_to());
-        let suffix = match self.get_move_type() {
-            MoveType::KingsideCastle => ", O-O".to_string(),
-            MoveType::QueensideCastle => ", O-O-O".to_string(),
-            MoveType::Promotion | MoveType::PromotionCapture => format!(" = {}", self.promotion),
-            _ => "".to_string()
+        let (x2, y2) = {
+            // Print castling moves as if the king moves to the rook square
+            if self.is_castling() { from_index(self.get_target()) }
+            else { from_index(self.get_to()) }
         };
-        write!(f, "({} -> {}{})", to_rank_file(x1, y1), to_rank_file(x2, y2), suffix)
+        let suffix = {
+            if self.is_promotion() { format!("={}", self.promotion) }
+            else { "".to_string() }
+        };
+        write!(f, "{}{}{}", to_rank_file(x1, y1), to_rank_file(x2, y2), suffix)
     }
 }
 

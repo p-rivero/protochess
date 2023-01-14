@@ -71,14 +71,31 @@ impl From<&MakeMoveResult> for MakeMoveResultSer {
 
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct MoveInfoWithDepthSer {
+pub struct MoveInfoWithEvalSer {
     move_info: MoveInfoSer,
-    depth: u8
+    evaluation: i32,
 }
-impl MoveInfoWithDepthSer {
-    pub fn to_js(mv: MoveInfo, depth: u8) -> JsValue {
-        let val = MoveInfoWithDepthSer {
+impl MoveInfoWithEvalSer {
+    pub fn to_js(mv: MoveInfo, evaluation: i32) -> JsValue {
+        let val = MoveInfoWithEvalSer {
             move_info: MoveInfoSer::from(mv),
+            evaluation
+        };
+        to_value(&val).unwrap()
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MoveInfoWithEvalDepthSer {
+    move_info: MoveInfoSer,
+    evaluation: i32,
+    depth: u8,
+}
+impl MoveInfoWithEvalDepthSer {
+    pub fn to_js(mv: MoveInfo, evaluation: i32, depth: u8) -> JsValue {
+        let val = MoveInfoWithEvalDepthSer {
+            move_info: MoveInfoSer::from(mv),
+            evaluation,
             depth
         };
         to_value(&val).unwrap()

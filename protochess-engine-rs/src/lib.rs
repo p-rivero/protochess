@@ -131,18 +131,18 @@ impl Engine {
         self.position.dimensions.height
     }
     
-    /// Returns (fromx,fromy,tox,toy,promotion) if there is a move to be made
-    pub fn get_best_move(&mut self, depth: Depth) -> MoveInfo {
+    /// Returns the best move for the current position, along with the evaluation score
+    pub fn get_best_move(&mut self, depth: Depth) -> (MoveInfo, Centipawns) {
         assert!(depth != 0, "Depth must be greater than 0");
-        let (mv, search_depth) = Searcher::get_best_move(&self.position, depth);
+        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth);
         assert!(search_depth == depth);
-        MoveInfo::from_move(mv)
+        (MoveInfo::from_move(pv[0]), score)
     }
 
-    ///Returns ((fromX,fromY,toX,toY,promotion), depth)
-    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> (MoveInfo, Depth) {
-        let (mv, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec);
-        (MoveInfo::from_move(mv), search_depth)
+    /// Returns the best move for the current position, along with the evaluation score and the search depth
+    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> (MoveInfo, Centipawns, Depth) {
+        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec);
+        (MoveInfo::from_move(pv[0]), score, search_depth)
     }
 
     pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<MoveInfo>{

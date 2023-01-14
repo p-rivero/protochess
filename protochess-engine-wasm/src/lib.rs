@@ -46,12 +46,12 @@ impl Protochess {
     }
 
     pub fn play_best_move(&mut self, depth: u8) -> JsValue {
-        let best_move = self.engine.get_best_move(depth);
+        let (best_move, _) = self.engine.get_best_move(depth);
         let move_result = self.engine.make_move(&best_move);
         MakeMoveResultSer::to_js(&move_result)
     }
     pub fn play_best_move_timeout(&mut self, time: usize) -> JsValue {
-        let (best_move, search_depth) = self.engine.get_best_move_timeout(time as u64);
+        let (best_move, _, search_depth) = self.engine.get_best_move_timeout(time as u64);
         let move_result = self.engine.make_move(&best_move);
         MakeMoveResultWithDepthSer::to_js(&move_result, search_depth)
     }
@@ -63,12 +63,12 @@ impl Protochess {
     }
 
     pub fn get_best_move(&mut self, depth: u8) -> JsValue {
-        let best_move = self.engine.get_best_move(depth);
-        MoveInfoSer::to_js(best_move)
+        let (best_move, eval) = self.engine.get_best_move(depth);
+        MoveInfoWithEvalSer::to_js(best_move, eval)
     }
     pub fn get_best_move_timeout(&mut self, time: usize) -> JsValue {
-        let (best_move, depth) = self.engine.get_best_move_timeout(time as u64);
-        MoveInfoWithDepthSer::to_js(best_move, depth)
+        let (best_move, eval, depth) = self.engine.get_best_move_timeout(time as u64);
+        MoveInfoWithEvalDepthSer::to_js(best_move, eval, depth)
     }
 
     pub fn to_move_in_check(&mut self) -> bool {

@@ -1,7 +1,7 @@
 use instant::Instant;
 
 use crate::{Position, MoveGen};
-use crate::types::{Move, Depth, SearchError, Centipawns};
+use crate::types::{Move, Depth, Centipawns};
 
 use super::Searcher;
 use super::eval;
@@ -10,7 +10,7 @@ use super::transposition_table::{Entry, EntryFlag};
 pub const GAME_OVER_SCORE: Centipawns = -1000000;
 
 impl Searcher {
-    pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchError> {
+    pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns,()> {
         // Use -MAX instead of MIN to avoid overflow when negating
         self.alphabeta(pos, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
     }
@@ -24,7 +24,7 @@ impl Searcher {
             beta: Centipawns,
             do_null: bool,
             end_time: &Instant
-        ) -> Result<Centipawns, SearchError>
+        ) -> Result<Centipawns,()>
     {
         // If there is repetition, the result is always a draw
         if pos.num_repetitions() >= 3 {
@@ -39,11 +39,10 @@ impl Searcher {
             return Ok(self.checkmate_score(depth as i16))
         }
         
-        let is_root = self.nodes_searched == 0;
         self.nodes_searched += 1;
         // Check for timeout periodically
         if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
-            return Err(SearchError::Timeout);
+            return Err(());
         }
 
         let is_pv = alpha != beta - 1;
@@ -52,6 +51,7 @@ impl Searcher {
                 match entry.flag {
                     EntryFlag::Exact => {
                         if entry.value < alpha {
+                            self.principal_variation[self.current_depth(depth as i16) as usize] = entry.mv;
                             return Ok(alpha);
                         }
                         if entry.value >= beta {
@@ -66,6 +66,7 @@ impl Searcher {
                     }
                     EntryFlag::Alpha => {
                         if !is_pv && alpha >= entry.value {
+                            self.principal_variation[self.current_depth(depth as i16) as usize] = entry.mv;
                             return Ok(alpha);
                         }
                     }
@@ -83,7 +84,8 @@ impl Searcher {
                 return Ok(beta);
             }
         }
-
+        
+        // TODO: Remove best_move and best_score
         let mut best_move = Move::null();
         let mut num_legal_moves = 0;
         let old_alpha = alpha;
@@ -188,29 +190,25 @@ impl Searcher {
                 depth,
             });
         }
-        // The root node returns the best move instead of the score
-        if is_root {
-            assert!(!best_move.is_null());
-            // This is not an error, but we use the error type to return the best move
-            return Err(SearchError::BestMove(best_move, best_score));
-        }
+        
+        self.principal_variation[self.current_depth(depth as i16) as usize] = best_move;
         
         Ok(alpha)
     }
 
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
-    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, end_time: &Instant, quiesce_depth: u8) -> Result<Centipawns, SearchError> {
+    // depth starts at 0 and is decreased by 1 for each ply
+    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, end_time: &Instant, depth: i16) -> Result<Centipawns,()> {
         
         if pos.leader_is_captured() {
-            // depth in quiesce() is increased by 1 for each ply (in alphabeta it's decreased)
-            return Ok(self.checkmate_score(-(quiesce_depth as i16)));
+            return Ok(self.checkmate_score(depth));
         }
         
         self.nodes_searched += 1;
         // Check for timeout periodically
         if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
-            return Err(SearchError::Timeout);
+            return Err(());
         }
         
         let score = eval::evaluate(pos);
@@ -229,7 +227,7 @@ impl Searcher {
             if !MoveGen::make_move_only_if_legal(&mv, pos) {
                 continue;
             }
-            let score = -self.quiesce(pos, -beta, -alpha, end_time, quiesce_depth + 1)?;
+            let score = -self.quiesce(pos, -beta, -alpha, end_time, depth - 1)?;
             pos.unmake_move();
 
             if score >= beta {
@@ -285,11 +283,16 @@ impl Searcher {
     }
     
     #[inline]
-    fn checkmate_score(&self, alphabeta_depth: i16) -> Centipawns {
+    fn checkmate_score(&self, depth: i16) -> Centipawns {
         // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
         // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
-        let current_depth = self.current_searching_depth as Centipawns - alphabeta_depth as Centipawns;
-        GAME_OVER_SCORE + current_depth
+        GAME_OVER_SCORE + self.current_depth(depth) as Centipawns
     }
+    
+    #[inline]
+    fn current_depth(&self, depth: i16) -> i16 {
+        self.current_searching_depth as i16 - depth
+    }
+    
 
 }
