@@ -111,6 +111,9 @@ impl Move {
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_null() {
+            return write!(f, "[NULL]");
+        }
         let (x1, y1) = from_index(self.get_from());
         let (x2, y2) = {
             // Print castling moves as if the king moves to the rook square

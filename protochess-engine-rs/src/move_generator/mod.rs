@@ -24,7 +24,7 @@ impl MoveGen {
     pub fn get_legal_moves(position: &mut Position) -> Vec<Move> {
         let mut legal_moves = Vec::new();
         for mv in MoveGen::get_pseudo_moves(position, true) {
-            if !MoveGen::is_move_legal(&mv, position) {
+            if !MoveGen::is_move_legal(mv, position) {
                 continue;
             }
             legal_moves.push(mv);
@@ -70,7 +70,7 @@ impl MoveGen {
     }
 
     /// Attempts to make a pseudo-legal move, succeeding and returning true only if the move was legal
-    pub fn make_move_only_if_legal(mv: &Move, position: &mut Position) -> bool {
+    pub fn make_move_only_if_legal(mv: Move, position: &mut Position) -> bool {
         // Cannot castle while in check or step through check
         if mv.is_castling() {
             let kingside = mv.get_move_type() == MoveType::KingsideCastle;
@@ -95,7 +95,7 @@ impl MoveGen {
         }
         
         // Try the move and skip a turn, then see if we are in check
-        position.make_move(*mv);
+        position.make_move(mv);
         position.make_move(Move::null());
         // See if we are in check or an explosion has killed the last leader
         // However, if the move causes us to capture the last enemy leader, the move is legal (even if it leaves us in check)
@@ -109,7 +109,7 @@ impl MoveGen {
     }
     
     /// Checks if a move is legal
-    pub fn is_move_legal(mv: &Move, position: &mut Position) -> bool {
+    pub fn is_move_legal(mv: Move, position: &mut Position) -> bool {
         let legal = Self::make_move_only_if_legal(mv, position);
         // Restore previous state of the position
         if legal {
@@ -123,7 +123,7 @@ impl MoveGen {
     pub fn count_legal_moves(position: &mut Position) -> u64{
         let mut nodes = 0u64;
         for mv in MoveGen::get_pseudo_moves(position, true) {
-            if !MoveGen::is_move_legal(&mv, position) {
+            if !MoveGen::is_move_legal(mv, position) {
                 continue;
             }
             nodes += 1;

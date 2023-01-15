@@ -72,7 +72,7 @@ impl Searcher {
                     if diff < 200 {
                         print!("[Mate in {}] ", (diff+1) / 2);
                     }
-                    println!("Depth {:<2} {}. Score: {:<5}, nodes: {}", search_depth, self.principal_variation[0], score, self.nodes_searched);
+                    println!("Depth {:<2}. Score: {:<4}, nodes: {}", search_depth, score, self.nodes_searched);
                     print!("  PV: ");
                     for m in &pv {
                         print!("{} ", m);

@@ -449,6 +449,7 @@ impl fmt::Display for Position {
         for x in 0..self.dimensions.width {
             write!(f, "{} ", (b'A'+x) as char)?;
         }
-        write!(f, "\nZobrist Key: {:x}", self.get_zobrist())
+        write!(f, "\nZobrist Key: {:x}", self.get_zobrist())?;
+        write!(f, "\nPlayer to move: {}", self.whos_turn)
     }
 }

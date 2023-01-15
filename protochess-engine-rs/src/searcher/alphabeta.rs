@@ -51,7 +51,6 @@ impl Searcher {
                 match entry.flag {
                     EntryFlag::Exact => {
                         if entry.value < alpha {
-                            self.principal_variation[self.current_depth(depth as i16) as usize] = entry.mv;
                             return Ok(alpha);
                         }
                         if entry.value >= beta {
@@ -66,7 +65,6 @@ impl Searcher {
                     }
                     EntryFlag::Alpha => {
                         if !is_pv && alpha >= entry.value {
-                            self.principal_variation[self.current_depth(depth as i16) as usize] = entry.mv;
                             return Ok(alpha);
                         }
                     }
@@ -100,7 +98,7 @@ impl Searcher {
         let moves = MoveGen::get_pseudo_moves(pos, true);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, depth) {
             
-            if !MoveGen::make_move_only_if_legal(&mv, pos) {
+            if !MoveGen::make_move_only_if_legal(mv, pos) {
                 continue;
             }
 
@@ -157,7 +155,7 @@ impl Searcher {
                     alpha = score;
 
                     // History heuristic
-                    self.update_history_heuristic(depth, &mv);
+                    self.update_history_heuristic(depth, mv);
                 }
             }
         }
@@ -181,6 +179,8 @@ impl Searcher {
                 mv: best_move,
                 depth,
             });
+            self.principal_variation[self.current_depth(depth as i16) as usize] = best_move;
+            
         } else {
             self.transposition_table.insert(pos.get_zobrist(), Entry{
                 key: pos.get_zobrist(),
@@ -190,8 +190,6 @@ impl Searcher {
                 depth,
             });
         }
-        
-        self.principal_variation[self.current_depth(depth as i16) as usize] = best_move;
         
         Ok(alpha)
     }
@@ -224,7 +222,7 @@ impl Searcher {
         let moves = MoveGen::get_pseudo_moves(pos, false);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, 0) {
             // This is a capture move, so there is no need to check for repetition
-            if !MoveGen::make_move_only_if_legal(&mv, pos) {
+            if !MoveGen::make_move_only_if_legal(mv, pos) {
                 continue;
             }
             let score = -self.quiesce(pos, -beta, -alpha, end_time, depth - 1)?;
@@ -249,7 +247,7 @@ impl Searcher {
     }
 
     #[inline]
-    fn update_history_heuristic(&mut self, depth: Depth, mv:&Move) {
+    fn update_history_heuristic(&mut self, depth: Depth, mv: Move) {
         if !mv.is_capture() {
             self.history_moves
                 [mv.get_from() as usize]
@@ -264,7 +262,7 @@ impl Searcher {
         let killer_moves_at_depth = &self.killer_moves[depth];
         let mut moves_and_score = Vec::with_capacity(moves.len());
         for mv in moves {
-            let score = eval::score_move(&self.history_moves, killer_moves_at_depth, pos, &mv);
+            let score = eval::score_move(&self.history_moves, killer_moves_at_depth, pos, mv);
             moves_and_score.push((score, mv));
         }
 
