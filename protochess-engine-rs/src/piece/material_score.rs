@@ -1,7 +1,7 @@
 use super::super::PieceDefinition;
 use crate::utils::to_index;
 use crate::MoveGen;
-use crate::types::{Centipawns, BDimensions, BIndex, Bitboard};
+use crate::types::{Centipawns, BDimensions};
 
 /// Returns a score value for a piece, given its movement pattern
 pub fn compute_material_score(mp: &PieceDefinition, dims: &BDimensions) -> Centipawns {
@@ -13,11 +13,10 @@ pub fn compute_material_score(mp: &PieceDefinition, dims: &BDimensions) -> Centi
     
     let mut score = 0;
     
-    let attables = MoveGen::attack_tables();
-    let width = average_dimension(dims, |index, walls| attables.get_rank_attack(index, walls));
-    let height = average_dimension(dims, |index, walls| attables.get_file_attack(index, walls).clone());
-    let diag = 1.4 * average_dimension(dims, |index, walls| attables.get_diagonal_attack(index, walls).clone());
-    let antidiag = 1.4 * average_dimension(dims, |index, walls| attables.get_antidiagonal_attack(index, walls).clone());
+    let width = average_dimension(dims, true, false, false, false);
+    let height = average_dimension(dims, false, true, false, false);
+    let diag = 1.4 * average_dimension(dims, false, false, true, false);
+    let antidiag = 1.4 * average_dimension(dims, false, false, false, true);
     
     // 130 centipawns for each direction (Rook is 4*130 = 520 centipawns, Queen is 8*130 = 1040 centipawns)
     if mp.attack_north { score += (ATTACK_MUL * height) as Centipawns }
@@ -85,9 +84,7 @@ pub fn compute_material_score(mp: &PieceDefinition, dims: &BDimensions) -> Centi
 
 /// Returns the average dimension (width, height, diagonals) of the board, from all legal indexes
 /// Gets a callback function that returns the desired dimension for a given index
-fn average_dimension<F>(dims: &BDimensions, measure_funct: F) -> f32 
-    where F: Fn(BIndex, &Bitboard) -> Bitboard
-{
+fn average_dimension(dims: &BDimensions, x_dir: bool, y_dir: bool, diag: bool, antidiag: bool) -> f32 {
     let walls = !&dims.bounds;
     let mut total = 0.0;
     let mut count = 0.0;
@@ -97,7 +94,19 @@ fn average_dimension<F>(dims: &BDimensions, measure_funct: F) -> f32
             if !dims.bounds.get_bit(index) {
                 continue; // Skip illegal indexes
             }
-            total += measure_funct(index, &walls).count_ones() as f32;
+            let sliding_moves = MoveGen::attack_tables().get_sliding_moves_bb(
+                index,
+                &walls,
+                y_dir,
+                x_dir,
+                y_dir,
+                x_dir,
+                diag,
+                antidiag,
+                antidiag,
+                diag
+            );
+            total += sliding_moves.count_ones() as f32;
             count += 1.0;
         }
     }

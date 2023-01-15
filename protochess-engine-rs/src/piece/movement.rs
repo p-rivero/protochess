@@ -87,7 +87,7 @@ pub fn output_translations(
     if can_castle {
         // Able to castle, check if there is a rook on the correct square
         let (_, ky) = from_index(index);
-        let rank_visibility = attack_tables.get_rank_attack(index, &position.occupied);
+        let rank_visibility = attack_tables.get_rank_slide(index, &position.occupied);
         
         // King side
         // Index of the closest piece to the east
