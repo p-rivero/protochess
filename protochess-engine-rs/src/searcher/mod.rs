@@ -62,8 +62,16 @@ impl Searcher {
             match self.search(pos, search_depth, &end_time) {
                 Ok(score) => {
                     pv.clear();
+                    // Copy the pv into a vector
                     for i in 0..search_depth {
+                        if self.principal_variation[i as usize].is_null() {
+                            break;
+                        }
                         pv.push(self.principal_variation[i as usize]);
+                    }
+                    // Clean up the pv
+                    for i in 0..self.current_searching_depth {
+                        self.principal_variation[i as usize] = Move::null();
                     }
                     pv_depth = search_depth;
                     pv_score = score;

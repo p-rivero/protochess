@@ -12,7 +12,7 @@ pub const GAME_OVER_SCORE: Centipawns = -1000000;
 impl Searcher {
     pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns,()> {
         // Use -MAX instead of MIN to avoid overflow when negating
-        self.alphabeta(pos, depth, -Centipawns::MAX, Centipawns::MAX, true, end_time)
+        self.alphabeta(pos, depth, 0, -Centipawns::MAX, Centipawns::MAX, true, end_time)
     }
     
     // alpha is the best score that I can currently guarantee at this level or above.
@@ -20,6 +20,7 @@ impl Searcher {
     fn alphabeta(&mut self,
             pos: &mut Position,
             mut depth: Depth,
+            pv_index: usize,
             mut alpha: Centipawns,
             beta: Centipawns,
             do_null: bool,
@@ -56,6 +57,14 @@ impl Searcher {
                         if entry.value >= beta {
                             return Ok(beta);
                         }
+                        if is_pv {
+                            self.principal_variation[pv_index] = entry.mv;
+                            // It's not feasible to store the rest of the PV in the transposition table,
+                            // so we don't know what the next moves in the PV are.
+                            for i in (pv_index+1)..(self.current_searching_depth as usize) {
+                                self.principal_variation[i] = Move::null();
+                            }
+                        }
                         return Ok(entry.value);
                     }
                     EntryFlag::Beta => {
@@ -76,22 +85,23 @@ impl Searcher {
         //Null move pruning
         if !is_pv && do_null && depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
             pos.make_move(Move::null());
-            let nscore = -self.alphabeta(pos, depth - 3, -beta, -beta + 1, false, end_time)?;
+            // Not pv, so the pv_index doesn't matter
+            let nscore = -self.alphabeta(pos, depth-3, 0, -beta, -beta+1, false, end_time)?;
             pos.unmake_move();
             if nscore >= beta {
                 return Ok(beta);
             }
         }
         
-        // TODO: Remove best_move and best_score
         let mut best_move = Move::null();
         let mut num_legal_moves = 0;
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
         let in_check = MoveGen::in_check(pos);
-        if in_check {
+        if is_pv && in_check {
             // If in check, extend search by 1 ply
             depth += 1;
+            self.current_searching_depth += 1;
         }
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
@@ -105,7 +115,7 @@ impl Searcher {
             num_legal_moves += 1;
             let mut score: Centipawns;
             if num_legal_moves == 1 {
-                score = -self.alphabeta(pos, depth - 1, -beta, -alpha, true, end_time)?;
+                score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, do_null, end_time)?;
             } else {
                 //Try late move reduction
                 if num_legal_moves > 4 && mv.is_quiet() && !is_pv && depth >= 5 && !in_check {
@@ -114,7 +124,8 @@ impl Searcher {
                     if num_legal_moves > 10 {
                         reduced_depth = depth - 3;
                     }
-                    score = -self.alphabeta(pos, reduced_depth, -alpha - 1, -alpha, true, end_time)?;
+                    // Not pv, so the pv_index doesn't matter
+                    score = -self.alphabeta(pos, reduced_depth, 0, -alpha-1, -alpha, do_null, end_time)?;
                 } else {
                     //Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
@@ -123,10 +134,10 @@ impl Searcher {
                 if score > alpha {
                     //PVS
                     //Null window search
-                    score = -self.alphabeta(pos, depth - 1, -alpha - 1, -alpha, true, end_time)?;
+                    score = -self.alphabeta(pos, depth-1, 0, -alpha-1, -alpha, do_null, end_time)?;
                     //Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta(pos, depth - 1, -beta, -score, true, end_time)?;
+                        score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, do_null, end_time)?;
                     }
                 }
 
@@ -179,7 +190,8 @@ impl Searcher {
                 mv: best_move,
                 depth,
             });
-            self.principal_variation[self.current_depth(depth as i16) as usize] = best_move;
+            assert!(is_pv);
+            self.principal_variation[pv_index] = best_move;
             
         } else {
             self.transposition_table.insert(pos.get_zobrist(), Entry{
