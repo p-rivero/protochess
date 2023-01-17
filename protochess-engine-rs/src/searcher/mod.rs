@@ -19,6 +19,7 @@ pub struct Searcher {
     // Stats
     nodes_searched: u64,
     current_searching_depth: Depth,
+    original_searching_depth: Depth,
     principal_variation: [Move; Depth::MAX as usize + 1],
 }
 
@@ -30,6 +31,7 @@ impl Searcher {
             transposition_table: TranspositionTable::new(),
             nodes_searched: 0,
             current_searching_depth: 0,
+            original_searching_depth: 0,
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
         }
     }
@@ -51,6 +53,8 @@ impl Searcher {
         assert!(MoveGen::count_legal_moves(pos) != 0, "Attempting to get best move but there are no legal moves");
         
         let end_time = Instant::now() + Duration::from_secs(time_sec);
+        // Limit the max depth to 127 to avoid overflow when doubling
+        let max_depth = std::cmp::min(max_depth, 127);
         let mut pv = Vec::with_capacity(max_depth as usize);
         let mut pv_depth: Depth = 0;
         let mut pv_score: Centipawns = 0;
@@ -58,16 +62,17 @@ impl Searcher {
         // Iterative deepening
         for search_depth in 1..=max_depth {
             self.nodes_searched = 0;
+            self.original_searching_depth = search_depth;
             self.current_searching_depth = search_depth;
             match self.search(pos, search_depth, &end_time) {
                 Ok(score) => {
                     pv.clear();
                     // Copy the pv into a vector
-                    for i in 0..search_depth {
-                        if self.principal_variation[i as usize].is_null() {
+                    for mv in self.principal_variation {
+                        if mv.is_null() {
                             break;
                         }
-                        pv.push(self.principal_variation[i as usize]);
+                        pv.push(mv);
                     }
                     // Clean up the pv
                     for i in 0..self.current_searching_depth {
