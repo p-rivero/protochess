@@ -14,7 +14,7 @@ pub fn output_translations(
     occ_or_not_in_bounds: &Bitboard,
     can_castle: bool,
     double_jump_squares: &Bitboard,
-    jumps_bitboard: &Vec<Bitboard>,
+    jumps_bitboard: &[Bitboard],
     out_moves: &mut Vec<Move>
 ) {
     let attack_tables = MoveGen::attack_tables();

@@ -9,3 +9,12 @@ pub type Depth = u8;
 pub type Player = u8;
 
 
+
+#[derive(Debug)]
+pub struct SearchTimeout;
+impl std::fmt::Display for SearchTimeout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Search timed out")
+    }
+}
+impl std::error::Error for SearchTimeout { }

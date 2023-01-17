@@ -68,8 +68,8 @@ impl Piece {
         let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims);
-        let jump_bitboards_translate = Piece::precompute_jumps(&definition.translate_jump_deltas, &dims);
-        let jump_bitboards_capture = Piece::precompute_jumps(&definition.attack_jump_deltas, &dims);
+        let jump_bitboards_translate = Piece::precompute_jumps(&definition.translate_jump_deltas, dims);
+        let jump_bitboards_capture = Piece::precompute_jumps(&definition.attack_jump_deltas, dims);
         Piece {
             type_def: definition,
             player_num,

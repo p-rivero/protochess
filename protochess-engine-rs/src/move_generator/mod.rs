@@ -70,7 +70,7 @@ impl MoveGen {
     }
 
     /// Attempts to make a pseudo-legal move, succeeding and returning true only if the move was legal
-    pub fn make_move_only_if_legal(mv: Move, position: &mut Position) -> bool {
+    pub fn make_move_if_legal(mv: Move, position: &mut Position) -> bool {
         // Cannot castle while in check or step through check
         if mv.is_castling() {
             let kingside = mv.get_move_type() == MoveType::KingsideCastle;
@@ -110,7 +110,7 @@ impl MoveGen {
     
     /// Checks if a move is legal
     pub fn is_move_legal(mv: Move, position: &mut Position) -> bool {
-        let legal = Self::make_move_only_if_legal(mv, position);
+        let legal = Self::make_move_if_legal(mv, position);
         // Restore previous state of the position
         if legal {
             position.unmake_move();

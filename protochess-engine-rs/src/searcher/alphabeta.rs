@@ -1,7 +1,7 @@
 use instant::Instant;
 
 use crate::{Position, MoveGen};
-use crate::types::{Move, Depth, Centipawns};
+use crate::types::{Move, Depth, Centipawns, SearchTimeout};
 
 use super::Searcher;
 use super::eval;
@@ -10,7 +10,7 @@ use super::transposition_table::{Entry, EntryFlag};
 pub const GAME_OVER_SCORE: Centipawns = -1000000;
 
 impl Searcher {
-    pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns,()> {
+    pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchTimeout> {
         // Use -MAX instead of MIN to avoid overflow when negating
         self.alphabeta(pos, depth, 0, -Centipawns::MAX, Centipawns::MAX, true, end_time)
     }
@@ -25,7 +25,7 @@ impl Searcher {
             beta: Centipawns,
             do_null: bool,
             end_time: &Instant
-        ) -> Result<Centipawns,()>
+        ) -> Result<Centipawns, SearchTimeout>
     {
         // If there is repetition, the result is always a draw
         if pos.num_repetitions() >= 3 {
@@ -37,13 +37,13 @@ impl Searcher {
         }
         
         if pos.leader_is_captured() {
-            return Ok(self.checkmate_score(depth as i16))
+            return Ok(self.checkmate_score(depth as i16));
         }
         
         self.nodes_searched += 1;
         // Check for timeout periodically
         if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
-            return Err(());
+            return Err(SearchTimeout);
         }
 
         let is_pv = alpha != beta - 1;
@@ -58,10 +58,8 @@ impl Searcher {
                             return Ok(beta);
                         }
                         if is_pv {
-                            self.principal_variation[pv_index] = entry.mv;
-                            // It's not feasible to store the rest of the PV in the transposition table,
-                            // so we don't know what the next moves in the PV are.
-                            for i in (pv_index+1)..(self.current_searching_depth as usize) {
+                            // entry.mv is not reliable, since this table entry could be from a transposition
+                            for i in pv_index..=self.current_searching_depth as usize {
                                 self.principal_variation[i] = Move::null();
                             }
                         }
@@ -108,7 +106,7 @@ impl Searcher {
         let moves = MoveGen::get_pseudo_moves(pos, true);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, depth) {
             
-            if !MoveGen::make_move_only_if_legal(mv, pos) {
+            if !MoveGen::make_move_if_legal(mv, pos) {
                 continue;
             }
 
@@ -209,7 +207,7 @@ impl Searcher {
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
     // depth starts at 0 and is decreased by 1 for each ply
-    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, end_time: &Instant, depth: i16) -> Result<Centipawns,()> {
+    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, end_time: &Instant, depth: i16) -> Result<Centipawns, SearchTimeout> {
         
         if pos.leader_is_captured() {
             return Ok(self.checkmate_score(depth));
@@ -218,7 +216,7 @@ impl Searcher {
         self.nodes_searched += 1;
         // Check for timeout periodically
         if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
-            return Err(());
+            return Err(SearchTimeout);
         }
         
         let score = eval::evaluate(pos);
@@ -234,7 +232,7 @@ impl Searcher {
         let moves = MoveGen::get_pseudo_moves(pos, false);
         for (_move_score, mv) in self.sort_moves_by_score(pos, moves, 0) {
             // This is a capture move, so there is no need to check for repetition
-            if !MoveGen::make_move_only_if_legal(mv, pos) {
+            if !MoveGen::make_move_if_legal(mv, pos) {
                 continue;
             }
             let score = -self.quiesce(pos, -beta, -alpha, end_time, depth - 1)?;

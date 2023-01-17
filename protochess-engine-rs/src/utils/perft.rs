@@ -12,7 +12,7 @@ pub fn perft(position: &mut Position, depth: Depth) -> u64 {
         return MoveGen::count_legal_moves(position);
     }
     for mv in MoveGen::get_pseudo_moves(position, true) {
-        if !MoveGen::make_move_only_if_legal(mv, position) {
+        if !MoveGen::make_move_if_legal(mv, position) {
             continue;
         }
         nodes += perft(position, depth - 1);
