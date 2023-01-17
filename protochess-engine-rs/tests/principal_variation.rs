@@ -46,6 +46,51 @@ mod principal_variation {
     fn starting_position_11() {
         test_pv("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 11);
     }
+    #[test]
+    fn starting_position_12() {
+        test_pv("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 11);
+    }
+    
+    #[test]
+    fn kiwipete_1() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 1);
+    }
+    #[test]
+    fn kiwipete_2() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 2);
+    }
+    #[test]
+    fn kiwipete_3() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 3);
+    }
+    #[test]
+    fn kiwipete_4() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 4);
+    }
+    #[test]
+    fn kiwipete_5() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 5);
+    }
+    #[test]
+    fn kiwipete_6() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 6);
+    }
+    #[test]
+    fn kiwipete_7() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 7);
+    }
+    #[test]
+    fn kiwipete_8() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 8);
+    }
+    #[test]
+    fn kiwipete_9() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 9);
+    }
+    #[test]
+    fn kiwipete_10() {
+        test_pv("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 10);
+    }
     
     
     fn test_pv(fen: &str, depth: u8) {

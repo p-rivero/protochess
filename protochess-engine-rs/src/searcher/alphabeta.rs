@@ -32,21 +32,12 @@ impl Searcher {
             return Ok(0);
         }
         
-        if depth == 0 {
-            return self.quiesce(pos, alpha, beta, end_time, 0);
-        }
-        
         if pos.leader_is_captured() {
             return Ok(self.checkmate_score(depth as i16));
         }
-        
-        self.nodes_searched += 1;
-        // Check for timeout periodically
-        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
-            return Err(SearchTimeout);
-        }
 
         let is_pv = alpha != beta - 1;
+        // Probe transposition table
         if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {
             if entry.depth >= depth {
                 match entry.flag {
@@ -78,6 +69,29 @@ impl Searcher {
                     EntryFlag::Null => {}
                 }
             }
+        }
+        
+        if depth == 0 {
+            let quiesce_score = self.quiesce(pos, alpha, beta, end_time, 0)?;
+            let flag = {
+                if quiesce_score <= alpha { EntryFlag::Alpha }
+                else if quiesce_score >= beta { EntryFlag::Beta }
+                else { EntryFlag::Exact }
+            };
+            self.transposition_table.insert(pos.get_zobrist(), Entry{
+                key: pos.get_zobrist(),
+                flag,
+                value: quiesce_score,
+                mv: Move::null(),
+                depth,
+            });
+            return Ok(quiesce_score); 
+        }
+        
+        self.nodes_searched += 1;
+        // Check for timeout periodically
+        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
+            return Err(SearchTimeout);
         }
 
         //Null move pruning
@@ -113,32 +127,31 @@ impl Searcher {
             num_legal_moves += 1;
             let mut score: Centipawns;
             if num_legal_moves == 1 {
-                score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, do_null, end_time)?;
+                score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, true, end_time)?;
             } else {
-                //Try late move reduction
+                // Try late move reduction
                 if num_legal_moves > 4 && mv.is_quiet() && !is_pv && depth >= 5 && !in_check {
-                    //Null window search with depth - 2
-                    let mut reduced_depth = depth - 2;
-                    if num_legal_moves > 10 {
-                        reduced_depth = depth - 3;
-                    }
+                    // Null window search
                     // Not pv, so the pv_index doesn't matter
-                    score = -self.alphabeta(pos, reduced_depth, 0, -alpha-1, -alpha, do_null, end_time)?;
+                    let reduced_depth = {
+                        if num_legal_moves > 10 { depth - 5 }
+                        else { depth - 3 }
+                    };
+                    score = -self.alphabeta(pos, reduced_depth, 0, -alpha-1, -alpha, true, end_time)?;
                 } else {
-                    //Cannot reduce, proceed with standard PVS
+                    // Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
                 }
 
                 if score > alpha {
-                    //PVS
-                    //Null window search
-                    score = -self.alphabeta(pos, depth-1, 0, -alpha-1, -alpha, do_null, end_time)?;
-                    //Re-search if necessary
+                    // PVS
+                    // Null window search
+                    score = -self.alphabeta(pos, depth-1, 0, -alpha-1, -alpha, true, end_time)?;
+                    // Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, do_null, end_time)?;
+                        score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, true, end_time)?;
                     }
                 }
-
             }
 
             pos.unmake_move();
