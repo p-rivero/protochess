@@ -53,6 +53,7 @@ impl Position {
     pub fn make_move(&mut self, mv: Move) {
         let my_player_num = self.whos_turn;
         let mut new_props: PositionProperties = self.get_properties().cheap_clone();
+        let move_type = mv.get_move_type();
         
         // Update the player
         self.whos_turn = 1 - self.whos_turn;
@@ -62,7 +63,7 @@ impl Position {
         
         // In the special case of the null move, don't do anything except update whos_turn
         // And update props
-        if mv.is_null() {
+        if move_type == MoveType::Null {
             // Update props
             // Since we're passing, there cannot be an ep square
             new_props.clear_ep_square();
@@ -72,7 +73,6 @@ impl Position {
         }
 
         // If this move is a capture, remove the captured piece before moving
-        let move_type = mv.get_move_type();
         if move_type == MoveType::Capture || move_type == MoveType::PromotionCapture {
             let capt_index = mv.get_target();
             let captured_piece = self.player_piece_at(self.whos_turn, capt_index).unwrap();
@@ -122,7 +122,7 @@ impl Position {
         if move_type == MoveType::KingsideCastle || move_type == MoveType::QueensideCastle {
             let rook_from = mv.get_target();
             let rook_to = {
-                if mv.get_move_type() == MoveType::KingsideCastle { to - 1 }
+                if move_type == MoveType::KingsideCastle { to - 1 }
                 else { to + 1 }
             };
             // At this point, it's possible that in "rook_from" there are 2 pieces at the same time
@@ -138,7 +138,7 @@ impl Position {
 
         // Pawn en-passant
         // Check for a pawn double push to set ep square
-        if mv.get_move_type() == MoveType::DoubleJump {
+        if move_type == MoveType::DoubleJump {
             new_props.set_ep_square(mv.get_target(), mv.get_to())
         } else {
             new_props.clear_ep_square();
@@ -205,9 +205,10 @@ impl Position {
 
         let my_player_num = self.whos_turn;
         let mv = props.move_played.expect("No move to undo");
+        let move_type = mv.get_move_type();
         
         // Undo null moves
-        if mv.is_null() {
+        if move_type == MoveType::Null {
             return;
         }
         let from = mv.get_from();
@@ -219,21 +220,18 @@ impl Position {
             moved_piece.move_piece(to, from, moved_piece_castle);
             
             // Undo Promotion
-            match mv.get_move_type() {
-                MoveType::PromotionCapture | MoveType::Promotion => {
-                    // Remove old piece
-                    moved_piece.remove_piece(from);
-                    let promoted_from = props.promote_from.unwrap();
-                    // Assume that the piece that promoted must have moved, so it can't castle
-                    self.add_piece(my_player_num, promoted_from, from, false);
-                },
-                _ => {}
-            };
+            if move_type == MoveType::Promotion || move_type == MoveType::PromotionCapture {
+                // Remove old piece
+                moved_piece.remove_piece(from);
+                let promoted_from = props.promote_from.unwrap();
+                // Assume that the piece that promoted must have moved, so it can't castle
+                self.add_piece(my_player_num, promoted_from, from, false);
+            }
         }
 
         // Undo special moves
         // Special moves
-        match mv.get_move_type() {
+        match move_type {
             MoveType::Capture | MoveType::PromotionCapture => {
                 let num_captures = props.captured_pieces.len();
                 for i in 0..num_captures {
@@ -244,7 +242,7 @@ impl Position {
             MoveType::KingsideCastle | MoveType::QueensideCastle => {
                 let rook_from = mv.get_target();
                 let (x, y) = from_index(mv.get_to());
-                let rook_x = if mv.get_move_type() == MoveType::KingsideCastle { x - 1 } else { x + 1 };
+                let rook_x = if move_type == MoveType::KingsideCastle { x - 1 } else { x + 1 };
                 let rook_to = to_index(rook_x, y);
                 // At this point, it's possible that in "rook_to" there are 2 pieces at the same time
                 // (the moved king and the rook waiting to be moved). This only happens in chess960.

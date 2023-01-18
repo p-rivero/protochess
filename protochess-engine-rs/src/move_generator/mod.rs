@@ -138,7 +138,7 @@ impl MoveGen {
         let enemy = 1 - position.whos_turn;
         let enemy_pieces = &position.pieces[enemy as usize];
         let enemy_occupied = enemy_pieces.get_occupied();
-        let inverse_attack = enemy_pieces.get_inverse_attack();
+        let (inverse_attack, jumps) = enemy_pieces.get_inverse_attack(index);
         // Use inverse attack pattern to get the squares that can potentially attack the square
         let attack_tables = MoveGen::attack_tables();
         let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
@@ -168,22 +168,16 @@ impl MoveGen {
         }
         
         // Check jump attacks
-        for (dx, dy) in &inverse_attack.attack_jump_deltas {
-            let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-            if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                continue;
-            }
-            let enemy_piece_index = to_index(x2 as BCoord, y2 as BCoord);
-            if !enemy_occupied.get_bit(enemy_piece_index) {
-                continue;
-            }
+        let mut jump_attacks = jumps & enemy_occupied;
+        while let Some(enemy_piece_index) = jump_attacks.lowest_one() {
             // Found an enemy piece that might attack the last leader
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
             let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(x, y, enemy_pieces, enemy_piece, enemy_piece_index);
-            if !kills_remaining_leaders && enemy_piece.get_movement().attack_jump_deltas.contains(&(-dx, -dy)) {
+            if !kills_remaining_leaders && enemy_piece.get_capture_jumps(enemy_piece_index).get_bit(index) {
                 return true;
             }
+            jump_attacks.clear_bit(enemy_piece_index);
         }
         
         // Check sliding deltas

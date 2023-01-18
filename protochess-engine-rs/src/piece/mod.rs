@@ -269,6 +269,9 @@ impl Piece {
     pub fn get_movement(&self) -> &PieceDefinition {
         &self.type_def
     }
+    pub fn get_capture_jumps(&self, index: BIndex) -> &Bitboard {
+        &self.jump_bitboards_capture[index as usize]
+    }
     
     fn random_zobrist(piece_id: u32, player: Player) -> Vec<u64> {
         // Generate a predictable seed for the rng

@@ -114,29 +114,6 @@ impl PieceDefinition {
     pub fn can_castle(&self) -> bool {
         self.castle_files.is_some()
     }
-    
-    pub fn update_inverse_attack(&mut self, other: &PieceDefinition) {
-        self.attack_north |= other.attack_south;
-        self.attack_south |= other.attack_north;
-        self.attack_east |= other.attack_west;
-        self.attack_west |= other.attack_east;
-        self.attack_northeast |= other.attack_southwest;
-        self.attack_northwest |= other.attack_southeast;
-        self.attack_southeast |= other.attack_northwest;
-        self.attack_southwest |= other.attack_northeast;
-        
-        for delta in &other.attack_jump_deltas {
-            self.attack_jump_deltas.push((-delta.0, -delta.1));
-        }
-        
-        for delta in &other.attack_sliding_deltas {
-            let mut new_delta = Vec::new();
-            for (x, y) in delta {
-                new_delta.push((-x, -y));
-            }
-            self.attack_sliding_deltas.push(new_delta);
-        }
-    }
 }
 
 impl Default for PieceDefinition {

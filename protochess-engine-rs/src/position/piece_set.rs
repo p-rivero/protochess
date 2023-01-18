@@ -2,8 +2,9 @@ use std::slice::{Iter, IterMut};
 
 use crate::PieceDefinition;
 //Pieces that a player has
-use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns};
+use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns, BCoord};
 use crate::piece::{Piece, PieceId};
+use crate::utils::from_index;
 
 /// Represents a set of pieces for a player
 /// custom is a vec of custom piece
@@ -15,22 +16,28 @@ pub struct PieceSet {
     player_num: Player,
     // Inverse attack pattern of all the pieces in the set
     inverse_attack: PieceDefinition,
+    inverse_attack_jumps: Vec<Bitboard>,
 }
 
 impl PieceSet {
     pub fn new(player_num: Player) -> PieceSet {
+        let mut inverse_attack_jumps = Vec::with_capacity(256);
+        for _ in 0..256 {
+            inverse_attack_jumps.push(Bitboard::zero());
+        }
         PieceSet {
             occupied: Bitboard::zero(),
             pieces: Vec::new(),
             leader_piece_index: -1,
             player_num,
             inverse_attack: PieceDefinition::default(),
+            inverse_attack_jumps,
         }
     }
     
     pub fn register_piecetype(&mut self, definition: PieceDefinition, dims: &BDimensions) {
         // Update the inverse movement pattern
-        self.inverse_attack.update_inverse_attack(&definition);
+        self.update_inverse_attack(&definition, dims);
         
         if definition.is_leader {
             assert!(self.leader_piece_index == -1, "Only one leader piece per player");
@@ -84,8 +91,8 @@ impl PieceSet {
         self.pieces.get(self.leader_piece_index as usize)
     }
     
-    pub fn get_inverse_attack(&self) -> &PieceDefinition {
-        &self.inverse_attack
+    pub fn get_inverse_attack(&self, index: BIndex) -> (&PieceDefinition, &Bitboard) {
+        (&self.inverse_attack, &self.inverse_attack_jumps[index as usize])
     }
 
     //Recomputes occupied bb
@@ -123,5 +130,39 @@ impl PieceSet {
             }
         }
         score
+    }
+    
+    
+    fn update_inverse_attack(&mut self, other: &PieceDefinition, dims: &BDimensions) {
+        self.inverse_attack.attack_north |= other.attack_south;
+        self.inverse_attack.attack_south |= other.attack_north;
+        self.inverse_attack.attack_east |= other.attack_west;
+        self.inverse_attack.attack_west |= other.attack_east;
+        self.inverse_attack.attack_northeast |= other.attack_southwest;
+        self.inverse_attack.attack_northwest |= other.attack_southeast;
+        self.inverse_attack.attack_southeast |= other.attack_northwest;
+        self.inverse_attack.attack_southwest |= other.attack_northeast;
+        
+        for delta in &other.attack_jump_deltas {
+            self.inverse_attack.attack_jump_deltas.push((-delta.0, -delta.1));
+            
+            for i in 0..=255 {
+                let (x, y) = from_index(i);
+                let nx = x as i8 - delta.0;
+                let ny = y as i8 - delta.1;
+                if nx < 0 || ny < 0 || !dims.in_bounds(nx as BCoord, ny as BCoord) {
+                    continue;
+                }
+                self.inverse_attack_jumps[i as usize].set_bit_at(nx as BCoord, ny as BCoord);
+            }
+        }
+        
+        for delta in &other.attack_sliding_deltas {
+            let mut new_delta = Vec::new();
+            for (x, y) in delta {
+                new_delta.push((-x, -y));
+            }
+            self.inverse_attack.attack_sliding_deltas.push(new_delta);
+        }
     }
 }
