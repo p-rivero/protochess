@@ -12,7 +12,7 @@ pub fn from_index(index: BIndex) -> (BCoord, BCoord) {
     ((index % 16) as BCoord , (index / 16) as BCoord)
 }
 
-// DFS to find distance to nearest 1, using a callback function to get neighbors
+// BFS to find distance to nearest 1, using a callback function to get neighbors
 pub fn distance_to_one<F>(x_start: BCoord, y_start: BCoord, board: &Bitboard, get_neighbors: F) -> isize 
     where F: Fn(BCoord, BCoord) -> Vec<(BCoord, BCoord)>
 {
