@@ -15,8 +15,11 @@ pub struct PieceSet {
     occupied: Bitboard,
     player_num: Player,
     // Inverse attack pattern of all the pieces in the set
+    // TODO: Remove inverse attack
     inverse_attack: PieceDefinition,
     inverse_attack_jumps: Vec<Bitboard>,
+    
+    piece_at_index: [isize; 256],
 }
 
 impl PieceSet {
@@ -32,6 +35,7 @@ impl PieceSet {
             player_num,
             inverse_attack: PieceDefinition::default(),
             inverse_attack_jumps,
+            piece_at_index: [-1; 256],
         }
     }
     
@@ -66,22 +70,29 @@ impl PieceSet {
         self.player_num
     }
 
+    pub fn index_has_piece(&self, index: BIndex) -> bool {
+        self.piece_at_index[index as usize] != -1
+    }
+    
     pub fn piece_at(&self, index: BIndex) -> Option<&Piece> {
-        self.pieces.iter().find(|&p| p.is_at_index(index))
+        let piece_index = self.piece_at_index[index as usize];
+        if piece_index == -1 {
+            None
+        } else {
+            Some(&self.pieces[piece_index as usize])
+        }
     }
     pub fn piece_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
-        self.pieces.iter_mut().find(|p| p.is_at_index(index))
-    }
-    pub fn rook_at_mut(&mut self, index: BIndex) -> Option<&mut Piece> {
-        self.pieces.iter_mut().find(|p| p.is_rook() && p.is_at_index(index))
-    }
-    
-    pub fn search_by_char(&mut self, c: char) -> Option<&mut Piece> {
-        self.pieces.iter_mut().find(|p| p.char_rep() == c)
+        let piece_index = self.piece_at_index[index as usize];
+        if piece_index == -1 {
+            None
+        } else {
+            Some(&mut self.pieces[piece_index as usize])
+        }
     }
     
-    pub fn search_by_id(&self, id: PieceId) -> Option<&Piece> {
-        self.pieces.iter().find(|p| p.get_piece_id() == id)
+    pub fn get_piece_char(&self, id: PieceId) -> Option<char> {
+        self.pieces.iter().find(|p| p.get_piece_id() == id).map(|p| p.char_rep())
     }
     
     pub fn get_leader(&self) -> Option<&Piece> {
@@ -95,12 +106,45 @@ impl PieceSet {
         (&self.inverse_attack, &self.inverse_attack_jumps[index as usize])
     }
 
-    //Recomputes occupied bb
+    /// Recomputes occupied bb
     pub fn update_occupied(&mut self) {
         self.occupied = Bitboard::zero();
         for p in &self.pieces {
             self.occupied |= p.get_bitboard();
         }
+    }
+    
+    /// Moves a piece from one index to another.
+    /// If set_can_castle is true, set the new index as a castle square.
+    /// Returns true if the piece could castle before this move
+    /// Always use this function to move pieces, never call piece.move_piece() directly.
+    pub fn move_piece(&mut self, from: BIndex, to: BIndex, set_can_castle: bool) -> bool {
+        let piece_index = self.piece_at_index[from as usize];
+        let piece = &mut self.pieces[piece_index as usize];
+        let could_castle = piece.move_piece_(from, to, set_can_castle);
+        self.piece_at_index[from as usize] = -1;
+        self.piece_at_index[to as usize] = piece_index;
+        could_castle
+    }
+    
+    /// Add a piece to a given piece type at a given index (assuming the piece type exists).
+    /// Always use this function to add pieces, never call piece.add_piece() directly.
+    pub fn add_piece(&mut self, piece_id: PieceId, index: BIndex, set_can_castle: bool) {
+        let piece_index = self.pieces.iter().position(|p| p.get_piece_id() == piece_id).unwrap();
+        let piece = &mut self.pieces[piece_index];
+        piece.add_piece_(index, set_can_castle);
+        self.piece_at_index[index as usize] = piece_index as isize;
+    }
+    
+    /// Remove a piece from a given index (assuming there is a piece there).
+    /// Returns true if the piece could castle before this move
+    /// Always use this function to remove pieces, never call piece.remove_piece() directly.
+    pub fn remove_piece(&mut self, index: BIndex) -> bool {
+        let piece_index = self.piece_at_index[index as usize];
+        let piece = &mut self.pieces[piece_index as usize];
+        let could_castle = piece.remove_piece_(index);
+        self.piece_at_index[index as usize] = -1;
+        could_castle
     }
     
     // Returns the material score of all pieces in the set, and of only the leader pieces

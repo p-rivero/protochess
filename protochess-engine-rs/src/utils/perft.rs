@@ -33,9 +33,9 @@ pub fn perft_divide(position: &mut Position, depth: Depth) -> u64 {
 
         let (x,y) = from_index(mv.get_from());
         let (x2,y2) = from_index(mv.get_to());
-        let promo = mv.get_promotion_piece().map(|p| position.search_piece_by_id(p));
+        let promo = mv.get_promotion_piece().map(|p| position.get_piece_char(position.whos_turn, p));
         let promo_char = {
-            if let Some(Some(p)) = promo { p.char_rep().to_string() }
+            if let Some(Some(p)) = promo { p.to_string() }
             else { "".to_string() }
         };
         if depth == 1 {

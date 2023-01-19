@@ -1,6 +1,6 @@
 use instant::{Instant, Duration};
 
-use crate::types::{Move, Depth, Centipawns};
+use crate::types::{Move, Depth, Centipawns, SearchTimeout};
 use crate::{Position, MoveGen};
 
 mod alphabeta;
@@ -92,7 +92,7 @@ impl Searcher {
                     }
                     println!();
                 },
-                Err(_) => {
+                Err(SearchTimeout) => {
                     // Thread timed out, return the best move found so far
                     break;
                 },

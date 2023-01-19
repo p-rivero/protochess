@@ -81,7 +81,7 @@ impl Position {
             let castling_zob = captured_piece.get_castle_zobrist(capt_index);
             new_props.zobrist_key ^= captured_piece.get_zobrist(capt_index);
     
-            let could_castle = self.player_piece_at_mut(capt_player, capt_index).unwrap().remove_piece(capt_index);
+            let could_castle = self.pieces[capt_player as usize].remove_piece(capt_index);
             if could_castle {
                 new_props.zobrist_key ^= castling_zob
             }
@@ -90,13 +90,26 @@ impl Position {
             // Check if the capturing piece explodes
             self.explode_piece(mv, my_player_num, &mut new_props);
         }
+        
+        // If this move is a castle, first remove the rook (in chess960 the king could move to the rook's square
+        // and the rook would be overwritten)
+        let mut rook_id = None;
+        if move_type == MoveType::KingsideCastle || move_type == MoveType::QueensideCastle {
+            let rook_from = mv.get_target();
+            let rook_piece = self.player_piece_at(my_player_num, rook_from).unwrap();
+            new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
+            new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
+            rook_id = Some(rook_piece.get_piece_id());
+            self.pieces[my_player_num as usize].remove_piece(rook_from);
+        }
 
         let from = mv.get_from();
         let to = mv.get_to();
         // Move the piece (only if it hasn't exploded)
-        if let Some(moved_piece) = self.player_piece_at_mut(my_player_num, from) {
+        if self.pieces[my_player_num as usize].index_has_piece(from) {
             // Move piece to location
-            new_props.moved_piece_castle = moved_piece.move_piece(from, to, false);
+            new_props.moved_piece_castle = self.pieces[my_player_num as usize].move_piece(from, to, false);
+            let moved_piece = self.player_piece_at(my_player_num, to).unwrap();
             new_props.zobrist_key ^= moved_piece.get_zobrist(from);
             new_props.zobrist_key ^= moved_piece.get_zobrist(to);
             if new_props.moved_piece_castle {
@@ -111,28 +124,23 @@ impl Position {
                 new_props.zobrist_key ^= moved_piece.get_zobrist(to);
                 new_props.promote_from = Some(moved_piece.get_piece_id());
                 // Remove old piece
-                self.player_piece_at_mut(my_player_num, to).unwrap().remove_piece(to);
+                self.pieces[my_player_num as usize].remove_piece(to);
                 // Add new piece
-                let piece = self.add_piece(my_player_num, promo, to, false);
+                self.pieces[my_player_num as usize].add_piece(promo, to, false);
+                let piece = self.player_piece_at(my_player_num, to).unwrap();
                 new_props.zobrist_key ^= piece.get_zobrist(to);
             }
         }
         
-        // If this move is a castle, also move the rook
+        // If this move is a castle, add the rook back
         if move_type == MoveType::KingsideCastle || move_type == MoveType::QueensideCastle {
-            let rook_from = mv.get_target();
             let rook_to = {
                 if move_type == MoveType::KingsideCastle { to - 1 }
                 else { to + 1 }
             };
-            // At this point, it's possible that in "rook_from" there are 2 pieces at the same time
-            // (the moved king and the rook waiting to be moved). This only happens in chess960.
-            // Use rook_at_mut() to make sure that we are moving the rook and not the king
-            let rook_piece = self.pieces[my_player_num as usize].rook_at_mut(rook_from).unwrap();
-            new_props.zobrist_key ^= rook_piece.get_zobrist(rook_from);
+            self.pieces[my_player_num as usize].add_piece(rook_id.unwrap(), rook_to, false);
+            let rook_piece = self.player_piece_at(my_player_num, rook_to).unwrap();
             new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
-            new_props.zobrist_key ^= rook_piece.get_castle_zobrist(rook_from);
-            rook_piece.move_piece(rook_from, rook_to, false);
             new_props.castled_players.set_player_castled(my_player_num);
         }
 
@@ -155,17 +163,19 @@ impl Position {
     #[inline]
     fn explode_piece(&mut self, mv: Move, my_player_num: u8, new_props: &mut PositionProperties) {
         let from = mv.get_from();
-        let moved_piece = self.player_piece_at_mut(my_player_num, from).unwrap();
+        let moved_piece = self.pieces[my_player_num as usize].piece_at_mut(from).unwrap();
         if !moved_piece.explodes() {
             return;
         }
-        // Remove the capturing piece
-        let capturing_could_castle = moved_piece.remove_piece(from);
         new_props.zobrist_key ^= moved_piece.get_zobrist(from);
+        let moved_piece_castle_zob = moved_piece.get_castle_zobrist(from);
+        let moved_piece_id = moved_piece.get_piece_id();
+        // Remove the capturing piece
+        let capturing_could_castle = self.pieces[my_player_num as usize].remove_piece(from);
         if capturing_could_castle {
-            new_props.zobrist_key ^= moved_piece.get_castle_zobrist(from);
+            new_props.zobrist_key ^= moved_piece_castle_zob;
         }
-        new_props.captured_pieces.push((moved_piece.get_piece_id(), my_player_num, capturing_could_castle, from));
+        new_props.captured_pieces.push((moved_piece_id, my_player_num, capturing_could_castle, from));
         // Remove all pieces in the explosion radius
         let (x, y) = from_index(mv.get_to());
         
@@ -179,16 +189,19 @@ impl Position {
                     continue;
                 }
                 let nindex = to_index(nx as BCoord, ny as BCoord);
-                if let Some(piece) = self.piece_at_mut(nindex) {
-                    if piece.immune_to_explosion() {
+                if let Some(exploded_piece) = self.piece_at_mut(nindex) {
+                    if exploded_piece.immune_to_explosion() {
                         continue;
                     }
-                    let could_castle = piece.remove_piece(nindex);
-                    new_props.zobrist_key ^= piece.get_zobrist(nindex);
+                    new_props.zobrist_key ^= exploded_piece.get_zobrist(nindex);
+                    let exploded_id = exploded_piece.get_piece_id();
+                    let exploded_player = exploded_piece.get_player();
+                    let exploded_castle_zob = exploded_piece.get_castle_zobrist(nindex);
+                    let could_castle = self.pieces[exploded_player as usize].remove_piece(nindex);
                     if could_castle {
-                        new_props.zobrist_key ^= piece.get_castle_zobrist(nindex);
+                        new_props.zobrist_key ^= exploded_castle_zob;
                     }
-                    new_props.captured_pieces.push((piece.get_piece_id(), piece.get_player(), could_castle, nindex));
+                    new_props.captured_pieces.push((exploded_id, exploded_player, could_castle, nindex));
                 }
             }
         }
@@ -213,19 +226,30 @@ impl Position {
         }
         let from = mv.get_from();
         let to = mv.get_to();
+        
+        // If this move is a castle, remove the rook
+        let mut rook_id = None;
+        if move_type == MoveType::KingsideCastle || move_type == MoveType::QueensideCastle {
+            let rook_to = {
+                if move_type == MoveType::KingsideCastle { to - 1 }
+                else { to + 1 }
+            };
+            let rook_piece = self.pieces[my_player_num as usize].piece_at_mut(rook_to).unwrap();
+            rook_id = Some(rook_piece.get_piece_id());
+            self.pieces[my_player_num as usize].remove_piece(rook_to);
+        }
 
         // Undo move piece to location
-        let moved_piece_castle = props.moved_piece_castle;
-        if let Some(moved_piece) = self.player_piece_at_mut(my_player_num, to) {
-            moved_piece.move_piece(to, from, moved_piece_castle);
+        if self.pieces[my_player_num as usize].index_has_piece(to) {
+            self.pieces[my_player_num as usize].move_piece(to, from, props.moved_piece_castle);
             
             // Undo Promotion
             if move_type == MoveType::Promotion || move_type == MoveType::PromotionCapture {
                 // Remove old piece
-                moved_piece.remove_piece(from);
+                self.pieces[my_player_num as usize].remove_piece(from);
                 let promoted_from = props.promote_from.unwrap();
                 // Assume that the piece that promoted must have moved, so it can't castle
-                self.add_piece(my_player_num, promoted_from, from, false);
+                self.pieces[my_player_num as usize].add_piece(promoted_from, from, false);
             }
         }
 
@@ -236,19 +260,13 @@ impl Position {
                 let num_captures = props.captured_pieces.len();
                 for i in 0..num_captures {
                     let (piece_id, owner, captured_can_castle, capt_index) = props.captured_pieces[i];
-                    self.add_piece(owner, piece_id, capt_index, captured_can_castle);
+                    self.pieces[owner as usize].add_piece(piece_id, capt_index, captured_can_castle);
                 }
             },
             MoveType::KingsideCastle | MoveType::QueensideCastle => {
+                // Add back the rook
                 let rook_from = mv.get_target();
-                let (x, y) = from_index(mv.get_to());
-                let rook_x = if move_type == MoveType::KingsideCastle { x - 1 } else { x + 1 };
-                let rook_to = to_index(rook_x, y);
-                // At this point, it's possible that in "rook_to" there are 2 pieces at the same time
-                // (the moved king and the rook waiting to be moved). This only happens in chess960.
-                // Use rook_at_mut() to make sure that we are moving the rook and not the king
-                let rook = self.pieces[self.whos_turn as usize].rook_at_mut(rook_to).unwrap();
-                rook.move_piece(rook_to, rook_from, true);
+                self.pieces[my_player_num as usize].add_piece(rook_id.unwrap(), rook_from, true);
             }
             _ => {}
         }
@@ -353,17 +371,9 @@ impl Position {
     pub fn player_piece_at(&self, player: Player, index: BIndex) -> Option<&Piece> {
         self.pieces[player as usize].piece_at(index)
     }
-    pub fn player_piece_at_mut(&mut self, player: Player, index: BIndex) -> Option<&mut Piece> {
-        self.pieces[player as usize].piece_at_mut(index)
-    }
     
-    pub fn search_piece_by_id(&self, piece_id: PieceId) -> Option<&Piece> {
-        for ps in &self.pieces {
-            if let Some(piece) = ps.search_by_id(piece_id) {
-                return Some(piece);
-            }
-        }
-        None
+    pub fn get_piece_char(&self, player: Player, piece_id: PieceId) -> Option<char> {
+        self.pieces[player as usize].get_piece_char(piece_id)
     }
     
     /// Returns if the point is in bounds
@@ -375,7 +385,8 @@ impl Position {
     /// Public interface for modifying the position
     pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex, can_castle: bool) {
         let mut zob = self.get_zobrist();
-        let piece = self.add_piece(owner, piece_type, index, can_castle);
+        self.pieces[owner as usize].add_piece(piece_type, index, can_castle);
+        let piece = self.player_piece_at(owner, index).unwrap();
         // Update the zobrist key
         zob ^= piece.get_zobrist(index);
         if can_castle && piece.used_in_castling() {
@@ -388,13 +399,19 @@ impl Position {
 
     /// Removes a piece from the position, assuming the piece is there
     pub fn public_remove_piece(&mut self, index: BIndex) {
+        let owner = {
+            if self.pieces[0].index_has_piece(index) { 0 }
+            else { 1 }
+        };
         let mut zob = self.get_zobrist();
         let piece = self.piece_at_mut(index).unwrap();
-        let could_casle = piece.remove_piece(index);
         // Update the zobrist key
         zob ^= piece.get_zobrist(index);
-        if could_casle && piece.used_in_castling() {
-            zob ^= piece.get_castle_zobrist(index);
+        let used_in_castling = piece.used_in_castling();
+        let castle_zob = piece.get_castle_zobrist(index);
+        let could_casle = self.pieces[owner].remove_piece(index);
+        if could_casle && used_in_castling {
+            zob ^= castle_zob;
         }
         self.update_occupied();
         let stack_len = self.properties_stack.len();
@@ -407,14 +424,6 @@ impl Position {
     #[inline]
     fn get_properties(&self) -> &PositionProperties {
         &self.properties_stack[self.properties_stack.len() - 1]
-    }
-    
-    /// Adds a piece to the position, assuming the piecetype already exists
-    /// Returns the piece that was added
-    fn add_piece(&mut self, owner: Player, piece_id: PieceId, index: BIndex, can_castle: bool) -> &Piece {
-        let piece = self.pieces[owner as usize].iter_mut().find(|c| c.get_piece_id() == piece_id).unwrap();
-        piece.add_piece(index, can_castle);
-        piece
     }
 
     /// Updates the occupied bitboard

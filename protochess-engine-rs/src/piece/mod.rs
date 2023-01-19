@@ -160,10 +160,16 @@ impl Piece {
         self.material_score
     }
     
+    // Returns true if this piece is involved in castling (either can castle or is a castle rook)
+    pub fn used_in_castling(&self) -> bool {
+        self.type_def.can_castle() || self.type_def.is_castle_rook
+    }
+    
     // Move a piece from one index to another
     // If set_can_castle is true, set the new index as a castle square.
     // Returns true if the piece could castle before this move
-    pub fn move_piece(&mut self, from: BIndex, to: BIndex, set_can_castle: bool) -> bool {
+    // Don't call this directly, use PieceSet::move_piece() instead.
+    pub fn move_piece_(&mut self, from: BIndex, to: BIndex, set_can_castle: bool) -> bool {
         let could_castle = self.castle_squares.get_bit(from);
         self.bitboard.clear_bit(from);
         self.bitboard.set_bit(to);
@@ -180,7 +186,8 @@ impl Piece {
     }
     
     // Add a piece to this piece type.
-    pub fn add_piece(&mut self, index: BIndex, set_can_castle: bool) {
+    // Don't call this directly, use PieceSet::add_piece() instead.
+    pub fn add_piece_(&mut self, index: BIndex, set_can_castle: bool) {
         self.bitboard.set_bit(index);
         self.num_pieces += 1;
         self.total_material_score += self.material_score;
@@ -189,13 +196,11 @@ impl Piece {
             self.castle_squares.set_bit(index);
         }
     }
-    pub fn used_in_castling(&self) -> bool {
-        self.type_def.can_castle() || self.type_def.is_castle_rook
-    }
     
     // Remove a piece from this piece type
     // Returns true if the piece could castle before this move
-    pub fn remove_piece(&mut self, index: BIndex) -> bool {
+    // Don't call this directly, use PieceSet::remove_piece() instead.
+    pub fn remove_piece_(&mut self, index: BIndex) -> bool {
         let could_castle = self.castle_squares.get_bit(index);
         self.bitboard.clear_bit(index);
         

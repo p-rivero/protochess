@@ -67,9 +67,9 @@ impl Engine {
         self.position.piece_at(to_index(position.0, position.1)).map(|p| p.get_piece_id())
     }
     
-    /// Returns the character representation of the piece with a given id
+    /// Returns the character representation of the piece with a given id for the player to move
     pub fn get_piece_char(&self, piece_id: PieceId) -> Option<char> {
-        self.position.search_piece_by_id(piece_id).map(|p| p.char_rep())
+        self.position.get_piece_char(self.whos_turn(), piece_id)
     }
 
     /// Adds a new piece on the board. If the piece is not used for castling, has_moved is ignored.
@@ -119,7 +119,7 @@ impl Engine {
         self.position.unmake_move();
     }
     
-    pub fn get_whos_turn(&self) -> Player {
+    pub fn whos_turn(&self) -> Player {
         self.position.whos_turn
     }
     
