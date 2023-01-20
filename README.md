@@ -10,4 +10,4 @@ This is a fork of [raytran/protochess](https://github.com/raytran/protochess) wi
 
 - Fixed some bugs in the original engine and added more tests.
 
-- Much faster. In my tests, the original engine searched the starting position at depth 12 in 140 seconds, while this engine took 45 seconds (3x speedup).
+- Faster move generation and more aggresive game tree pruning.

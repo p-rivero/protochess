@@ -23,6 +23,10 @@ pub struct Position {
     // Typically hard-to-recover properties, like castling
     // Similar to state in stockfish
     properties_stack: Vec<PositionProperties>,
+    // Full id (piece type + player num) of the captured pieces, if any.
+    // Also store whether the captured piece could castle and the index where it was captured.
+    // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be up to 9.
+    captures_stack: Vec<(PieceId, Player, bool, BIndex)>,
 }
 
 impl Position {
@@ -37,6 +41,7 @@ impl Position {
             pieces: [PieceSet::new(0), PieceSet::new(1)],
             occ_or_out_bounds,
             properties_stack,
+            captures_stack: Vec::with_capacity(128),
         }
     }
 
@@ -53,7 +58,8 @@ impl Position {
     /// Modifies the position to make the move
     pub fn make_move(&mut self, mv: Move) {
         let my_player_num = self.whos_turn;
-        let mut new_props: PositionProperties = self.get_properties().cheap_clone();
+        let mut new_props = *self.get_properties(); // Copy the current properties
+        new_props.num_captures = 0;
         let move_type = mv.get_move_type();
         
         // Update the player
@@ -86,7 +92,8 @@ impl Position {
             if could_castle {
                 new_props.zobrist_key ^= castling_zob
             }
-            new_props.captured_pieces.push((piece_id, capt_player, could_castle, capt_index));
+            self.captures_stack.push((piece_id, capt_player, could_castle, capt_index));
+            new_props.num_captures += 1;
     
             // Check if the capturing piece explodes
             self.explode_piece(mv, my_player_num, &mut new_props);
@@ -176,7 +183,8 @@ impl Position {
         if capturing_could_castle {
             new_props.zobrist_key ^= moved_piece_castle_zob;
         }
-        new_props.captured_pieces.push((moved_piece_id, my_player_num, capturing_could_castle, from));
+        self.captures_stack.push((moved_piece_id, my_player_num, capturing_could_castle, from));
+        new_props.num_captures += 1;
         // Remove all pieces in the explosion radius
         let (x, y) = from_index(mv.get_to());
         
@@ -202,7 +210,8 @@ impl Position {
                     if could_castle {
                         new_props.zobrist_key ^= exploded_castle_zob;
                     }
-                    new_props.captured_pieces.push((exploded_id, exploded_player, could_castle, nindex));
+                    self.captures_stack.push((exploded_id, exploded_player, could_castle, nindex));
+                    new_props.num_captures += 1;
                 }
             }
         }
@@ -258,9 +267,8 @@ impl Position {
         // Special moves
         match move_type {
             MoveType::Capture | MoveType::PromotionCapture => {
-                let num_captures = props.captured_pieces.len();
-                for i in 0..num_captures {
-                    let (piece_id, owner, captured_can_castle, capt_index) = props.captured_pieces[i];
+                for _ in 0..props.num_captures {
+                    let (piece_id, owner, captured_can_castle, capt_index) = self.captures_stack.pop().unwrap();
                     self.pieces[owner as usize].add_piece(piece_id, capt_index, captured_can_castle);
                 }
             },

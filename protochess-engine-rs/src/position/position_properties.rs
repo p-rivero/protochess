@@ -1,11 +1,11 @@
-use crate::types::{BIndex, Move, Player};
+use crate::types::{BIndex, Move};
 
 use crate::piece::PieceId;
 
 use super::castled_players::CastledPlayers;
 
 /// Properties that are hard to recover from a Move
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PositionProperties {
     pub zobrist_key: u64,
     pub move_played: Option<Move>,
@@ -17,27 +17,10 @@ pub struct PositionProperties {
     ep_victim: BIndex, // Only valid if ep_square is Some
     // true if the piece that moved could castle
     pub moved_piece_castle: bool,
-    // Full id (piece type + player num) of the captured pieces, if any.
-    // Also store whether the captured piece could castle and the index where it was captured.
-    // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be many.
-    pub captured_pieces: Vec<(PieceId, Player, bool, BIndex)>,
+    pub num_captures: u8,
 }
 
 impl PositionProperties {
-    pub fn cheap_clone(&self) -> PositionProperties {
-        PositionProperties{
-            // Copy most fields
-            zobrist_key: self.zobrist_key,
-            move_played: self.move_played,
-            promote_from: self.promote_from,
-            castled_players: self.castled_players,
-            ep_square: self.ep_square,
-            ep_victim: self.ep_victim,
-            moved_piece_castle: self.moved_piece_castle,
-            captured_pieces: Vec::new(), // Don't clone captured pieces
-        }
-    }
-    
     // Access EP square
     pub fn set_ep_square(&mut self, ep_square: BIndex, ep_victim: BIndex) {
         self.clear_ep_square();
@@ -73,7 +56,7 @@ impl Default for PositionProperties {
             ep_square: None,
             ep_victim: 0,
             moved_piece_castle: false,
-            captured_pieces: Vec::new(),
+            num_captures: 0,
         }
     }
 }
