@@ -33,21 +33,19 @@ pub fn output_translations(
         movement.translate_southeast,
         movement.translate_southwest
     );
-    // Non-attacks only
-    slide_moves &= !&position.occupied;
-    // Keep only in bounds
-    slide_moves &= &position.dimensions.bounds;
+    // Non-attacks (and in bounds) only
+    slide_moves &= !&position.occ_or_out_bounds;
     self::flatten_bb_moves(enemies, slide_moves, index, promotion_squares, &movement.promo_vals, out_moves);
 
 
     // JUMP MOVES
 
-    let jump_moves = &jumps_bitboard[index as usize] & !&position.occupied;
+    let jump_moves = &jumps_bitboard[index as usize] & !&position.occ_or_out_bounds;
     // Output double jump moves
     if double_jump_squares.get_bit(index) {
         let mut jump_moves_copy = jump_moves.clone();
         while let Some(new_index) = jump_moves_copy.lowest_one() {
-            let double_jump_moves = &jumps_bitboard[new_index as usize] & !&position.occupied;
+            let double_jump_moves = &jumps_bitboard[new_index as usize] & !&position.occ_or_out_bounds;
             self::flatten_bb_moves_doublejump(double_jump_moves, index, new_index, promotion_squares, double_jump_squares, &movement.promo_vals, out_moves);
             jump_moves_copy.clear_bit(new_index);
         }
@@ -66,9 +64,8 @@ pub fn output_translations(
                 break;
             }
             let to = to_index(x2 as BCoord, y2 as BCoord);
-            //If the point is out of bounds or there is another piece here, we cannot go any
-            //farther
-            if !position.in_bounds(x2 as BCoord, y2 as BCoord) || position.occupied.get_bit(to) {
+            //If the point is out of bounds or there is another piece here, we cannot go any farther
+            if position.occ_or_out_bounds.get_bit(to) {
                 break;
             }
             if promotion_squares.get_bit(to) {
@@ -87,7 +84,7 @@ pub fn output_translations(
     if can_castle {
         // Able to castle, check if there is a rook on the correct square
         let (_, ky) = from_index(index);
-        let rank_visibility = attack_tables.get_rank_slide(index, &position.occupied);
+        let rank_visibility = attack_tables.get_rank_slide(index, &position.occ_or_out_bounds);
         
         // King side
         // Index of the closest piece to the east
@@ -101,14 +98,14 @@ pub fn output_translations(
                 // Check that the squares between x=(rook_x + 1) and x=6 (both included) are empty
                 let mut empty = true;
                 for i in (kingside_rook_index as i16 + 1)..=(to_index as i16) {
-                    if position.occupied.get_bit(i as BIndex) {
+                    if position.occ_or_out_bounds.get_bit(i as BIndex) {
                         empty = false;
                         break;
                     }
                 }
                 // Check that the squares between x=5 and x=(king_x - 1) (both included) are empty
                 for i in (to_index as i16 - 1)..=(index as i16 - 1) {
-                    if position.occupied.get_bit(i as BIndex) {
+                    if position.occ_or_out_bounds.get_bit(i as BIndex) {
                         empty = false;
                         break;
                     }
@@ -127,14 +124,14 @@ pub fn output_translations(
                 // Check that the squares between x=2 and x=(rook_x - 1) (both included) are empty
                 let mut empty = true;
                 for i in (to_index as i16)..=(queenside_rook_index as i16 - 1) {
-                    if position.occupied.get_bit(i as BIndex) {
+                    if position.occ_or_out_bounds.get_bit(i as BIndex) {
                         empty = false;
                         break;
                     }
                 }
                 // Check that the squares between x=(king_x + 1) and x=3 (both included) are empty
                 for i in (index as i16 + 1)..=(to_index as i16 + 1) {
-                    if position.occupied.get_bit(i as BIndex) {
+                    if position.occ_or_out_bounds.get_bit(i as BIndex) {
                         empty = false;
                         break;
                     }
@@ -225,7 +222,7 @@ pub fn output_captures(
                 break;
             }
             //Occupied by own team
-            if position.occupied.get_bit(to) {
+            if position.occ_or_out_bounds.get_bit(to) {
                 break;
             }
         }

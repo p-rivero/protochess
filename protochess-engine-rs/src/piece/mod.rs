@@ -169,6 +169,7 @@ impl Piece {
     // If set_can_castle is true, set the new index as a castle square.
     // Returns true if the piece could castle before this move
     // Don't call this directly, use PieceSet::move_piece() instead.
+    #[inline]
     pub fn move_piece_(&mut self, from: BIndex, to: BIndex, set_can_castle: bool) -> bool {
         let could_castle = self.castle_squares.get_bit(from);
         self.bitboard.clear_bit(from);
@@ -187,6 +188,7 @@ impl Piece {
     
     // Add a piece to this piece type.
     // Don't call this directly, use PieceSet::add_piece() instead.
+    #[inline]
     pub fn add_piece_(&mut self, index: BIndex, set_can_castle: bool) {
         self.bitboard.set_bit(index);
         self.num_pieces += 1;
@@ -200,6 +202,7 @@ impl Piece {
     // Remove a piece from this piece type
     // Returns true if the piece could castle before this move
     // Don't call this directly, use PieceSet::remove_piece() instead.
+    #[inline]
     pub fn remove_piece_(&mut self, index: BIndex) -> bool {
         let could_castle = self.castle_squares.get_bit(index);
         self.bitboard.clear_bit(index);

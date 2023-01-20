@@ -18,7 +18,7 @@ pub struct Position {
     pub dimensions: BDimensions,
     pub whos_turn: Player,
     pub pieces: [PieceSet; 2], // pieces[0] = white, pieces[1] = black
-    pub occupied: Bitboard,
+    pub occ_or_out_bounds: Bitboard,
     // Stack of properties relating only to the current position
     // Typically hard-to-recover properties, like castling
     // Similar to state in stockfish
@@ -29,12 +29,13 @@ impl Position {
     fn new(dimensions: BDimensions, whos_turn: Player, props: PositionProperties) -> Position {
         let mut properties_stack = Vec::with_capacity(128);
         properties_stack.push(props);
+        let occ_or_out_bounds = !&dimensions.bounds;
         
         Position {
             dimensions,
             whos_turn,
             pieces: [PieceSet::new(0), PieceSet::new(1)],
-            occupied: Bitboard::zero(),
+            occ_or_out_bounds,
             properties_stack,
         }
     }
@@ -429,10 +430,10 @@ impl Position {
     /// Updates the occupied bitboard
     /// Must be called after every position update/modification
     fn update_occupied(&mut self) {
-        self.occupied = Bitboard::zero();
+        self.occ_or_out_bounds = !&self.dimensions.bounds;
         for (_i, ps) in self.pieces.iter_mut().enumerate() {
             ps.update_occupied();
-            self.occupied |= ps.get_occupied();
+            self.occ_or_out_bounds |= ps.get_occupied();
         }
     }
 }

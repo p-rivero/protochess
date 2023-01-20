@@ -16,10 +16,8 @@ pub struct AttackTables {
     top_left: Bitboard,
     bottom_right: Bitboard,
     // Masks for edges of the board
-    top: Bitboard,
-    bottom: Bitboard,
     horizontal_edges: Bitboard,
-    vertical_edges: Bitboard, // top | bottom
+    vertical_edges: Bitboard,
 }
 
 impl AttackTables {
@@ -94,8 +92,6 @@ impl AttackTables {
             top_right: &top_bits | &right_bits,
             bottom_left: &bottom_bits | &left_bits,
             top_left: &top_bits | &left_bits,
-            top: top_bits.clone(),
-            bottom: bottom_bits.clone(),
             bottom_right: &bottom_bits | &right_bits,
             horizontal_edges: &left_bits | &right_bits,
             vertical_edges: &top_bits | &bottom_bits,
@@ -173,10 +169,10 @@ impl AttackTables {
         // For north/south, add top and bottom edges to the occupied bitboard to handle end condition
         let mut occ = occ | &self.vertical_edges;
         
-        if north && !self.top.get_bit(index) {
+        if north && index < 240 {
             self.add_slide_top_right(&mut moves, index, &occ, 16);
         }
-        if south && !self.bottom.get_bit(index) {
+        if south && index > 15 {
             self.add_slide_bottom_left(&mut moves, index, &occ, 16);
         }
         

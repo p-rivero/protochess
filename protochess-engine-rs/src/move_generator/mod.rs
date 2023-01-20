@@ -38,15 +38,15 @@ impl MoveGen {
 
         let mut out_moves = Vec::with_capacity(50);
 
-        let enemies = &position.occupied & !my_pieces.get_occupied();
-        let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
+        let enemies_or_out_bounds = &position.occ_or_out_bounds & !my_pieces.get_occupied();
+        let occ_or_not_in_bounds = &position.occ_or_out_bounds;
         
         for p in my_pieces.iter() {
-            p.output_captures(position, &enemies, &occ_or_not_in_bounds, &mut out_moves);
+            p.output_captures(position, &enemies_or_out_bounds, &occ_or_not_in_bounds, &mut out_moves);
         }
         if output_translations {
             for p in my_pieces.iter() {
-                p.output_translations(position, &enemies, &occ_or_not_in_bounds, &mut out_moves);
+                p.output_translations(position, &enemies_or_out_bounds, &occ_or_not_in_bounds, &mut out_moves);
             }
         }
         out_moves
@@ -84,14 +84,14 @@ impl MoveGen {
             let start_index = { if kingside { from } else { to + 1 } };
             let end_index = { if kingside { to - 1 } else { from } };
             // Hide the castling piece from the occupied bitboard so that it doesn't get in the way of check detection
-            position.occupied.clear_bit(from);
+            position.occ_or_out_bounds.clear_bit(from);
             for step_index in start_index..=end_index {
                 if MoveGen::index_in_check(step_index, position) {
-                    position.occupied.set_bit(from);
+                    position.occ_or_out_bounds.set_bit(from);
                     return false;
                 }
             }
-            position.occupied.set_bit(from);
+            position.occ_or_out_bounds.set_bit(from);
         }
         
         // Try the move and skip a turn, then see if we are in check
@@ -141,7 +141,7 @@ impl MoveGen {
         let (inverse_attack, jumps) = enemy_pieces.get_inverse_attack(index);
         // Use inverse attack pattern to get the squares that can potentially attack the square
         let attack_tables = MoveGen::attack_tables();
-        let occ_or_not_in_bounds = &position.occupied | !&position.dimensions.bounds;
+        let occ_or_not_in_bounds = &position.occ_or_out_bounds;
         
         let mut slides = attack_tables.get_sliding_moves_bb(
             index,
@@ -161,7 +161,7 @@ impl MoveGen {
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
             let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(x, y, enemy_pieces, enemy_piece, enemy_piece_index);
-            if !kills_remaining_leaders && MoveGen::slide_targets_index(enemy_piece, enemy_piece_index, index, &occ_or_not_in_bounds) {
+            if !kills_remaining_leaders && MoveGen::slide_targets_coords(x, y, enemy_piece, enemy_piece_index) {
                 return true;
             }
             slides.clear_bit(enemy_piece_index);
@@ -185,15 +185,14 @@ impl MoveGen {
             for (dx, dy) in run {
     
                 let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
+                if x2 < 0 || y2 < 0 {
                     break;
                 }
-    
-                let to = to_index(x2 as BCoord, y2 as BCoord);
                 //Out of bounds, next sliding moves can be ignored
                 if !position.in_bounds(x2 as BCoord, y2 as BCoord) {
                     break;
                 }
+                let to = to_index(x2 as BCoord, y2 as BCoord);
                 if enemy_occupied.get_bit(to) {
                     // Found an enemy piece that might attack the last leader
                     let enemy_piece = enemy_pieces.piece_at(to).unwrap();
@@ -205,29 +204,36 @@ impl MoveGen {
                     break;
                 }
                 //Occupied by own team
-                if position.occupied.get_bit(to) {
+                if position.occ_or_out_bounds.get_bit(to) {
                     break;
                 }
             }
         }
         false
     }
-    fn slide_targets_index(piece: &Piece, piece_index: BIndex, target_index: BIndex, occ_or_not_in_bounds: &Bitboard) -> bool {
-        let attack_tables = MoveGen::attack_tables();
+    fn slide_targets_coords(x: BCoord, y: BCoord, piece: &Piece, piece_index: BIndex) -> bool {
+        // We already know that this piece is on the same rank, file, diagonal or antidiagonal as the target (x, y)
         let piece_movement = piece.get_movement();
-        let slides = attack_tables.get_sliding_moves_bb(
-            piece_index,
-            occ_or_not_in_bounds,
-            piece_movement.attack_north,
-            piece_movement.attack_east,
-            piece_movement.attack_south,
-            piece_movement.attack_west,
-            piece_movement.attack_northeast,
-            piece_movement.attack_northwest,
-            piece_movement.attack_southeast,
-            piece_movement.attack_southwest
-        );
-        slides.get_bit(target_index)
+        let (px, py) = from_index(piece_index);
+        if px == x {
+            // Same file
+            if py < y { piece_movement.attack_north }
+            else { piece_movement.attack_south }
+        } else if py == y {
+            // Same rank
+            if px < x { piece_movement.attack_east }
+            else { piece_movement.attack_west }
+        } else if px < x {
+            // Same diagonal
+            if py < y { piece_movement.attack_northeast}
+            // Same antidiagonal
+            else { piece_movement.attack_southeast }
+        } else {
+            // Same antidiagonal
+            if py < y { piece_movement.attack_northwest }
+            // Same diagonal
+            else { piece_movement.attack_southwest }
+        }
     }
     fn sliding_delta_targets_index(piece: &Piece, piece_index: BIndex, target_index: BIndex, occ_or_not_in_bounds: &Bitboard) -> bool {
         let piece_movement = piece.get_movement();
