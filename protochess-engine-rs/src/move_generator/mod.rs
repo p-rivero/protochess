@@ -160,7 +160,7 @@ impl MoveGen {
             // Found an enemy piece that might attack the last leader
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
-            let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(x, y, enemy_pieces, enemy_piece, enemy_piece_index);
+            let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, enemy_piece_index);
             if !kills_remaining_leaders && MoveGen::slide_targets_coords(x, y, enemy_piece, enemy_piece_index) {
                 return true;
             }
@@ -173,7 +173,7 @@ impl MoveGen {
             // Found an enemy piece that might attack the last leader
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
-            let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(x, y, enemy_pieces, enemy_piece, enemy_piece_index);
+            let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, enemy_piece_index);
             if !kills_remaining_leaders && enemy_piece.get_capture_jumps(enemy_piece_index).get_bit(index) {
                 return true;
             }
@@ -197,7 +197,7 @@ impl MoveGen {
                     // Found an enemy piece that might attack the last leader
                     let enemy_piece = enemy_pieces.piece_at(to).unwrap();
                     // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
-                    let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(x, y, enemy_pieces, enemy_piece, to);
+                    let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, to);
                     if !kills_remaining_leaders && MoveGen::sliding_delta_targets_index(enemy_piece, to, index, &occ_or_not_in_bounds) {
                         return true;
                     }
@@ -260,52 +260,25 @@ impl MoveGen {
 
 
 /// Returns true if an explosion in this coordinates would kill all the remaining enemy leaders
-fn explosion_kills_enemy(x: u8, y: u8, enemy_pieces: &PieceSet, enemy_piece: &Piece, enemy_piece_index: u8) -> bool {
+fn explosion_kills_enemy(index: BIndex, enemy_pieces: &PieceSet, enemy_piece: &Piece, enemy_piece_index: u8) -> bool {
     if let Some(enemy_leader) = enemy_pieces.get_leader() {
         let mut killed_enemy_leaders = 0;
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                let (x2, y2) = (x as i8 + dx, y as i8 + dy);
-                if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                    continue;
-                }
-                if enemy_leader.get_bitboard().get_bit_at(x2 as BCoord, y2 as BCoord) {
-                    killed_enemy_leaders += 1;
-                }
-            }
+        let affected_squares = enemy_leader.get_bitboard() & enemy_piece.get_explosion(index);
+        // Take into account that the attacking piece might be a leader from far away
+        if enemy_piece.is_leader() && !affected_squares.get_bit(enemy_piece_index) {
+            killed_enemy_leaders += 1;
         }
-        // Also take into account that the attacking piece might be a leader from far away
-        if enemy_piece.is_leader() {
-            let (x2, y2) = from_index(enemy_piece_index);
-            let dx = (x2 as i8 - x as i8).abs();
-            let dy = (y2 as i8 - y as i8).abs();
-            if dx > 1 || dy > 1 {
-                // The attacker is far away and has not been taken into account in the previous loop, add 1
-                killed_enemy_leaders += 1;
-            }
-        }
+        killed_enemy_leaders += affected_squares.count_ones();
         killed_enemy_leaders == enemy_leader.get_num_pieces()
     } else {
         // If the enemy has no leaders, then they only lose when all pieces are captured
         let mut killed_enemies = 0;
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                let (x2, y2) = (x as i8 + dx, y as i8 + dy);
-                if x2 < 0 || y2 < 0 || x2 > 15 || y2 > 15 {
-                    continue;
-                }
-                if enemy_pieces.get_occupied().get_bit_at(x2 as BCoord, y2 as BCoord) {
-                    killed_enemies += 1;
-                }
-            }
-        }
-        let (x2, y2) = from_index(enemy_piece_index);
-        let dx = (x2 as i8 - x as i8).abs();
-        let dy = (y2 as i8 - y as i8).abs();
-        if dx > 1 || dy > 1 {
-            // The attacker is far away and has not been taken into account in the previous loop, add 1
+        let affected_squares = enemy_pieces.get_occupied() & enemy_piece.get_explosion(index);
+        // Take into account that the attacking piece might be far away
+        if !affected_squares.get_bit(enemy_piece_index) {
             killed_enemies += 1;
         }
+        killed_enemies += affected_squares.count_ones();
         killed_enemies == enemy_pieces.get_occupied().count_ones()
     }
 }

@@ -16,6 +16,7 @@ pub struct PieceDefinition {
     // True if this piece works as a rook for castling purposes
     pub is_castle_rook: bool,
     pub explodes: bool,
+    pub explosion_deltas: Vec<(i8, i8)>,
     pub immune_to_explosion: bool,
     
     // Places where this piece can promote, as well as PieceId for the promotion pieces
@@ -121,15 +122,16 @@ impl Default for PieceDefinition {
         PieceDefinition {
             id: 0,
             char_rep: '?',
-            available_for: vec![],
+            available_for: Vec::new(),
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
             explodes: false,
+            explosion_deltas: Vec::new(),
             immune_to_explosion: false,
-            promotion_squares: vec![],
+            promotion_squares: Vec::new(),
             promo_vals: Vec::new(),
-            double_jump_squares: vec![],
+            double_jump_squares: Vec::new(),
             attack_sliding_deltas: Vec::new(),
             attack_jump_deltas: Vec::new(),
             attack_north: false,

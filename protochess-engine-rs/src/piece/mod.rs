@@ -51,6 +51,9 @@ pub struct Piece {
     // Precompute the jump bitboards for this piece
     jump_bitboards_translate: Vec<Bitboard>,
     jump_bitboards_capture: Vec<Bitboard>,
+    
+    // Precompute explosion bitboards for this piece
+    explosion_bitboards: Vec<Bitboard>,
 }
 
 impl Piece {
@@ -70,6 +73,7 @@ impl Piece {
         let piece_square_table = compute_piece_square_table(&definition, dims);
         let jump_bitboards_translate = Piece::precompute_jumps(&definition.translate_jump_deltas, dims);
         let jump_bitboards_capture = Piece::precompute_jumps(&definition.attack_jump_deltas, dims);
+        let explosion_bitboards = Piece::precompute_jumps(&definition.explosion_deltas, dims);
         Piece {
             type_def: definition,
             player_num,
@@ -84,6 +88,7 @@ impl Piece {
             double_jump_squares,
             jump_bitboards_translate,
             jump_bitboards_capture,
+            explosion_bitboards,
         }
     }
     
@@ -279,6 +284,9 @@ impl Piece {
     }
     pub fn get_capture_jumps(&self, index: BIndex) -> &Bitboard {
         &self.jump_bitboards_capture[index as usize]
+    }
+    pub fn get_explosion(&self, index: BIndex) -> &Bitboard {
+        &self.explosion_bitboards[index as usize]
     }
     
     fn random_zobrist(piece_id: u32, player: Player) -> Vec<u64> {
