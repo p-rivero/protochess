@@ -15,7 +15,6 @@ pub struct PieceSet {
     occupied: Bitboard,
     player_num: Player,
     // Inverse attack pattern of all the pieces in the set
-    // TODO: Remove inverse attack
     inverse_attack: PieceDefinition,
     inverse_attack_jumps: Vec<Bitboard>,
     

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use instant::{Instant, Duration};
 
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
@@ -21,6 +23,7 @@ pub struct Searcher {
     current_searching_depth: Depth,
     original_searching_depth: Depth,
     principal_variation: [Move; Depth::MAX as usize + 1],
+    known_checks: BTreeMap<u64, ()>,
 }
 
 impl Searcher {
@@ -33,6 +36,7 @@ impl Searcher {
             current_searching_depth: 0,
             original_searching_depth: 0,
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
+            known_checks: BTreeMap::new(),
         }
     }
     
@@ -58,6 +62,7 @@ impl Searcher {
         let mut pv = Vec::with_capacity(max_depth as usize);
         let mut pv_depth: Depth = 0;
         let mut pv_score: Centipawns = 0;
+        self.known_checks.clear();
         
         // Iterative deepening
         for search_depth in 1..=max_depth {

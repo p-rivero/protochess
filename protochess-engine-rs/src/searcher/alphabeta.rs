@@ -40,7 +40,15 @@ impl Searcher {
             return Ok(Self::checkmate_score(pv_index));
         }
         
-        // TODO: Check here if player is in check and increment depth
+        let mut known_check = false;
+        if is_pv {
+            // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
+            known_check = self.known_checks.contains_key(&pos.get_zobrist());
+            if known_check && self.current_searching_depth < 2 * self.original_searching_depth {
+                depth += 1;
+                self.current_searching_depth += 1;
+            }
+        }
 
         // Probe transposition table
         if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {
@@ -114,11 +122,12 @@ impl Searcher {
         let mut num_legal_moves = 0;
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
-        let in_check = MoveGen::in_check(pos);
-        if is_pv && in_check && self.current_searching_depth < 2 * self.original_searching_depth {
+        let in_check = known_check || MoveGen::in_check(pos);
+        if is_pv && in_check && !known_check && self.current_searching_depth < 2 * self.original_searching_depth {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
             depth += 1;
             self.current_searching_depth += 1;
+            self.known_checks.insert(pos.get_zobrist(), ());
         }
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
