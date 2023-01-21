@@ -10,9 +10,9 @@ use super::transposition_table::{Entry, EntryFlag};
 pub const GAME_OVER_SCORE: Centipawns = -1000000;
 
 impl Searcher {
-    pub fn search(&mut self, pos: &mut Position, depth: Depth, end_time: &Instant) -> Result<Centipawns, SearchTimeout> {
+    pub fn search(&mut self, pos: &mut Position, depth: Depth) -> Result<Centipawns, SearchTimeout> {
         // Use -MAX instead of MIN to avoid overflow when negating
-        self.alphabeta(pos, depth, 0, -Centipawns::MAX, Centipawns::MAX, true, end_time)
+        self.alphabeta(pos, depth, 0, -Centipawns::MAX, Centipawns::MAX, true)
     }
     
     // alpha is the best score that I can currently guarantee at this level or above.
@@ -24,7 +24,6 @@ impl Searcher {
             mut alpha: Centipawns,
             beta: Centipawns,
             do_null: bool,
-            end_time: &Instant
         ) -> Result<Centipawns, SearchTimeout>
     {
         let is_pv = alpha != beta - 1;
@@ -85,7 +84,7 @@ impl Searcher {
         }
         
         if depth == 0 {
-            let quiesce_score = self.quiesce(pos, alpha, beta, end_time, 0)?;
+            let quiesce_score = self.quiesce(pos, alpha, beta, 0)?;
             let flag = {
                 if quiesce_score <= alpha { EntryFlag::Alpha }
                 else if quiesce_score >= beta { EntryFlag::Beta }
@@ -104,14 +103,14 @@ impl Searcher {
         
         self.nodes_searched += 1;
         // Check for timeout periodically
-        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
+        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= self.end_time {
             return Err(SearchTimeout);
         }
 
         //Null move pruning
         if !is_pv && do_null && depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
             pos.make_move(Move::null());
-            let nscore = -self.alphabeta(pos, depth-3, pv_index+1, -beta, -beta+1, false, end_time)?;
+            let nscore = -self.alphabeta(pos, depth-3, pv_index+1, -beta, -beta+1, false)?;
             pos.unmake_move();
             if nscore >= beta {
                 return Ok(beta);
@@ -141,7 +140,7 @@ impl Searcher {
             num_legal_moves += 1;
             let mut score: Centipawns;
             if num_legal_moves == 1 {
-                score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, true, end_time)?;
+                score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, true)?;
             } else {
                 // Try late move reduction
                 if num_legal_moves > 4 && mv.is_quiet() && !is_pv && depth >= 5 && !in_check {
@@ -150,7 +149,7 @@ impl Searcher {
                         if num_legal_moves > 10 { depth - 4 }
                         else { depth - 3 }
                     };
-                    score = -self.alphabeta(pos, reduced_depth, pv_index+1, -alpha-1, -alpha, true, end_time)?;
+                    score = -self.alphabeta(pos, reduced_depth, pv_index+1, -alpha-1, -alpha, true)?;
                 } else {
                     // Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
@@ -159,10 +158,10 @@ impl Searcher {
                 if score > alpha {
                     // PVS
                     // Null window search
-                    score = -self.alphabeta(pos, depth-1, pv_index+1, -alpha-1, -alpha, true, end_time)?;
+                    score = -self.alphabeta(pos, depth-1, pv_index+1, -alpha-1, -alpha, true)?;
                     // Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, true, end_time)?;
+                        score = -self.alphabeta(pos, depth-1, pv_index+1, -beta, -alpha, true)?;
                     }
                 }
             }
@@ -235,7 +234,7 @@ impl Searcher {
 
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
-    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, end_time: &Instant, pv_index: usize) -> Result<Centipawns, SearchTimeout> {
+    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, pv_index: usize) -> Result<Centipawns, SearchTimeout> {
         
         if pos.leader_is_captured() {
             return Ok(Self::checkmate_score(pv_index));
@@ -243,7 +242,7 @@ impl Searcher {
         
         self.nodes_searched += 1;
         // Check for timeout periodically
-        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= *end_time {
+        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= self.end_time {
             return Err(SearchTimeout);
         }
         
@@ -263,7 +262,7 @@ impl Searcher {
             if !MoveGen::make_move_if_legal(mv, pos) {
                 continue;
             }
-            let score = -self.quiesce(pos, -beta, -alpha, end_time, pv_index+1)?;
+            let score = -self.quiesce(pos, -beta, -alpha, pv_index+1)?;
             pos.unmake_move();
 
             if score >= beta {

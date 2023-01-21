@@ -22,6 +22,7 @@ pub struct Searcher {
     nodes_searched: u64,
     current_searching_depth: Depth,
     original_searching_depth: Depth,
+    end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
     known_checks: BTreeMap<u64, ()>,
 }
@@ -35,6 +36,7 @@ impl Searcher {
             nodes_searched: 0,
             current_searching_depth: 0,
             original_searching_depth: 0,
+            end_time: Instant::now(),
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
             known_checks: BTreeMap::new(),
         }
@@ -56,20 +58,20 @@ impl Searcher {
         assert!(!pos.leader_is_captured(), "Attempting to get best move but leader is captured");
         assert!(MoveGen::count_legal_moves(pos) != 0, "Attempting to get best move but there are no legal moves");
         
-        let end_time = Instant::now() + Duration::from_secs(time_sec);
         // Limit the max depth to 127 to avoid overflow when doubling
         let max_depth = std::cmp::min(max_depth, 127);
         let mut pv = Vec::with_capacity(max_depth as usize);
         let mut pv_depth: Depth = 0;
         let mut pv_score: Centipawns = 0;
         self.known_checks.clear();
+        self.end_time = Instant::now() + Duration::from_secs(time_sec);
         
         // Iterative deepening
         for search_depth in 1..=max_depth {
             self.nodes_searched = 0;
             self.original_searching_depth = search_depth;
             self.current_searching_depth = search_depth;
-            match self.search(pos, search_depth, &end_time) {
+            match self.search(pos, search_depth) {
                 Ok(score) => {
                     pv.clear();
                     // Copy the pv into a vector
@@ -103,7 +105,7 @@ impl Searcher {
                 },
             }
 
-            if Instant::now() >= end_time {
+            if Instant::now() >= self.end_time {
                 // Return the best move found so far
                 break;
             }

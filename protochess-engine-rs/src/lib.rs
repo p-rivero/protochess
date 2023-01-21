@@ -15,6 +15,7 @@ use utils::to_index;
 
 pub use position::Position;
 pub use position::game_state::{PiecePlacement, GameState};
+pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
 pub use piece::{PieceId, PieceDefinition};
 pub use types::MoveInfo;

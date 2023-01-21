@@ -5,10 +5,12 @@ use crate::utils::{from_index, to_index};
 use crate::piece::{Piece, PieceId};
 
 mod position_properties;
+pub mod global_rules;
 pub mod game_state;
 pub mod castled_players;
 pub mod piece_set;
 
+use global_rules::{GlobalRules, GlobalRulesInternal};
 use position_properties::PositionProperties;
 use piece_set::PieceSet;
 
@@ -18,6 +20,7 @@ pub struct Position {
     pub dimensions: BDimensions,
     pub whos_turn: Player,
     pub pieces: [PieceSet; 2], // pieces[0] = white, pieces[1] = black
+    // Bitboard squares, that are occupied by a piece or out of bounds
     pub occ_or_out_bounds: Bitboard,
     // Stack of properties relating only to the current position
     // Typically hard-to-recover properties, like castling
@@ -27,10 +30,12 @@ pub struct Position {
     // Also store whether the captured piece could castle and the index where it was captured.
     // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be up to 9.
     captures_stack: Vec<(PieceId, Player, bool, BIndex)>,
+    // Global rules of the game
+    pub global_rules: GlobalRulesInternal,
 }
 
 impl Position {
-    fn new(dimensions: BDimensions, whos_turn: Player, props: PositionProperties) -> Position {
+    fn new(dimensions: BDimensions, whos_turn: Player, props: PositionProperties, rules: GlobalRules) -> Position {
         let mut properties_stack = Vec::with_capacity(128);
         properties_stack.push(props);
         let occ_or_out_bounds = !&dimensions.bounds;
@@ -42,6 +47,7 @@ impl Position {
             occ_or_out_bounds,
             properties_stack,
             captures_stack: Vec::with_capacity(128),
+            global_rules: rules.into(),
         }
     }
 

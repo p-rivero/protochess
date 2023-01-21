@@ -42,11 +42,12 @@ impl MoveGen {
         let occ_or_not_in_bounds = &position.occ_or_out_bounds;
         
         for p in my_pieces.iter() {
-            p.output_captures(position, &enemies_or_out_bounds, &occ_or_not_in_bounds, &mut out_moves);
+            p.output_captures(position, &enemies_or_out_bounds, occ_or_not_in_bounds, &mut out_moves);
         }
-        if output_translations {
+        let skip_translations = position.global_rules.capturing_is_forced && !out_moves.is_empty();
+        if output_translations && !skip_translations {
             for p in my_pieces.iter() {
-                p.output_translations(position, &enemies_or_out_bounds, &occ_or_not_in_bounds, &mut out_moves);
+                p.output_translations(position, &enemies_or_out_bounds, occ_or_not_in_bounds, &mut out_moves);
             }
         }
         out_moves
@@ -145,7 +146,7 @@ impl MoveGen {
         
         let mut slides = attack_tables.get_sliding_moves_bb(
             index,
-            &occ_or_not_in_bounds,
+            occ_or_not_in_bounds,
             inverse_attack.attack_north,
             inverse_attack.attack_east,
             inverse_attack.attack_south,
@@ -198,7 +199,7 @@ impl MoveGen {
                     let enemy_piece = enemy_pieces.piece_at(to).unwrap();
                     // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
                     let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, to);
-                    if !kills_remaining_leaders && MoveGen::sliding_delta_targets_index(enemy_piece, to, index, &occ_or_not_in_bounds) {
+                    if !kills_remaining_leaders && MoveGen::sliding_delta_targets_index(enemy_piece, to, index, occ_or_not_in_bounds) {
                         return true;
                     }
                     break;

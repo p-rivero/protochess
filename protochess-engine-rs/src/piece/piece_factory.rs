@@ -1,24 +1,12 @@
 use super::{PieceDefinition, PieceId};
-use crate::types::BCoord;
+use crate::types::{BCoord, GameMode};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GameMode {
-    Standard,
-    Atomic,
-    Horde,
-}
 pub struct PieceFactory {
     mode: GameMode
 }
 
 impl PieceFactory {
-    pub fn new(game_mode: &str) -> PieceFactory {
-        let mode = match game_mode.to_ascii_lowercase().as_str() {
-            "standard" => GameMode::Standard,
-            "atomic" => GameMode::Atomic,
-            "horde" => GameMode::Horde,
-            _ => panic!("Invalid game mode: {}", game_mode)
-        };
+    pub fn new(mode: GameMode) -> PieceFactory {
         PieceFactory { mode }
     }
     

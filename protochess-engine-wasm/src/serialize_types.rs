@@ -1,4 +1,4 @@
-use protochess_engine_rs::{MoveInfo, MakeMoveResult, PieceDefinition, GameState, PiecePlacement};
+use protochess_engine_rs::*;
 use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
 use super::utils::SerVec;
@@ -163,11 +163,20 @@ generate_wrapper!(PiecePlacementSer, PiecePlacement, [
     can_castle, Option<bool>
 ]);
 
+generate_wrapper!(GlobalRulesSer, GlobalRules, [
+    win_positions_white, Vec<(u8, u8)>,
+    win_positions_black, Vec<(u8, u8)>,
+    capturing_is_forced, bool,
+    stalemated_player_loses, bool,
+    invert_win_conditions, bool
+]);
+
 generate_wrapper!(GameStateSer, GameState, [
     piece_types, SerVec<PieceDefinitionSer>,
     valid_squares, Vec<(u8, u8)>,
     pieces, SerVec<PiecePlacementSer>,
     whos_turn, u8,
-    ep_square_and_victim, Option<((u8, u8), (u8, u8))>
+    ep_square_and_victim, Option<((u8, u8), (u8, u8))>,
+    global_rules, GlobalRulesSer
 ]);
 
