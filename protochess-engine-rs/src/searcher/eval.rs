@@ -47,6 +47,11 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
         }
     }
 
+    // When trying to lose, minimize own score
+    if position.global_rules.invert_win_conditions {
+        score = -score;
+    }
+    
     score
 }
 

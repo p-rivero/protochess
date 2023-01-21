@@ -285,4 +285,49 @@ mod perft {
         assert_eq!(engine.perft(5), 371518);
         assert_eq!(engine.perft(6), 11514471);
     }
+    
+    
+    // https://github.com/niklasf/python-chess/blob/master/examples/perft/giveaway.perft
+    
+    #[test]
+    fn antichess_start() {
+        let mut engine = Engine::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1 ANTICHESS");
+        assert_eq!(engine.perft(1), 20);
+        assert_eq!(engine.perft(2), 400);
+        assert_eq!(engine.perft(3), 8067);
+        assert_eq!(engine.perft(4), 153299);
+        assert_eq!(engine.perft(5), 2732672);
+        assert_eq!(engine.perft(6), 46264162);
+    }
+    
+    #[test]
+    fn antichess_a_pawn_vs_b_pawn() {
+        let mut engine = Engine::from_fen("8/1p6/8/8/8/8/P7/8 w - - 0 1 ANTICHESS");
+        assert_eq!(engine.perft(1), 2);
+        assert_eq!(engine.perft(2), 4);
+        assert_eq!(engine.perft(3), 4);
+        assert_eq!(engine.perft(4), 3);
+        assert_eq!(engine.perft(5), 1);
+        assert_eq!(engine.perft(6), 0);
+        assert_eq!(engine.perft(7), 0);
+    }
+    
+    #[test]
+    fn antichess_a_pawn_vs_c_pawn() {
+        let mut engine = Engine::from_fen("8/2p5/8/8/8/8/P7/8 w - - 0 1 ANTICHESS");
+        assert_eq!(engine.perft(1), 2);
+        assert_eq!(engine.perft(2), 4);
+        assert_eq!(engine.perft(3), 4);
+        assert_eq!(engine.perft(4), 4);
+        assert_eq!(engine.perft(5), 4);
+        assert_eq!(engine.perft(6), 4);
+        assert_eq!(engine.perft(7), 4);
+        assert_eq!(engine.perft(8), 4);
+        assert_eq!(engine.perft(9), 12);
+        assert_eq!(engine.perft(10), 36);
+        assert_eq!(engine.perft(11), 312);
+        assert_eq!(engine.perft(12), 2557);
+        assert_eq!(engine.perft(13), 30873);
+        assert_eq!(engine.perft(14), 343639);
+    }
 }

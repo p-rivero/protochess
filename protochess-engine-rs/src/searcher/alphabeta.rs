@@ -36,7 +36,7 @@ impl Searcher {
         
         if pos.leader_is_captured() {
             if is_pv { self.clear_remaining_pv(pv_index) }
-            return Ok(Self::checkmate_score(pv_index));
+            return Ok(self.checkmate_score(pv_index));
         }
         
         let mut known_check = false;
@@ -107,8 +107,13 @@ impl Searcher {
             return Err(SearchTimeout);
         }
 
-        //Null move pruning
-        if !is_pv && do_null && depth > 3 && eval::can_do_null_move(pos) && !MoveGen::in_check(pos) {
+        // Null move pruning
+        if  !is_pv && depth > 3 && // Don't skip a turn in PV nodes or close to the leaves
+            do_null && // Don't do 2 null moves in a row
+            !self.rules.capturing_is_forced && // Don't skip a turn if capturing is forced
+            eval::can_do_null_move(pos) && // Don't skip a turn in endgame
+            !MoveGen::in_check(pos) // Don't skip a turn in check
+        {
             pos.make_move(Move::null());
             let nscore = -self.alphabeta(pos, depth-3, pv_index+1, -beta, -beta+1, false)?;
             pos.unmake_move();
@@ -196,10 +201,10 @@ impl Searcher {
         }
 
         if num_legal_moves == 0 {
-            return if in_check {
+            return if in_check || pos.global_rules.stalemated_player_loses {
                 // No legal moves and in check: Checkmate
                 if is_pv { self.clear_remaining_pv(pv_index) }
-                Ok(Self::checkmate_score(pv_index))
+                Ok(self.checkmate_score(pv_index))
             } else {
                 // No legal moves but also not in check: Stalemate
                 if is_pv { self.clear_remaining_pv(pv_index) }
@@ -237,7 +242,7 @@ impl Searcher {
     fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, pv_index: usize) -> Result<Centipawns, SearchTimeout> {
         
         if pos.leader_is_captured() {
-            return Ok(Self::checkmate_score(pv_index));
+            return Ok(self.checkmate_score(pv_index));
         }
         
         self.nodes_searched += 1;
@@ -316,14 +321,19 @@ impl Searcher {
         // Sort moves by decreasing score
         moves_and_score.sort_unstable_by(|a, b| b.0.cmp(&a.0));
         
+        if self.rules.invert_win_conditions {
+            moves_and_score.reverse();
+        }
+        
         moves_and_score
     }
     
     #[inline]
-    fn checkmate_score(pv_index: usize) -> Centipawns {
+    fn checkmate_score(&self, pv_index: usize) -> Centipawns {
         // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
         // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
-        GAME_OVER_SCORE + pv_index as Centipawns
+        let score = GAME_OVER_SCORE + pv_index as Centipawns;
+        if self.rules.invert_win_conditions { -score } else { score }
     }
     
     #[inline]

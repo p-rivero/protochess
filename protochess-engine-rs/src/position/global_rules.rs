@@ -27,7 +27,16 @@ impl GlobalRules {
                     stalemated_player_loses: false,
                     invert_win_conditions: false,
                 }
-            }
+            },
+            GameMode::Antichess => {
+                GlobalRules {
+                    win_positions_white: vec![],
+                    win_positions_black: vec![],
+                    capturing_is_forced: true,
+                    stalemated_player_loses: true,
+                    invert_win_conditions: true,
+                }
+            },
         }
     }
 }
@@ -82,5 +91,11 @@ impl From<GlobalRules> for GlobalRulesInternal {
 impl Default for GlobalRules {
     fn default() -> Self {
         GlobalRules::for_mode(GameMode::Standard)
+    }
+}
+
+impl Default for GlobalRulesInternal {
+    fn default() -> Self {
+        GlobalRules::default().into()
     }
 }

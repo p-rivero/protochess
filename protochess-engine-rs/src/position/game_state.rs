@@ -49,14 +49,18 @@ impl GameState {
         
         let whos_turn = if fen_parts[1] == "w" {0} else {1};
         let factory = PieceFactory::new(mode);
+        let mut pawn_promotions = vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT];
+        if mode == GameMode::Antichess {
+            pawn_promotions.push(ID_KING);
+        }
         let piece_types = vec![
             factory.make_king(ID_KING),
             factory.make_queen(ID_QUEEN),
             factory.make_rook(ID_ROOK),
             factory.make_bishop(ID_BISHOP),
             factory.make_knight(ID_KNIGHT),
-            factory.make_pawn(ID_PAWN, true, BOARD_WIDTH, BOARD_HEIGHT, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]),
-            factory.make_pawn(ID_PAWN, false, BOARD_WIDTH, BOARD_HEIGHT, vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT]),
+            factory.make_pawn(ID_PAWN, true, BOARD_WIDTH, BOARD_HEIGHT, pawn_promotions.clone()),
+            factory.make_pawn(ID_PAWN, false, BOARD_WIDTH, BOARD_HEIGHT, pawn_promotions),
         ];
         
         let mut valid_squares = Vec::new();

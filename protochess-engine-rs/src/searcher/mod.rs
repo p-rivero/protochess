@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use instant::{Instant, Duration};
 
+use crate::position::global_rules::GlobalRulesInternal;
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
 use crate::{Position, MoveGen};
 
@@ -25,6 +26,7 @@ pub struct Searcher {
     end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
     known_checks: BTreeMap<u64, ()>,
+    rules: GlobalRulesInternal,
 }
 
 impl Searcher {
@@ -39,6 +41,7 @@ impl Searcher {
             end_time: Instant::now(),
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
             known_checks: BTreeMap::new(),
+            rules: Default::default(),
         }
     }
     
@@ -65,6 +68,7 @@ impl Searcher {
         let mut pv_score: Centipawns = 0;
         self.known_checks.clear();
         self.end_time = Instant::now() + Duration::from_secs(time_sec);
+        self.rules = pos.global_rules.clone();
         
         // Iterative deepening
         for search_depth in 1..=max_depth {
