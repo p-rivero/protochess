@@ -325,7 +325,7 @@ impl Position {
     }
     
     #[inline]
-    pub fn num_repetitions(&self) -> u8 {
+    pub fn draw_by_repetition(&self) -> bool {
         let mut num_reps = 1;
         let my_zob = self.get_zobrist();
         for p in &self.properties_stack {
@@ -333,7 +333,7 @@ impl Position {
                 num_reps += 1;
             }
         }
-        num_reps
+        num_reps >= self.global_rules.repetition_draw
     }
     
     #[inline]

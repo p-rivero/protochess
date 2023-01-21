@@ -13,6 +13,8 @@ pub struct GlobalRules {
     pub stalemated_player_loses: bool,
     // If true, what would be a win for white is a win for black, and vice versa
     pub invert_win_conditions: bool,
+    // Number of times that the same position is reached to draw by repetition
+    pub repetitions_draw: u8,
 }
 
 
@@ -26,6 +28,7 @@ impl GlobalRules {
                     capturing_is_forced: false,
                     stalemated_player_loses: false,
                     invert_win_conditions: false,
+                    repetitions_draw: 3,
                 }
             },
             GameMode::Antichess => {
@@ -35,6 +38,7 @@ impl GlobalRules {
                     capturing_is_forced: true,
                     stalemated_player_loses: true,
                     invert_win_conditions: true,
+                    repetitions_draw: 3,
                 }
             },
         }
@@ -48,6 +52,7 @@ pub struct GlobalRulesInternal {
     pub capturing_is_forced: bool,
     pub stalemated_player_loses: bool,
     pub invert_win_conditions: bool,
+    pub repetition_draw: u8,
 }
 
 
@@ -69,6 +74,7 @@ impl From<GlobalRulesInternal> for GlobalRules {
             capturing_is_forced: rules.capturing_is_forced,
             stalemated_player_loses: rules.stalemated_player_loses,
             invert_win_conditions: rules.invert_win_conditions,
+            repetitions_draw: rules.repetition_draw,
         }
     }
 }
@@ -83,6 +89,7 @@ impl From<GlobalRules> for GlobalRulesInternal {
             capturing_is_forced: rules.capturing_is_forced,
             stalemated_player_loses: rules.stalemated_player_loses,
             invert_win_conditions: rules.invert_win_conditions,
+            repetition_draw: rules.repetitions_draw,
         }
     }
 }

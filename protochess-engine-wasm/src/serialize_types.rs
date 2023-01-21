@@ -168,7 +168,8 @@ generate_wrapper!(GlobalRulesSer, GlobalRules, [
     win_positions_black, Vec<(u8, u8)>,
     capturing_is_forced, bool,
     stalemated_player_loses, bool,
-    invert_win_conditions, bool
+    invert_win_conditions, bool,
+    repetitions_draw, u8
 ]);
 
 generate_wrapper!(GameStateSer, GameState, [

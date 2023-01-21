@@ -29,7 +29,7 @@ impl Searcher {
         let is_pv = alpha != beta - 1;
         
         // If there is repetition, the result is always a draw
-        if pos.num_repetitions() >= 3 {
+        if pos.draw_by_repetition() {
             if is_pv { self.clear_remaining_pv(pv_index) }
             return Ok(0);
         }

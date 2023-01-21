@@ -106,7 +106,7 @@ impl Engine {
                 }
                 return MakeMoveResult::Stalemate;
             }
-            if self.position.num_repetitions() >= 3 {
+            if self.position.draw_by_repetition() {
                 // Threefold Repetition
                 return MakeMoveResult::Repetition;
             }
@@ -147,10 +147,10 @@ impl Engine {
     }
 
     pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<MoveInfo>{
-        let target_index = to_index(x,y);
+        let from = to_index(x,y);
         MoveGen::get_legal_moves(&mut self.position)
             .into_iter()
-            .filter(|mv| mv.get_from() == target_index)
+            .filter(|mv| mv.get_from() == from)
             .map(MoveInfo::from_move)
             .collect()
     }
