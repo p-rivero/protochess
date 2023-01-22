@@ -71,10 +71,10 @@ pub fn output_translations(
             if promotion_squares.get_bit(to) {
                 //Add all the promotion moves
                 for c in &movement.promo_vals {
-                    out_moves.push(Move::new(index, to, None, MoveType::Quiet, Some(*c)));
+                    out_moves.push(Move::new(index, to, 0, MoveType::Quiet, Some(*c)));
                 }
             } else {
-                out_moves.push(Move::new(index, to, None, MoveType::Quiet, None));
+                out_moves.push(Move::new(index, to, 0, MoveType::Quiet, None));
             }
         }
     }
@@ -111,7 +111,7 @@ pub fn output_translations(
                     }
                 }
                 if empty {
-                    out_moves.push(Move::new(index, to_index, Some(kingside_rook_index), MoveType::KingsideCastle, None));
+                    out_moves.push(Move::new(index, to_index, kingside_rook_index, MoveType::KingsideCastle, None));
                 }
             }
         }
@@ -137,7 +137,7 @@ pub fn output_translations(
                     }
                 }
                 if empty {
-                    out_moves.push(Move::new(index, to_index, Some(queenside_rook_index), MoveType::QueensideCastle, None));
+                    out_moves.push(Move::new(index, to_index, queenside_rook_index, MoveType::QueensideCastle, None));
                 }
             }
         }
@@ -189,7 +189,7 @@ pub fn output_captures(
     if let Some(ep_square) = position.get_ep_square() {
         if movement.can_double_jump() && jumps_bitboard.get_bit(ep_square) {
             let target = position.get_ep_victim();
-            out_moves.push(Move::new(index, ep_square, Some(target), MoveType::Capture, None));
+            out_moves.push(Move::new(index, ep_square, target, MoveType::Capture, None));
         }
     }
     
@@ -214,10 +214,10 @@ pub fn output_captures(
                 if promotion_squares.get_bit(to) {
                     //Add all the promotion moves
                     for c in &movement.promo_vals {
-                        out_moves.push(Move::new(index, to, Some(to), MoveType::PromotionCapture, Some(*c)));
+                        out_moves.push(Move::new(index, to, to, MoveType::PromotionCapture, Some(*c)));
                     }
                 } else {
-                    out_moves.push(Move::new(index, to, Some(to), MoveType::Capture, None));
+                    out_moves.push(Move::new(index, to, to, MoveType::Capture, None));
                 }
                 break;
             }
@@ -241,21 +241,21 @@ pub fn flatten_bb_moves(
         let promo_here = promotion_squares.get_bit(to);
         let capture_here = enemies.get_bit(to);
         let move_type = {
-            match (capture_here, promo_here) {
-                (true, true) => { MoveType::PromotionCapture },
-                (true, false) => { MoveType::Capture },
-                (false, true) => { MoveType::Promotion },
-                (false, false) => { MoveType::Quiet },
+            if capture_here {
+                if promo_here { MoveType::PromotionCapture }
+                else { MoveType::Capture }
+            } else {
+                if promo_here { MoveType::Promotion }
+                else { MoveType::Quiet }
             }
         };
-        let target = { if capture_here { Some(to) } else { None } };
         if promo_here {
             for promo_val in promo_vals {
-                out_moves.push(Move::new(from_index, to, target, move_type, Some(*promo_val)));
+                out_moves.push(Move::new(from_index, to, to, move_type, Some(*promo_val)));
             }
         } else {
             //No promotion chars left, go to next after this
-            out_moves.push(Move::new(from_index, to, target, move_type, None))
+            out_moves.push(Move::new(from_index, to, to, move_type, None))
         }
         moves.clear_bit(to);
     }
@@ -272,13 +272,13 @@ pub fn flatten_bb_moves_doublejump(
     while let Some(to) = moves.lowest_one() {
         if promotion_squares.get_bit(to) {
             for promo_val in promo_vals {
-                out_moves.push(Move::new(from_index, to, None, MoveType::Promotion, Some(*promo_val)));
+                out_moves.push(Move::new(from_index, to, 0, MoveType::Promotion, Some(*promo_val)));
             }
         } else if double_jump_squares.get_bit(ep_square) {
             // In double jump, the first jump index (to) is an en passant square (unless it's also a double jump square)
-            out_moves.push(Move::new(from_index, to, None, MoveType::Quiet, None))
+            out_moves.push(Move::new(from_index, to, 0, MoveType::Quiet, None))
         } else {
-            out_moves.push(Move::new(from_index, to, Some(ep_square), MoveType::DoubleJump, None))
+            out_moves.push(Move::new(from_index, to, ep_square, MoveType::DoubleJump, None))
         }
         moves.clear_bit(to);
     }

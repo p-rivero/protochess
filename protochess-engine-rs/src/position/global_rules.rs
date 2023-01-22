@@ -14,6 +14,7 @@ pub struct GlobalRules {
     // If true, what would be a win for white is a win for black, and vice versa
     pub invert_win_conditions: bool,
     // Number of times that the same position is reached to draw by repetition
+    // 0 means no repetition draw
     pub repetitions_draw: u8,
 }
 

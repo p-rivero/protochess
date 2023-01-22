@@ -36,8 +36,7 @@ pub struct Move {
 
 impl Move {
     #[inline]
-    pub fn new(from: BIndex, to: BIndex, target_loc: Option<BIndex>, move_type: MoveType, promotion: Option<PieceId>) -> Move {
-        let target = target_loc.unwrap_or(0);
+    pub fn new(from: BIndex, to: BIndex, target: BIndex, move_type: MoveType, promotion: Option<PieceId>) -> Move {
         Move {
             move_fields: (from as u32) | (to as u32) << 8 | (target as u32) << 16 | (move_type as u32) << 24,
             promotion: promotion.unwrap_or(0)
@@ -46,7 +45,7 @@ impl Move {
 
     #[inline]
     pub fn null() -> Move {
-        Move::new(0, 0, None, MoveType::Null, None)
+        Move::new(0, 0, 0, MoveType::Null, None)
     }
     
     #[inline]

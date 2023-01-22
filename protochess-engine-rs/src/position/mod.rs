@@ -326,11 +326,20 @@ impl Position {
     
     #[inline]
     pub fn draw_by_repetition(&self) -> bool {
+        if self.global_rules.repetition_draw == 0 {
+            return false;
+        }
         let mut num_reps = 1;
         let my_zob = self.get_zobrist();
-        for p in &self.properties_stack {
+        // Iterate from the top of the stack to the beginning
+        for p in self.properties_stack.iter().rev() {
             if p.zobrist_key == my_zob {
                 num_reps += 1;
+            }
+            // A capture breaks the repetition
+            // We could also break on pawn moves, but the concept of "pawn" doesn't exist in a custom game
+            if p.num_captures > 0 {
+                break;
             }
         }
         num_reps >= self.global_rules.repetition_draw
@@ -352,18 +361,18 @@ impl Position {
     
     #[inline]
     pub fn leader_is_captured(&self) -> bool {
-        if let Some(leader) = self.pieces[self.whos_turn as usize].get_leader() {
-            leader.get_num_pieces() == 0
-        } else {
-            self.pieces[self.whos_turn as usize].get_occupied().count_ones() == 0
-        }
+        self.get_num_leader_pieces(self.whos_turn) == 0
     }
     #[inline]
     pub fn enemy_leader_is_captured(&self) -> bool {
-        if let Some(leader) = self.pieces[1 - self.whos_turn as usize].get_leader() {
-            leader.get_num_pieces() == 0
+        self.get_num_leader_pieces(1 - self.whos_turn) == 0
+    }
+    #[inline]
+    fn get_num_leader_pieces(&self, player: Player) -> u32 {
+        if let Some(leader) = self.pieces[player as usize].get_leader() {
+            leader.get_num_pieces()
         } else {
-            self.pieces[1 - self.whos_turn as usize].get_occupied().count_ones() == 0
+            self.pieces[player as usize].get_occupied().count_ones()
         }
     }
 
