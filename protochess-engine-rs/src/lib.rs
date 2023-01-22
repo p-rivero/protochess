@@ -24,9 +24,9 @@ pub use types::MoveInfo;
 pub enum MakeMoveResult {
     Ok,
     IllegalMove,
-    Checkmate(Player), // Checkmated player
-    LeaderCaptured(Player), // All leader pieces of the player are captured (only in illegal positions or atomic chess)
-    Stalemate,
+    Checkmate{winner: Player},
+    LeaderCaptured{winner: Player},
+    Stalemate{winner: Option<Player>},
     Repetition,
 }
 
@@ -97,14 +97,26 @@ impl Engine {
             }
             
             // Check if the game is over
+            let winner = {
+                if self.position.global_rules.invert_win_conditions {
+                    self.position.whos_turn
+                } else {
+                    1 - self.position.whos_turn
+                }
+            };
+            // Leader captured (atomic chess)
             if self.position.leader_is_captured() {
-                return MakeMoveResult::LeaderCaptured(self.position.whos_turn);
+                return MakeMoveResult::LeaderCaptured{winner};
             }
+            // No legal moves, check if it's checkmate or stalemate
             if MoveGen::count_legal_moves(&mut self.position) == 0 {
                 if MoveGen::in_check(&mut self.position) {
-                    return MakeMoveResult::Checkmate(self.position.whos_turn);
+                    return MakeMoveResult::Checkmate{winner};
                 }
-                return MakeMoveResult::Stalemate;
+                if self.position.global_rules.stalemated_player_loses {
+                    return MakeMoveResult::Stalemate{winner: Some(winner)};
+                }
+                return MakeMoveResult::Stalemate{winner: None};
             }
             if self.position.draw_by_repetition() {
                 // Threefold Repetition

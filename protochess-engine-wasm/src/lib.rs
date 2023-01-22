@@ -48,18 +48,18 @@ impl Protochess {
     pub fn play_best_move(&mut self, depth: u8) -> JsValue {
         let (best_move, _) = self.engine.get_best_move(depth);
         let move_result = self.engine.make_move(&best_move);
-        MakeMoveResultSer::to_js(&move_result)
+        MakeMoveResultSer::to_js(move_result)
     }
     pub fn play_best_move_timeout(&mut self, time: usize) -> JsValue {
         let (best_move, _, search_depth) = self.engine.get_best_move_timeout(time as u64);
         let move_result = self.engine.make_move(&best_move);
-        MakeMoveResultWithDepthSer::to_js(&move_result, search_depth)
+        MakeMoveResultWithDepthSer::to_js(move_result, search_depth)
     }
 
     pub fn make_move(&mut self, mv: JsValue) -> JsValue {
         let mv = MoveInfoSer::from_js(mv);
         let move_result = self.engine.make_move(&mv);
-        MakeMoveResultSer::to_js(&move_result)
+        MakeMoveResultSer::to_js(move_result)
     }
 
     pub fn get_best_move(&mut self, depth: u8) -> JsValue {

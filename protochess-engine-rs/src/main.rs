@@ -23,6 +23,7 @@ pub fn main() {
 
     
     let args: Vec<String> = std::env::args().collect();
+    let mut fixed_depth = true;
     let mut depth = 12;
     let mut max_ply = 500;
     if args.len() > 3 {
@@ -38,7 +39,12 @@ pub fn main() {
         }
     };
     if args.len() > 1 {
-        depth = args[1].parse::<u8>().unwrap();
+        if args[1].contains('t') {
+            fixed_depth = false;
+            depth = args[1].replace('t', "").parse::<u8>().unwrap();
+        } else {
+            depth = args[1].parse::<u8>().unwrap();
+        }
     }
     
     println!("Start Position:\n{}", engine);
@@ -46,7 +52,13 @@ pub fn main() {
 
     let start = instant::Instant::now();
     for ply in 0..max_ply {
-        let (mv, _) = engine.get_best_move(depth);
+        let mv = {
+            if fixed_depth {
+                engine.get_best_move(depth).0
+            } else {
+                engine.get_best_move_timeout(depth as u64).0
+            }
+        };
         println!("\n========================================\n");
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
@@ -59,29 +71,24 @@ pub fn main() {
             MakeMoveResult::IllegalMove => {
                 panic!("An illegal move was made");
             },
-            MakeMoveResult::Checkmate(losing_player) => {
-                if losing_player == 0 {
-                    println!("{}", engine);
-                    println!("CHECKMATE! Black wins!");
-                } else {
-                    println!("{}", engine);
-                    println!("CHECKMATE! White wins!");
-                }
-                break;
-            },
-            MakeMoveResult::LeaderCaptured(losing_player) => {
-                if losing_player == 0 {
-                    println!("{}", engine);
-                    println!("KING HAS BEEN CAPTURED! Black wins!");
-                } else {
-                    println!("{}", engine);
-                    println!("KING HAS BEEN CAPTURED! White wins!");
-                }
-                break;
-            },
-            MakeMoveResult::Stalemate => {
+            MakeMoveResult::Checkmate{winner} => {
                 println!("{}", engine);
-                println!("STALEMATE!");
+                println!("CHECKMATE! {} wins!", if winner == 0 { "White" } else { "Black" });
+                break;
+            },
+            MakeMoveResult::LeaderCaptured{winner} => {
+                println!("{}", engine);
+                println!("KING HAS BEEN CAPTURED! {} wins!", if winner == 0 { "White" } else { "Black" });
+                break;
+            },
+            MakeMoveResult::Stalemate{winner: Some(winner)} => {
+                println!("{}", engine);
+                println!("STALEMATE! {} wins!", if winner == 0 { "White" } else { "Black" });
+                break;
+            },
+            MakeMoveResult::Stalemate{winner: None} => {
+                println!("{}", engine);
+                println!("DRAW BY STALEMATE!");
                 break;
             },
             MakeMoveResult::Repetition => {

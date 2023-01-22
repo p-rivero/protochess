@@ -46,26 +46,36 @@ generate_wrapper!(MoveInfoSer, MoveInfo, [
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct MakeMoveResultSer {
     result: String,
-    checkmated_player_num: Option<u8>,
+    winner_player: Option<u8>,
 }
 impl MakeMoveResultSer {
-    pub fn to_js(mmr: &MakeMoveResult) -> JsValue {
+    pub fn to_js(mmr: MakeMoveResult) -> JsValue {
         to_value(&MakeMoveResultSer::from(mmr)).unwrap()
     }
 }
-impl From<&MakeMoveResult> for MakeMoveResultSer {
-    fn from(mmr: &MakeMoveResult) -> MakeMoveResultSer {
-        if let MakeMoveResult::Checkmate(player_num) = mmr {
-            MakeMoveResultSer {
-                result: "Checkmate".to_string(),
-                checkmated_player_num: Some(*player_num)
-            }
-        } else {
-            MakeMoveResultSer {
-                result: format!("{:?}", mmr),
-                checkmated_player_num: None
+impl From<MakeMoveResult> for MakeMoveResultSer {
+    fn from(mmr: MakeMoveResult) -> MakeMoveResultSer {
+        let result;
+        let winner_player;
+        match mmr {
+            MakeMoveResult::Checkmate{winner} => {
+                result = "Checkmate".to_string();
+                winner_player = Some(winner);
+            },
+            MakeMoveResult::LeaderCaptured{winner} => {
+                result = "LeaderCaptured".to_string();
+                winner_player = Some(winner);
+            },
+            MakeMoveResult::Stalemate{winner} => {
+                result = "Stalemate".to_string();
+                winner_player = winner;
+            },
+            _ => {
+                result = format!("{:?}", mmr);
+                winner_player = None;
             }
         }
+        MakeMoveResultSer { result, winner_player }
     }
 }
 
@@ -109,7 +119,7 @@ pub struct MakeMoveResultWithDepthSer {
     depth: u8
 }
 impl MakeMoveResultWithDepthSer {
-    pub fn to_js(mmr: &MakeMoveResult, depth: u8) -> JsValue {
+    pub fn to_js(mmr: MakeMoveResult, depth: u8) -> JsValue {
         let val = MakeMoveResultWithDepthSer {
             make_move_result: mmr.into(),
             depth
