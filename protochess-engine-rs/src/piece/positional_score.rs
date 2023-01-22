@@ -7,10 +7,10 @@ const POSITION_EDGE_DIST_MULT: Centipawns = 5;
 const POSITION_PROMOTION_DIST_MULT: Centipawns = 7;
 
 /// Returns Vec of size 256, each with an integer representing # of moves possible at that location
-pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions) -> Vec<Centipawns> {
+pub fn compute_piece_square_table(piece: &PieceDefinition, dims: &BDimensions, endgame: bool) -> Vec<Centipawns> {
     let mut return_vec = Vec::with_capacity(256);
     let center_squares_bb = get_center_squares(dims.width, dims.height);
-    let promotion_squares_bb = mp.promotion_squares_bb() & &dims.bounds; // Keep promotion squares in bounds
+    let promotion_squares_bb = piece.promotion_squares_bb() & &dims.bounds; // Keep promotion squares in bounds
     
     
     for index in 0..=BIndex::MAX {
@@ -19,7 +19,7 @@ pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions) -> V
             return_vec.push(0);
             continue;
         }
-        let mut moves = get_moves_on_empty_board(mp, index, dims, true);
+        let mut moves = get_moves_on_empty_board(piece, index, dims, true);
         moves &= &center_squares_bb;
         
         // 1 point for each move that lands on a center square
@@ -36,7 +36,7 @@ pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions) -> V
         if !promotion_squares_bb.is_zero() {
             let get_neighbors = |x: BCoord, y: BCoord| {
                 let mut neighbors = Vec::new();
-                let mut moves = get_moves_on_empty_board(mp, to_index(x, y), dims, false);
+                let mut moves = get_moves_on_empty_board(piece, to_index(x, y), dims, false);
                 // Get the coordinates of all the 1s in the bitboard
                 while let Some(index) = moves.lowest_one() {
                     neighbors.push(from_index(index));
@@ -51,7 +51,25 @@ pub fn compute_piece_square_table(mp: &PieceDefinition, dims: &BDimensions) -> V
             score += promotion_points * POSITION_PROMOTION_DIST_MULT;
         }
         
+        // Extra points for castling a leader
+        if piece.is_leader && !endgame && piece.can_castle() && (y == 0 || y == dims.height - 1) {
+            let (queenside_x, kingside_x) = piece.castle_files.unwrap();
+            // Subtract points because later we will invert the score for leaders
+            if x == queenside_x || x == kingside_x {
+                score -= 40;
+            } else if x < queenside_x || x > kingside_x {
+                score -= 20;
+            }
+        }
+        
         return_vec.push(score);
+    }
+    
+    // If the piece is a leader, invert the score so that it stays far away from the center
+    if piece.is_leader && !endgame {
+        for score in return_vec.iter_mut() {
+            *score = -*score;
+        }
     }
     
     return_vec

@@ -35,6 +35,7 @@ pub struct Piece {
     material_score: Centipawns,
     // Table of positional scores for this piece
     piece_square_table: Vec<Centipawns>,
+    piece_square_table_endgame: Vec<Centipawns>,
     
     // Number of 1 bits in the bitboard
     num_pieces: u32,
@@ -70,7 +71,8 @@ impl Piece {
         
         let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
-        let piece_square_table = compute_piece_square_table(&definition, dims);
+        let piece_square_table = compute_piece_square_table(&definition, dims, false);
+        let piece_square_table_endgame = compute_piece_square_table(&definition, dims, true);
         let jump_bitboards_translate = Piece::precompute_jumps(&definition.translate_jump_deltas, dims);
         let jump_bitboards_capture = Piece::precompute_jumps(&definition.attack_jump_deltas, dims);
         let explosion_bitboards = Piece::precompute_jumps(&definition.explosion_deltas, dims);
@@ -80,6 +82,7 @@ impl Piece {
             zobrist_hashes,
             material_score,
             piece_square_table,
+            piece_square_table_endgame,
             bitboard: Bitboard::zero(),
             num_pieces: 0,
             total_material_score: 0,
@@ -223,16 +226,22 @@ impl Piece {
     }
     
     // Get the positional score for 1 unit of this piece at the given index
-    pub fn get_positional_score(&self, index: BIndex) -> Centipawns {
-        self.piece_square_table[index as usize]
+    #[inline]
+    pub fn get_positional_score<const ENDGAME: bool>(&self, index: BIndex) -> Centipawns {
+        if ENDGAME {
+            self.piece_square_table_endgame[index as usize]
+        } else {
+            self.piece_square_table[index as usize]
+        }
     }
     
     // Get the positional score for all current units of this piece
-    pub fn get_positional_score_all(&self) -> Centipawns {
+    #[inline]
+    pub fn get_positional_score_all<const ENDGAME: bool>(&self) -> Centipawns {
         let mut bb_copy = self.bitboard.clone();
         let mut score = 0;
         while let Some(index) = bb_copy.lowest_one() {
-            score += self.get_positional_score(index);
+            score += self.get_positional_score::<ENDGAME>(index);
             bb_copy.clear_bit(index);
         }
         score

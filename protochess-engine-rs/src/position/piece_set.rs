@@ -160,17 +160,11 @@ impl PieceSet {
         (score, leader_score)
     }
     
-    pub fn get_positional_score(&self, is_endgame: bool) -> Centipawns {
+    #[inline]
+    pub fn get_positional_score<const ENDGAME: bool>(&self) -> Centipawns {
         let mut score = 0;
         for piece in &self.pieces {
-            // TODO: Inverting the leader score may not always be the best option
-            // For each piece, get the positional score.
-            // Invert the leader so that it stays away from the center, except in the endgame
-            if piece.is_leader() && !is_endgame {
-                score -= piece.get_positional_score_all();
-            } else {
-                score += piece.get_positional_score_all();
-            }
+            score += piece.get_positional_score_all::<ENDGAME>();
         }
         score
     }

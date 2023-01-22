@@ -28,22 +28,17 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
     // Positional score
     let is_endgame = total_leaderless_score < ENDGAME_THRESHOLD;
     for ps in &position.pieces {
-        const CASTLING_BONUS: Centipawns = 30;
-        
-        if ps.get_player_num() == player_num {
-            score += ps.get_positional_score(is_endgame);
-        } else {
-            score -= ps.get_positional_score(is_endgame);
-        }
-        
-        //Castling bonus
-        // TODO: Keep castling bonus also in the endgame?
-        if position.has_player_castled(ps.get_player_num()) && !is_endgame {
-            if ps.get_player_num() == player_num {
-                score += CASTLING_BONUS;
+        let ps_score = {
+            if is_endgame {
+                ps.get_positional_score::<true>()
             } else {
-                score -= CASTLING_BONUS;
+                ps.get_positional_score::<false>()
             }
+        };
+        if ps.get_player_num() == player_num {
+            score += ps_score;
+        } else {
+            score -= ps_score;
         }
     }
 

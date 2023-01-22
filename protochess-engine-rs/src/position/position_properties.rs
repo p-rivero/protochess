@@ -2,8 +2,6 @@ use crate::types::{BIndex, Move};
 
 use crate::piece::PieceId;
 
-use super::castled_players::CastledPlayers;
-
 /// Properties that are hard to recover from a Move
 #[derive(Clone, Copy, Debug)]
 pub struct PositionProperties {
@@ -11,7 +9,6 @@ pub struct PositionProperties {
     pub move_played: Option<Move>,
     //If the last move was a promotion, promote_from is the previous piecetype
     pub promote_from: Option<PieceId>,
-    pub castled_players: CastledPlayers,
     //EP square (square behind a double pawn push)
     ep_square: Option<BIndex>,
     ep_victim: BIndex, // Only valid if ep_square is Some
@@ -52,7 +49,6 @@ impl Default for PositionProperties {
             zobrist_key: 0,
             move_played: None,
             promote_from: None,
-            castled_players: CastledPlayers::new(),
             ep_square: None,
             ep_victim: 0,
             moved_piece_castle: false,

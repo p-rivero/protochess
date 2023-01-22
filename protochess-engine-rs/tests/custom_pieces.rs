@@ -16,12 +16,12 @@ mod custom_pieces {
         assert_eq!(white_pawn.get_player(), 0);
         assert_eq!(white_pawn.get_material_score(), 100);
         assert_eq!(white_pawn.get_material_score_all(), 0); // No pieces on the board
-        assert_eq!(white_pawn.get_positional_score_all(), 0); // No pieces on the board
+        assert_eq!(white_pawn.get_positional_score_all::<false>(), 0); // No pieces on the board
         
         println!("White pawn positional scores:");
         for y in (0..dims.height).rev() {
             for x in 0..dims.width {
-                print!("{} ", white_pawn.get_positional_score(to_index(x, y)));
+                print!("{} ", white_pawn.get_positional_score::<false>(to_index(x, y)));
             }
             println!();
         }
@@ -33,12 +33,12 @@ mod custom_pieces {
         assert_eq!(black_pawn.get_player(), 1);
         assert_eq!(black_pawn.get_material_score(), 100);
         assert_eq!(black_pawn.get_material_score_all(), 0); // No pieces on the board
-        assert_eq!(black_pawn.get_positional_score_all(), 0); // No pieces on the board
+        assert_eq!(black_pawn.get_positional_score_all::<false>(), 0); // No pieces on the board
         
         println!("Black pawn positional scores:");
         for y in (0..dims.height).rev() {
             for x in 0..dims.width {
-                print!("{} ", black_pawn.get_positional_score(to_index(x, y)));
+                print!("{} ", black_pawn.get_positional_score::<false>(to_index(x, y)));
             }
             println!();
         }
@@ -54,12 +54,12 @@ mod custom_pieces {
         assert_eq!(knight.get_player(), 0);
         assert_eq!(knight.get_material_score(), 320);
         assert_eq!(knight.get_material_score_all(), 0); // No pieces on the board
-        assert_eq!(knight.get_positional_score_all(), 0); // No pieces on the board
+        assert_eq!(knight.get_positional_score_all::<false>(), 0); // No pieces on the board
         
         println!("Knight positional scores:");
         for y in (0..dims.height).rev() {
             for x in 0..dims.width {
-                print!("{} ", knight.get_positional_score(to_index(x, y)));
+                print!("{} ", knight.get_positional_score::<false>(to_index(x, y)));
             }
             println!();
         }
@@ -75,12 +75,12 @@ mod custom_pieces {
         assert_eq!(bishop.get_player(), 0);
         assert_eq!(bishop.get_material_score(), 336);
         assert_eq!(bishop.get_material_score_all(), 0); // No pieces on the board
-        assert_eq!(bishop.get_positional_score_all(), 0); // No pieces on the board
+        assert_eq!(bishop.get_positional_score_all::<false>(), 0); // No pieces on the board
         
         println!("Bishop positional scores:");
         for y in (0..dims.height).rev() {
             for x in 0..dims.width {
-                print!("{} ", bishop.get_positional_score(to_index(x, y)));
+                print!("{} ", bishop.get_positional_score::<false>(to_index(x, y)));
             }
             println!();
         }
@@ -96,12 +96,12 @@ mod custom_pieces {
         assert_eq!(rook.get_player(), 0);
         assert_eq!(rook.get_material_score(), 528);
         assert_eq!(rook.get_material_score_all(), 0); // No pieces on the board
-        assert_eq!(rook.get_positional_score_all(), 0); // No pieces on the board
+        assert_eq!(rook.get_positional_score_all::<false>(), 0); // No pieces on the board
         
         println!("Rook positional scores:");
         for y in (0..dims.height).rev() {
             for x in 0..dims.width {
-                print!("{} ", rook.get_positional_score(to_index(x, y)));
+                print!("{} ", rook.get_positional_score::<false>(to_index(x, y)));
             }
             println!();
         }
@@ -117,12 +117,12 @@ mod custom_pieces {
         assert_eq!(queen.get_player(), 0);
         assert_eq!(queen.get_material_score(), 1014);
         assert_eq!(queen.get_material_score_all(), 0); // No pieces on the board
-        assert_eq!(queen.get_positional_score_all(), 0); // No pieces on the board
+        assert_eq!(queen.get_positional_score_all::<false>(), 0); // No pieces on the board
         
         println!("Queen positional scores:");
         for y in (0..dims.height).rev() {
             for x in 0..dims.width {
-                print!("{} ", queen.get_positional_score(to_index(x, y)));
+                print!("{} ", queen.get_positional_score::<false>(to_index(x, y)));
             }
             println!();
         }
@@ -138,12 +138,20 @@ mod custom_pieces {
         assert_eq!(king.get_player(), 0);
         assert_eq!(king.get_material_score(), 320 * 4);
         assert_eq!(king.get_material_score_all(), 0); // No pieces on the board
-        assert_eq!(king.get_positional_score_all(), 0); // No pieces on the board
+        assert_eq!(king.get_positional_score_all::<false>(), 0); // No pieces on the board
         
         println!("King positional scores:");
         for y in (0..dims.height).rev() {
             for x in 0..dims.width {
-                print!("{} ", king.get_positional_score(to_index(x, y)));
+                print!("{} ", king.get_positional_score::<false>(to_index(x, y)));
+            }
+            println!();
+        }
+        
+        println!("King positional scores (ENDGAME):");
+        for y in (0..dims.height).rev() {
+            for x in 0..dims.width {
+                print!("{} ", king.get_positional_score::<true>(to_index(x, y)));
             }
             println!();
         }

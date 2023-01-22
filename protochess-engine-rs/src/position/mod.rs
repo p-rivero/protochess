@@ -7,7 +7,6 @@ use crate::piece::{Piece, PieceId};
 mod position_properties;
 pub mod global_rules;
 pub mod game_state;
-pub mod castled_players;
 pub mod piece_set;
 
 use global_rules::{GlobalRules, GlobalRulesInternal};
@@ -155,7 +154,6 @@ impl Position {
             self.pieces[my_player_num as usize].add_piece(rook_id.unwrap(), rook_to, false);
             let rook_piece = self.player_piece_at(my_player_num, rook_to).unwrap();
             new_props.zobrist_key ^= rook_piece.get_zobrist(rook_to);
-            new_props.castled_players.set_player_castled(my_player_num);
         }
 
         // Pawn en-passant
@@ -343,11 +341,6 @@ impl Position {
             }
         }
         num_reps >= self.global_rules.repetition_draw
-    }
-    
-    #[inline]
-    pub fn has_player_castled(&self, player: Player) -> bool {
-        self.get_properties().castled_players.did_player_castle(player)
     }
     
     #[inline]
