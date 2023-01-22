@@ -41,7 +41,7 @@ impl Searcher {
         if IS_PV {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
             known_check = self.known_checks.contains_key(&pos.get_zobrist());
-            if known_check && self.current_searching_depth < 2 * self.original_searching_depth {
+            if known_check && self.current_searching_depth < self.max_searching_depth {
                 depth += 1;
                 self.current_searching_depth += 1;
             }
@@ -125,7 +125,7 @@ impl Searcher {
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
         let in_check = known_check || MoveGen::in_check(pos);
-        if IS_PV && in_check && !known_check && self.current_searching_depth < 2 * self.original_searching_depth {
+        if IS_PV && in_check && !known_check && self.current_searching_depth < self.max_searching_depth {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
             depth += 1;
             self.current_searching_depth += 1;
@@ -168,8 +168,6 @@ impl Searcher {
                     }
                 }
             }
-            // (Time since start: 127.770821266s)
-            // PLY: 5 Engine plays: 
 
             pos.unmake_move();
 
@@ -189,7 +187,11 @@ impl Searcher {
                             mv,
                             depth,
                         });
-                        if IS_PV { self.clear_remaining_pv(pv_index) }
+                        if IS_PV {
+                            // Undo extension
+                            if in_check { self.current_searching_depth -= 1; }
+                            self.clear_remaining_pv(pv_index);
+                        }
                         return Ok(beta);
                     }
                     alpha = score;
@@ -201,6 +203,8 @@ impl Searcher {
         }
 
         if num_legal_moves == 0 {
+            // Undo extension
+            if IS_PV && in_check { self.current_searching_depth -= 1; }
             return if in_check || pos.global_rules.stalemated_player_loses {
                 // No legal moves and in check: Checkmate
                 if IS_PV { self.clear_remaining_pv(pv_index) }
@@ -232,6 +236,9 @@ impl Searcher {
                 depth,
             });
         }
+        
+        // Undo extension
+        if IS_PV && in_check { self.current_searching_depth -= 1; }
         
         Ok(alpha)
     }
