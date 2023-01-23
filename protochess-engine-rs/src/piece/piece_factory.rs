@@ -22,11 +22,20 @@ impl PieceFactory {
             double_jump_squares.push((i, double_move_rank2));
         }
         let move_dir = { if is_white { 1 } else { -1 } };
+        let available_for = {
+            if self.mode == GameMode::RacingKings {
+                vec![]
+            } else if is_white {
+                vec![0]
+            } else {
+                vec![1]
+            }
+        };
         
         PieceDefinition {
             id,
             char_rep: 'P',
-            available_for: if is_white { vec![0] } else { vec![1] },
+            available_for,
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -178,16 +187,19 @@ impl PieceFactory {
         let win_squares = {
             if self.mode == GameMode::KingOfTheHill {
                 vec![(3,3), (3,4), (4,3), (4,4)]
+            } else if self.mode == GameMode::RacingKings {
+                vec![(0,7), (1,7), (2,7), (3,7), (4,7), (5,7), (6,7), (7,7)]
             } else {
                 vec![]
             }
         };
+        let can_castle = self.mode != GameMode::Antichess && self.mode != GameMode::RacingKings;
         PieceDefinition {
             id,
             char_rep: 'K',
             available_for: if self.mode == GameMode::Horde { vec![1] } else { vec![0, 1] },
             is_leader: self.mode != GameMode::Antichess,
-            castle_files: if self.mode == GameMode::Antichess { None } else { Some((2, 6)) },
+            castle_files: if can_castle { Some((2, 6)) } else { None },
             is_castle_rook: false,
             explodes: self.mode == GameMode::Atomic,
             explosion_deltas: vec![(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)],
