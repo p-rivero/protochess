@@ -1,7 +1,7 @@
 use crate::position::Position;
 use crate::types::{Move, Centipawns};
 
-/// Retrieves the score for the player to move (position.whos_turn)
+/// Retrieves the score for the player to move (`position.whos_turn`)
 pub fn evaluate(position: &mut Position) -> Centipawns {
     // Material score (without leaders) of both players combined, below which the game is considered to be in the endgame
     // Arbitrary threshold of roughly 2 queens and 2 rooks, feel free to experiment

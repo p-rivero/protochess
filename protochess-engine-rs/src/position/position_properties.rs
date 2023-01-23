@@ -6,9 +6,9 @@ use crate::piece::PieceId;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PositionProperties {
     pub zobrist_key: u64,
-    pub move_played: Option<Move>,
+    pub move_played: Move,
     //If the last move was a promotion, promote_from is the previous piecetype
-    pub promote_from: Option<PieceId>,
+    pub promote_from: PieceId,
     //EP square (square behind a double pawn push)
     ep_square: Option<BIndex>,
     ep_victim: BIndex, // Only valid if ep_square is Some

@@ -4,7 +4,7 @@ use super::PieceId;
 
 /// External representation of a piece
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Default)]
 pub struct PieceDefinition {
     pub id: PieceId,
     pub char_rep: char,
@@ -111,45 +111,5 @@ impl PieceDefinition {
     }
     pub fn can_castle(&self) -> bool {
         self.castle_files.is_some()
-    }
-}
-
-impl Default for PieceDefinition {
-    fn default() -> Self {
-        PieceDefinition {
-            id: 0,
-            char_rep: '?',
-            available_for: Vec::new(),
-            is_leader: false,
-            castle_files: None,
-            is_castle_rook: false,
-            explodes: false,
-            explosion_deltas: Vec::new(),
-            immune_to_explosion: false,
-            promotion_squares: Vec::new(),
-            promo_vals: Vec::new(),
-            double_jump_squares: Vec::new(),
-            attack_sliding_deltas: Vec::new(),
-            attack_jump_deltas: Vec::new(),
-            attack_north: false,
-            attack_south: false,
-            attack_east: false,
-            attack_west: false,
-            attack_northeast: false,
-            attack_northwest: false,
-            attack_southeast: false,
-            attack_southwest: false,
-            translate_jump_deltas: Vec::new(),
-            translate_sliding_deltas: Vec::new(),
-            translate_north: false,
-            translate_south: false,
-            translate_east: false,
-            translate_west: false,
-            translate_northeast: false,
-            translate_northwest: false,
-            translate_southeast: false,
-            translate_southwest: false,
-            win_squares: Vec::new(),
-        }
     }
 }

@@ -40,7 +40,7 @@ pub fn distance_to_one<F>(x_start: BCoord, y_start: BCoord, board: &Bitboard, ge
 
 
 /// Converts an (x, y) location to chess rank-file notation
-/// Ex: to_rank_file(0, 1) = a2
+/// Ex: `to_rank_file(0, 1)` = a2
 pub fn to_rank_file(x: BCoord, y: BCoord) -> String {
     format!("{}{}", (b'a' + x) as char, (y + 1))
 }

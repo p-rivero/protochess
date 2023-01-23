@@ -6,7 +6,7 @@ use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
 use serialize_types::*;
-use utils::*;
+use utils::{set_panic_hook, SerVec};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.

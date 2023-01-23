@@ -25,19 +25,19 @@ mod move_generator_test {
         assert_eq!(mv.get_to(), 0xCD);
         assert_eq!(mv.get_target(), 0xEF);
         assert_eq!(mv.get_move_type(), MoveType::PromotionCapture);
-        assert_eq!(mv.is_capture(), true);
-        assert_eq!(mv.is_null(), false);
+        assert!(mv.is_capture());
+        assert!(!mv.is_null());
         assert_eq!(mv.get_promotion_piece(), Some(123));
         
         assert!(Move::null().is_null());
         assert!(Move::null().get_promotion_piece().is_none());
         
-        assert!(Move::new(0, 0, 0, MoveType::Quiet, None).is_capture() == false);
-        assert!(Move::new(0, 0, 0, MoveType::Capture, None).is_capture() == true);
-        assert!(Move::new(0, 0, 0, MoveType::KingsideCastle, None).is_capture() == false);
-        assert!(Move::new(0, 0, 0, MoveType::QueensideCastle, None).is_capture() == false);
-        assert!(Move::new(0, 0, 0, MoveType::Promotion, None).is_capture() == false);
-        assert!(Move::new(0, 0, 0, MoveType::PromotionCapture, None).is_capture() == true);
-        assert!(Move::new(0, 0, 0, MoveType::Null, None).is_capture() == false);
+        assert!(!Move::new(0, 0, 0, MoveType::Quiet, None).is_capture());
+        assert!(Move::new(0, 0, 0, MoveType::Capture, None).is_capture());
+        assert!(!Move::new(0, 0, 0, MoveType::KingsideCastle, None).is_capture());
+        assert!(!Move::new(0, 0, 0, MoveType::QueensideCastle, None).is_capture());
+        assert!(!Move::new(0, 0, 0, MoveType::Promotion, None).is_capture());
+        assert!(Move::new(0, 0, 0, MoveType::PromotionCapture, None).is_capture());
+        assert!(!Move::new(0, 0, 0, MoveType::Null, None).is_capture());
     }
 }

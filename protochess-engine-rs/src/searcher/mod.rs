@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 use instant::{Instant, Duration};
 
@@ -24,7 +24,7 @@ pub struct Searcher {
     max_searching_depth: Depth,
     end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
-    known_checks: BTreeMap<u64, ()>,
+    known_checks: BTreeSet<u64>,
     rules: GlobalRules,
 }
 
@@ -39,8 +39,8 @@ impl Searcher {
             max_searching_depth: 0,
             end_time: Instant::now(),
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
-            known_checks: BTreeMap::new(),
-            rules: Default::default(),
+            known_checks: BTreeSet::new(),
+            rules: GlobalRules::default(),
         }
     }
     

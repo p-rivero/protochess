@@ -62,7 +62,7 @@ pub fn main() {
         println!("\n========================================\n");
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
-        print_pgn(&mut pgn_file, ply, to_long_algebraic_notation(&mv, &engine));
+        print_pgn(&mut pgn_file, ply, &to_long_algebraic_notation(&mv, &engine));
         match engine.make_move(&mv) {
             MakeMoveResult::Ok => {
                 println!("{}", engine);
@@ -117,7 +117,7 @@ fn print_pgn_header(fen: &str, pgn_file: &mut std::fs::File) {
     pgn_file.write_all(format!("[FEN \"{}\"]\n\n", std_fen).as_bytes()).unwrap();
 }
 
-fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: String) {
+fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: &str) {
     if (ply % 2) == 0 {
         let round = format!("{}. ", ply/2 + 1);
         pgn_file.write_all(round.as_bytes()).expect("write failed");
@@ -147,10 +147,8 @@ pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
     };
     
     match result.as_str() {
-        "Ke1h1" => "O-O".to_string(),
-        "Ke1a1" => "O-O-O".to_string(),
-        "Ke8h8" => "O-O".to_string(),
-        "Ke8a8" => "O-O-O".to_string(),
+        "Ke1h1" | "Ke8h8" => "O-O".to_string(),
+        "Ke1a1" | "Ke8a8" => "O-O-O".to_string(),
         _ => result
     }
 }

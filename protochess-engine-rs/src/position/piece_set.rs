@@ -91,7 +91,7 @@ impl PieceSet {
     }
     
     pub fn get_piece_char(&self, id: PieceId) -> Option<char> {
-        self.pieces.iter().find(|p| p.get_piece_id() == id).map(|p| p.char_rep())
+        self.pieces.iter().find(|p| p.get_piece_id() == id).map(Piece::char_rep)
     }
     
     pub fn get_leader(&self) -> Option<&Piece> {
@@ -114,9 +114,9 @@ impl PieceSet {
     }
     
     /// Moves a piece from one index to another.
-    /// If set_can_castle is true, set the new index as a castle square.
+    /// If `set_can_castle` is true, set the new index as a castle square.
     /// Returns true if the piece could castle before this move
-    /// Always use this function to move pieces, never call piece.move_piece() directly.
+    /// Always use this function to move pieces, never call `piece.move_piece()` directly.
     pub fn move_piece(&mut self, from: BIndex, to: BIndex, set_can_castle: bool) -> bool {
         let piece_index = self.piece_at_index[from as usize];
         let piece = &mut self.pieces[piece_index as usize];
@@ -127,7 +127,7 @@ impl PieceSet {
     }
     
     /// Add a piece to a given piece type at a given index (assuming the piece type exists).
-    /// Always use this function to add pieces, never call piece.add_piece() directly.
+    /// Always use this function to add pieces, never call `piece.add_piece()` directly.
     pub fn add_piece(&mut self, piece_id: PieceId, index: BIndex, set_can_castle: bool) {
         let piece_index = self.pieces.iter().position(|p| p.get_piece_id() == piece_id).unwrap();
         let piece = &mut self.pieces[piece_index];
@@ -137,7 +137,7 @@ impl PieceSet {
     
     /// Remove a piece from a given index (assuming there is a piece there).
     /// Returns true if the piece could castle before this move
-    /// Always use this function to remove pieces, never call piece.remove_piece() directly.
+    /// Always use this function to remove pieces, never call `piece.remove_piece()` directly.
     pub fn remove_piece(&mut self, index: BIndex) -> bool {
         let piece_index = self.piece_at_index[index as usize];
         let piece = &mut self.pieces[piece_index as usize];
@@ -146,7 +146,7 @@ impl PieceSet {
         could_castle
     }
     
-    // Returns the material score of all pieces in the set, and of only the leader pieces
+    /// Returns the material score of all pieces in the set, and of only the leader pieces
     pub fn get_material_score(&self) -> (Centipawns, Centipawns) {
         let mut score = 0;
         let mut leader_score = 0;

@@ -71,7 +71,7 @@ impl Position {
         self.whos_turn = 1 - self.whos_turn;
         // Update the player zobrist key
         // For simplicity, use the top bit to represent the player
-        new_props.zobrist_key ^= 0x8000000000000000;
+        new_props.zobrist_key ^= 0x8000_0000_0000_0000;
         
         // In the special case of the null move, don't do anything except update whos_turn
         // And update props
@@ -79,7 +79,7 @@ impl Position {
             // Update props
             // Since we're passing, there cannot be an ep square
             new_props.clear_ep_square();
-            new_props.move_played = Some(mv);
+            new_props.move_played = mv;
             self.properties_stack.push(new_props);
             return;
         }
@@ -95,7 +95,7 @@ impl Position {
     
             let could_castle = self.pieces[capt_player as usize].remove_piece(capt_index);
             if could_castle {
-                new_props.zobrist_key ^= castling_zob
+                new_props.zobrist_key ^= castling_zob;
             }
             self.captures_stack.push((piece_id, capt_player, could_castle, capt_index));
             new_props.num_captures += 1;
@@ -135,7 +135,7 @@ impl Position {
             if let Some(promo) = mv.get_promotion_piece() {
                 // Remove zobrist hash of the old piece
                 new_props.zobrist_key ^= moved_piece.get_zobrist(to);
-                new_props.promote_from = Some(moved_piece.get_piece_id());
+                new_props.promote_from = moved_piece.get_piece_id();
                 // Remove old piece
                 self.pieces[my_player_num as usize].remove_piece(to);
                 // Add new piece
@@ -159,13 +159,13 @@ impl Position {
         // Pawn en-passant
         // Check for a pawn double push to set ep square
         if move_type == MoveType::DoubleJump {
-            new_props.set_ep_square(mv.get_target(), mv.get_to())
+            new_props.set_ep_square(mv.get_target(), mv.get_to());
         } else {
             new_props.clear_ep_square();
         }
         
         // Update props
-        new_props.move_played = Some(mv);
+        new_props.move_played = mv;
         self.properties_stack.push(new_props);
         
         // Update occupied bbs for future calculations
@@ -225,13 +225,13 @@ impl Position {
     pub fn unmake_move(&mut self) {
         // Update props
         // Consume prev props; never to return again
-        let props = self.properties_stack.pop().unwrap();
+        let props = self.properties_stack.pop().expect("No move to undo");
         
         // Update player turn
         self.whos_turn = 1 - self.whos_turn;
 
         let my_player_num = self.whos_turn;
-        let mv = props.move_played.expect("No move to undo");
+        let mv = props.move_played;
         let move_type = mv.get_move_type();
         
         // Undo null moves
@@ -261,7 +261,7 @@ impl Position {
             if move_type == MoveType::Promotion || move_type == MoveType::PromotionCapture {
                 // Remove old piece
                 self.pieces[my_player_num as usize].remove_piece(from);
-                let promoted_from = props.promote_from.unwrap();
+                let promoted_from = props.promote_from;
                 // Assume that the piece that promoted must have moved, so it can't castle
                 self.pieces[my_player_num as usize].add_piece(promoted_from, from, false);
             }

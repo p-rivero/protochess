@@ -95,24 +95,23 @@ fn get_center_squares(width: BCoord, height: BCoord) -> Bitboard {
 fn points_for_distance_to_one(x_start: BCoord, y_start: BCoord, piece: &PieceDefinition, dims: &BDimensions,
     board: &Bitboard, dist_threshold: isize, points: Centipawns) -> Centipawns
 {
-    if !board.is_zero() {
-        let get_neighbors = |x: BCoord, y: BCoord| {
-            let mut neighbors = Vec::new();
-            let mut moves = get_moves_on_empty_board(piece, to_index(x, y), dims, false);
-            // Get the coordinates of all the 1s in the bitboard
-            while let Some(index) = moves.lowest_one() {
-                neighbors.push(from_index(index));
-                moves.clear_bit(index);
-            }
-            neighbors
-        };
-        let distance = distance_to_one(x_start, y_start, &board, get_neighbors);
-        // Extend promotion bonus until distance = dist_threshold
-        let promotion_points = std::cmp::max(0, dist_threshold - distance) as Centipawns;
-        promotion_points * points
-    } else {
-        0
+    if board.is_zero() {
+        return 0;
     }
+    let get_neighbors = |x: BCoord, y: BCoord| {
+        let mut neighbors = Vec::new();
+        let mut moves = get_moves_on_empty_board(piece, to_index(x, y), dims, false);
+        // Get the coordinates of all the 1s in the bitboard
+        while let Some(index) = moves.lowest_one() {
+            neighbors.push(from_index(index));
+            moves.clear_bit(index);
+        }
+        neighbors
+    };
+    let distance = distance_to_one(x_start, y_start, board, get_neighbors);
+    // Extend promotion bonus until distance = dist_threshold
+    let promotion_points = std::cmp::max(0, dist_threshold - distance) as Centipawns;
+    promotion_points * points
 }
 
 

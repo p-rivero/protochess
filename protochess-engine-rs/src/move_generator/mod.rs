@@ -1,6 +1,6 @@
 use crate::piece::Piece;
 use crate::position::piece_set::PieceSet;
-use crate::types::*;
+use crate::types::{BCoord, BIndex, Bitboard, Move, MoveType};
 use crate::position::Position;
 use crate::move_generator::attack_tables::AttackTables;
 use crate::utils::{from_index, to_index};

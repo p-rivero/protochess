@@ -104,7 +104,7 @@ pub fn output_translations(
                     }
                 }
                 // Check that the squares between x=5 and x=(king_x - 1) (both included) are empty
-                for i in (to_index as i16 - 1)..=(index as i16 - 1) {
+                for i in (to_index as i16 - 1)..(index as i16) {
                     if position.occ_or_out_bounds.get_bit(i as BIndex) {
                         empty = false;
                         break;
@@ -123,7 +123,7 @@ pub fn output_translations(
                 let to_index = to_index(queenside_file, ky);
                 // Check that the squares between x=2 and x=(rook_x - 1) (both included) are empty
                 let mut empty = true;
-                for i in (to_index as i16)..=(queenside_rook_index as i16 - 1) {
+                for i in (to_index as i16)..(queenside_rook_index as i16) {
                     if position.occ_or_out_bounds.get_bit(i as BIndex) {
                         empty = false;
                         break;
@@ -256,7 +256,7 @@ pub fn flatten_bb_moves(
             }
         } else {
             //No promotion chars left, go to next after this
-            out_moves.push(Move::new(from_index, to, to, move_type, None))
+            out_moves.push(Move::new(from_index, to, to, move_type, None));
         }
         moves.clear_bit(to);
     }
@@ -277,9 +277,9 @@ pub fn flatten_bb_moves_doublejump(
             }
         } else if double_jump_squares.get_bit(ep_square) {
             // In double jump, the first jump index (to) is an en passant square (unless it's also a double jump square)
-            out_moves.push(Move::new(from_index, to, 0, MoveType::Quiet, None))
+            out_moves.push(Move::new(from_index, to, 0, MoveType::Quiet, None));
         } else {
-            out_moves.push(Move::new(from_index, to, ep_square, MoveType::DoubleJump, None))
+            out_moves.push(Move::new(from_index, to, ep_square, MoveType::DoubleJump, None));
         }
         moves.clear_bit(to);
     }

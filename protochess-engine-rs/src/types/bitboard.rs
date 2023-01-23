@@ -8,7 +8,7 @@ pub type BIndex = u8; // 256 positions in 16x16 board
 pub type BCoord = u8; // Coordinate the board: [0..15]
 
 // Store bounds of the board (bit set to 1 for valid positions) and dimensions (width and height)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BDimensions {
     pub width: BCoord,
     pub height: BCoord,
@@ -46,11 +46,6 @@ impl BDimensions {
             return self.bounds.get_bit_at(x, y)
         }
         false
-    }
-}
-impl Default for BDimensions {
-    fn default() -> Self {
-        BDimensions::new_without_walls(0, 0)
     }
 }
 
@@ -145,6 +140,11 @@ impl std::fmt::Display for Bitboard {
 impl std::fmt::LowerHex for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:x}", self.board_internal)
+    }
+}
+impl Default for Bitboard {
+    fn default() -> Self {
+        Bitboard::zero()
     }
 }
 

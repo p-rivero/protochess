@@ -15,12 +15,12 @@ pub fn set_panic_hook() {
 pub struct SerVec<T>(Vec<T>);
 impl<T, S> From<Vec<T>> for SerVec<S> where T: Into<S> {
     fn from(val: Vec<T>) -> Self {
-        SerVec(val.into_iter().map(|x| x.into()).collect())
+        SerVec(val.into_iter().map(Into::into).collect())
     }
 }
 impl<T, S> From<SerVec<S>> for Vec<T> where S: Into<T> {
     fn from(val: SerVec<S>) -> Self {
-        val.0.into_iter().map(|x| x.into()).collect()
+        val.0.into_iter().map(Into::into).collect()
     }
 }
 impl<T> serde::Serialize for SerVec<T> where T: serde::Serialize {

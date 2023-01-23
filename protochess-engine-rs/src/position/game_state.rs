@@ -36,32 +36,13 @@ impl GameState {
         // FEN constants
         const BOARD_WIDTH: BCoord = 8;
         const BOARD_HEIGHT: BCoord = 8;
-        const ID_KING: PieceId = 0;
-        const ID_QUEEN: PieceId = 1;
-        const ID_ROOK: PieceId = 2;
-        const ID_BISHOP: PieceId = 3;
-        const ID_KNIGHT: PieceId = 4;
-        const ID_PAWN: PieceId = 5;
         
         let fen_parts: Vec<&str> = fen.split_whitespace().collect();
         assert!(fen_parts.len() >= 6, "Invalid FEN string: {}", fen);
         let mode = fen_parts.get(6).map_or(GameMode::Standard, |s| (*s).into());
         
         let whos_turn = if fen_parts[1] == "w" {0} else {1};
-        let factory = PieceFactory::new(mode);
-        let mut pawn_promotions = vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT];
-        if mode == GameMode::Antichess {
-            pawn_promotions.push(ID_KING);
-        }
-        let piece_types = vec![
-            factory.make_king(ID_KING),
-            factory.make_queen(ID_QUEEN),
-            factory.make_rook(ID_ROOK),
-            factory.make_bishop(ID_BISHOP),
-            factory.make_knight(ID_KNIGHT),
-            factory.make_pawn(ID_PAWN, true, BOARD_WIDTH, BOARD_HEIGHT, pawn_promotions.clone()),
-            factory.make_pawn(ID_PAWN, false, BOARD_WIDTH, BOARD_HEIGHT, pawn_promotions),
-        ];
+        let (piece_types, id_king, id_rook) = Self::generate_pieces(mode);
         
         let mut valid_squares = Vec::new();
         for x in 0..BOARD_WIDTH {
@@ -93,30 +74,30 @@ impl GameState {
         
         // Enable castling rights
         let mut enable_castle = |is_white: bool, kingside: bool| {
-            let len = pieces.len();
+            let num_pieces = pieces.len();
             let row_y = if is_white { 0 } else { BOARD_HEIGHT - 1 };
             let mut found_rook = false;
-            for i in 0..len {
+            for i in 0..num_pieces {
                 let p = {
                     // If kingside, traverse ranks from right to left, otherwise from left to right
-                    if kingside { &mut pieces[len - i - 1] }
+                    if kingside { &mut pieces[num_pieces - i - 1] }
                     else { &mut pieces[i] }
                 };
                 // Visit only pieces on the correct row and of the correct color
                 if p.y != row_y { continue; }
                 if (p.owner == 0) != is_white { continue; }
                 // Find the first rook and enable it
-                if !found_rook && p.piece_id == ID_ROOK {
+                if !found_rook && p.piece_id == id_rook {
                     found_rook = true;
                     assert!(p.can_castle == Some(false), "Rook should not have been able to castle, FEN might be invalid");
                     p.can_castle = Some(true);
                     continue;
                 }
                 // Next search for the king, but stop if we find another rook instead
-                if found_rook && p.piece_id == ID_KING {
+                if found_rook && p.piece_id == id_king {
                     p.can_castle = Some(true);
                 }
-                if found_rook && p.piece_id == ID_ROOK {
+                if found_rook && p.piece_id == id_rook {
                     break;
                 }
             }
@@ -135,7 +116,9 @@ impl GameState {
         }
         
         let ep_square_and_victim = {
-            if fen_parts[3] != "-" {
+            if fen_parts[3] == "-" {
+                None
+            } else {
                 let ep_x = (fen_parts[3].as_bytes()[0] - b'a') as BCoord;
                 let ep_y = (fen_parts[3].as_bytes()[1] - b'1') as BCoord;
                 let ep_square = (ep_x, ep_y);
@@ -144,8 +127,6 @@ impl GameState {
                     else { (ep_x, ep_y - 1) }
                 };
                 Some((ep_square, ep_victim))
-            } else {
-                None
             }
         };
         
@@ -161,6 +142,30 @@ impl GameState {
             }
         }
         panic!("Invalid piece char: {}", c);
+    }
+    
+    fn generate_pieces(mode: GameMode) -> (Vec<PieceDefinition>, PieceId, PieceId) {
+        const ID_KING: PieceId = 0;
+        const ID_QUEEN: PieceId = 1;
+        const ID_ROOK: PieceId = 2;
+        const ID_BISHOP: PieceId = 3;
+        const ID_KNIGHT: PieceId = 4;
+        const ID_PAWN: PieceId = 5;
+        let factory = PieceFactory::new(mode);
+        let mut pawn_promotions = vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT];
+        if mode == GameMode::Antichess {
+            pawn_promotions.push(ID_KING);
+        }
+        let pieces = vec![
+            factory.make_king(ID_KING),
+            factory.make_queen(ID_QUEEN),
+            factory.make_rook(ID_ROOK),
+            factory.make_bishop(ID_BISHOP),
+            factory.make_knight(ID_KNIGHT),
+            factory.make_pawn(ID_PAWN, true, pawn_promotions.clone()),
+            factory.make_pawn(ID_PAWN, false, pawn_promotions),
+        ];
+        (pieces, ID_KING, ID_ROOK)
     }
 }
 
@@ -221,7 +226,7 @@ impl From<GameState> for Position {
         }
         if state.whos_turn == 1 {
             // Use the top bit as player zobrist key
-            props.zobrist_key ^= 0x8000000000000000;
+            props.zobrist_key ^= 0x8000_0000_0000_0000;
         }
 
         // Instantiate position and register piecetypes

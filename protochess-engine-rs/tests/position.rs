@@ -31,7 +31,7 @@ mod position_test {
             } else if pce.2 == 'b' {
                 black_tiles += 1;
             } else {
-                assert!(false);
+                panic!("Invalid tile color: {}", pce.2);
             }
         }
         assert!(white_tiles == 32);

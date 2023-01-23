@@ -84,6 +84,7 @@ pub fn compute_material_score(mp: &PieceDefinition, dims: &BDimensions) -> Centi
 
 /// Returns the average dimension (width, height, diagonals) of the board, from all legal indexes
 /// Gets a callback function that returns the desired dimension for a given index
+#[allow(clippy::cast_precision_loss)]
 fn average_dimension(dims: &BDimensions, x_dir: bool, y_dir: bool, diag: bool, antidiag: bool) -> f32 {
     let walls = !&dims.bounds;
     let mut total = 0.0;
@@ -106,6 +107,7 @@ fn average_dimension(dims: &BDimensions, x_dir: bool, y_dir: bool, diag: bool, a
                 antidiag,
                 diag
             );
+            // sliding_moves.count_ones() will return at most 256
             total += sliding_moves.count_ones() as f32;
             count += 1.0;
         }

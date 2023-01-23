@@ -17,7 +17,7 @@ pub use position::Position;
 pub use position::game_state::{PiecePlacement, GameState};
 pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
-pub use piece::{PieceId, PieceDefinition};
+pub use piece::{Piece, PieceId, PieceDefinition};
 pub use types::MoveInfo;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -66,7 +66,7 @@ impl Engine {
     
     /// Returns the id of the piece at the given coordinates
     pub fn get_piece_at(&self, position: (BCoord, BCoord)) -> Option<PieceId> {
-        self.position.piece_at(to_index(position.0, position.1)).map(|p| p.get_piece_id())
+        self.position.piece_at(to_index(position.0, position.1)).map(Piece::get_piece_id)
     }
     
     /// Returns the character representation of the piece with a given id for the player to move
@@ -74,7 +74,7 @@ impl Engine {
         self.position.get_piece_char(self.whos_turn(), piece_id)
     }
 
-    /// Adds a new piece on the board. If the piece is not used for castling, has_moved is ignored.
+    /// Adds a new piece on the board. If the piece is not used for castling, `has_moved` is ignored.
     pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord, has_moved: bool) {
         self.position.public_add_piece(owner, piece_type, to_index(x,y), !has_moved);
     }
@@ -85,7 +85,6 @@ impl Engine {
     }
 
     /// Attempts a move on the current board position
-    /// If it's a promotion, the piece type is also specified. Otherwise, promotion char is ignored.
     pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
         let moves = MoveGen::get_pseudo_moves(&mut self.position, true);
         for mv in moves {

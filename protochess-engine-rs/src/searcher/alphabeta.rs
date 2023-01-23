@@ -7,9 +7,13 @@ use super::Searcher;
 use super::eval;
 use super::transposition_table::{Entry, EntryFlag};
 
-pub const GAME_OVER_SCORE: Centipawns = -1000000;
+pub const GAME_OVER_SCORE: Centipawns = -1_000_000;
 
 impl Searcher {
+    /// Search for the best move to play at the current position.
+    /// Populates the principal variation vector and returns the score of the position.
+    /// # Errors
+    /// Returns `Err(SearchTimeout)` if the search timed out.
     pub fn search(&mut self, pos: &mut Position, depth: Depth) -> Result<Centipawns, SearchTimeout> {
         // Use -MAX instead of MIN to avoid overflow when negating
         self.alphabeta::<true>(pos, depth, 0, -Centipawns::MAX, Centipawns::MAX, true)
@@ -17,6 +21,7 @@ impl Searcher {
     
     // alpha is the best score that I can currently guarantee at this level or above.
     // beta is the worst score for me that the opponent can currently guarantee at this level or above.
+    #[allow(clippy::too_many_lines)]
     fn alphabeta<const IS_PV: bool>(&mut self,
             pos: &mut Position,
             mut depth: Depth,
@@ -29,7 +34,7 @@ impl Searcher {
         let mut known_check = false;
         if IS_PV {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
-            known_check = self.known_checks.contains_key(&pos.get_zobrist());
+            known_check = self.known_checks.contains(&pos.get_zobrist());
             if known_check && self.current_searching_depth < self.max_searching_depth {
                 depth += 1;
                 self.current_searching_depth += 1;
@@ -118,7 +123,7 @@ impl Searcher {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
             depth += 1;
             self.current_searching_depth += 1;
-            self.known_checks.insert(pos.get_zobrist(), ());
+            self.known_checks.insert(pos.get_zobrist());
         }
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)

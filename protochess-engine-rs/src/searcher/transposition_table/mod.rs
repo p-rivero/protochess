@@ -35,10 +35,10 @@ impl TranspositionTable {
         let cluster = &mut self.data[zobrist_key as usize % TABLE_SIZE];
         // As a first option, replace the first exact match for this key that has lower depth
         for i in 0..ENTRIES_PER_CLUSTER {
-            let tentry = cluster.entries[i];
-            if tentry.key == zobrist_key && tentry.flag != EntryFlag::Null {
+            let table_entry = cluster.entries[i];
+            if table_entry.key == zobrist_key && table_entry.flag != EntryFlag::Null {
                 // Exact match, replace it only if the new entry is better
-                if entry.equal_or_better_than(&tentry) {
+                if entry.equal_or_better_than(&table_entry) {
                     cluster.entries[i] = entry;
                 }
                 // Drop _guard and return

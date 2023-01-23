@@ -129,6 +129,12 @@ impl fmt::Display for Move {
     }
 }
 
+impl Default for Move {
+    fn default() -> Self {
+        Move::null()
+    }
+}
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MoveInfo {
