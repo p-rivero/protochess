@@ -15,6 +15,7 @@ pub enum GameMode {
     Horde,
     Antichess,
     KingOfTheHill,
+    RacingKings,
 }
 
 impl From<&str> for GameMode {
@@ -25,6 +26,7 @@ impl From<&str> for GameMode {
             "horde" => GameMode::Horde,
             "antichess" => GameMode::Antichess,
             "kingofthehill" => GameMode::KingOfTheHill,
+            "racingkings" => GameMode::RacingKings,
             _ => panic!("Invalid game mode: {}", s)
         }
     }

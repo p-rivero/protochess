@@ -3,7 +3,7 @@ use crate::types::{BIndex, Move};
 use crate::piece::PieceId;
 
 /// Properties that are hard to recover from a Move
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PositionProperties {
     pub zobrist_key: u64,
     pub move_played: Option<Move>,
@@ -39,20 +39,5 @@ impl PositionProperties {
     pub fn get_ep_victim(&self) -> BIndex {
         assert!(self.ep_square.is_some(), "Attempted to get ep victim when ep square is None");
         self.ep_victim
-    }
-}
-
-
-impl Default for PositionProperties {
-    fn default() -> PositionProperties {
-        PositionProperties{
-            zobrist_key: 0,
-            move_played: None,
-            promote_from: None,
-            ep_square: None,
-            ep_victim: 0,
-            moved_piece_castle: false,
-            num_captures: 0,
-        }
     }
 }

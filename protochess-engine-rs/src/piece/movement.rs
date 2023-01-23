@@ -244,9 +244,10 @@ pub fn flatten_bb_moves(
             if capture_here {
                 if promo_here { MoveType::PromotionCapture }
                 else { MoveType::Capture }
+            } else if promo_here {
+                MoveType::Promotion
             } else {
-                if promo_here { MoveType::Promotion }
-                else { MoveType::Quiet }
+                MoveType::Quiet
             }
         };
         if promo_here {

@@ -26,6 +26,7 @@ pub enum MakeMoveResult {
     IllegalMove,
     Checkmate{winner: Player},
     LeaderCaptured{winner: Player},
+    PieceInWinSquare{winner: Player},
     Stalemate{winner: Option<Player>},
     Repetition,
 }
@@ -108,6 +109,10 @@ impl Engine {
             if self.position.leader_is_captured() {
                 return MakeMoveResult::LeaderCaptured{winner};
             }
+            // Piece moved to winning square (king of the hill, racing kings)
+            if self.position.piece_is_on_winning_square() {
+                return MakeMoveResult::PieceInWinSquare{winner};
+            }
             // No legal moves, check if it's checkmate or stalemate
             if MoveGen::count_legal_moves(&mut self.position) == 0 {
                 if MoveGen::in_check(&mut self.position) {
@@ -158,6 +163,7 @@ impl Engine {
         (MoveInfo::from_move(pv[0]), score, search_depth)
     }
 
+    /// Returns a list of all legal moves from the given square
     pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<MoveInfo>{
         let from = to_index(x,y);
         MoveGen::get_legal_moves(&mut self.position)
@@ -167,6 +173,7 @@ impl Engine {
             .collect()
     }
 
+    /// Returns true if the player to move is in check
     pub fn to_move_in_check(&mut self) -> bool {
         if self.position.leader_is_captured() {
             return false;

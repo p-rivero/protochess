@@ -81,6 +81,11 @@ pub fn main() {
                 println!("KING HAS BEEN CAPTURED! {} wins!", if winner == 0 { "White" } else { "Black" });
                 break;
             },
+            MakeMoveResult::PieceInWinSquare{winner} => {
+                println!("{}", engine);
+                println!("KING IN WINNING SQUARE! {} wins!", if winner == 0 { "White" } else { "Black" });
+                break;
+            },
             MakeMoveResult::Stalemate{winner: Some(winner)} => {
                 println!("{}", engine);
                 println!("STALEMATE! {} wins!", if winner == 0 { "White" } else { "Black" });

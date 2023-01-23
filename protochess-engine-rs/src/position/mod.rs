@@ -46,7 +46,7 @@ impl Position {
             occ_or_out_bounds,
             properties_stack,
             captures_stack: Vec::with_capacity(128),
-            global_rules: rules.into(),
+            global_rules: rules,
         }
     }
 
@@ -433,6 +433,18 @@ impl Position {
         self.update_occupied();
         let stack_len = self.properties_stack.len();
         self.properties_stack[stack_len - 1].zobrist_key = zob;
+    }
+    
+    /// Returns true if any of the pieces on the board is on a winning square
+    pub fn piece_is_on_winning_square(&self) -> bool {
+        for piece_set in &self.pieces {
+            for p in piece_set.iter() {
+                if p.is_in_win_square() {
+                    return true;
+                }
+            }
+        }
+        false
     }
     
     

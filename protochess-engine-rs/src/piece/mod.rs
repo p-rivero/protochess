@@ -130,6 +130,9 @@ impl Piece {
         self.type_def.explodes
     }
     
+    pub fn is_in_win_square(&self) -> bool {
+        !((&self.precomp.instant_win_squares & &self.bitboard).is_zero())
+    }
     pub fn wins_at(&self, index: BIndex) -> bool {
         self.precomp.instant_win_squares.get_bit(index)
     }

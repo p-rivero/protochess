@@ -330,4 +330,19 @@ mod perft {
         assert_eq!(engine.perft(13), 30873);
         assert_eq!(engine.perft(14), 343639);
     }
+    
+    
+    // https://github.com/niklasf/python-chess/blob/master/examples/perft/racingkings.perft
+    
+    #[test]
+    fn racingkings_start() {
+        let mut engine = Engine::from_fen("8/8/8/8/8/8/krbnNBRK/qrbnNBRQ w - - 0 1 RACINGKINGS");
+        assert_eq!(engine.perft(1), 21);
+        assert_eq!(engine.perft(2), 421);
+        assert_eq!(engine.perft(3), 11264);
+        assert_eq!(engine.perft(4), 296242);
+        assert_eq!(engine.perft(5), 9472927);
+    }
+    // We cannot test endgame positions because the engine does not check for moving the king into win squares,
+    // so it will keep generating more moves after the game is over.
 }

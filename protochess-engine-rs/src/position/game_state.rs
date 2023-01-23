@@ -198,7 +198,7 @@ impl From<&Position> for GameState {
             pieces,
             whos_turn: pos.whos_turn,
             ep_square_and_victim,
-            global_rules: pos.global_rules.clone().into(),
+            global_rules: pos.global_rules.clone(),
         }
     }
 }

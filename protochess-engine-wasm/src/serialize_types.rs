@@ -66,6 +66,10 @@ impl From<MakeMoveResult> for MakeMoveResultSer {
                 result = "LeaderCaptured".to_string();
                 winner_player = Some(winner);
             },
+            MakeMoveResult::PieceInWinSquare{winner} => {
+                result = "PieceInWinSquare".to_string();
+                winner_player = Some(winner);
+            },
             MakeMoveResult::Stalemate{winner} => {
                 result = "Stalemate".to_string();
                 winner_player = winner;
@@ -176,6 +180,7 @@ generate_wrapper!(PiecePlacementSer, PiecePlacement, [
 
 generate_wrapper!(GlobalRulesSer, GlobalRules, [
     capturing_is_forced, bool,
+    check_is_forbidden, bool,
     stalemated_player_loses, bool,
     invert_win_conditions, bool,
     repetitions_draw, u8
