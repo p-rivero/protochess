@@ -94,10 +94,15 @@ impl Searcher {
                     pv_score = score;
                     // Print PV info
                     let diff = -(score.abs() + alphabeta::GAME_OVER_SCORE);
-                    if diff < 200 {
-                        print!("[Mate in {}] ", (diff+1) / 2);
-                    }
-                    println!("Depth {:<2}. Score: {:<4}, nodes: {}", search_depth, score, self.nodes_searched);
+                    let score_str = {
+                        if diff < 200 {
+                            let sign = if score > 0 { "" } else { "-" };
+                            format!("MATE {}{}", sign, (diff+1) / 2)
+                        } else {
+                            format!("cp {:<4}", score)
+                        }
+                    };
+                    println!("Depth {:<2} Score: {} [nodes: {}]", search_depth, score_str, self.nodes_searched);
                     print!("  PV: ");
                     for m in &pv {
                         print!("{} ", m);

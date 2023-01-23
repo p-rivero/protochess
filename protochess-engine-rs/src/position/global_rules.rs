@@ -42,6 +42,16 @@ impl GlobalRules {
                     repetitions_draw: 3,
                 }
             },
+            GameMode::KingOfTheHill => {
+                GlobalRules {
+                    win_positions_white: vec![(3,3), (3,4), (4,3), (4,4)],
+                    win_positions_black: vec![(3,3), (3,4), (4,3), (4,4)],
+                    capturing_is_forced: false,
+                    stalemated_player_loses: false,
+                    invert_win_conditions: false,
+                    repetitions_draw: 3,
+                }
+            },
         }
     }
 }

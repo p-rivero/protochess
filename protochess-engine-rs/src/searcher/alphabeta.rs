@@ -26,17 +26,6 @@ impl Searcher {
             do_null: bool,
         ) -> Result<Centipawns, SearchTimeout>
     {
-        // If there is repetition, the result is always a draw
-        if pos.draw_by_repetition() {
-            if IS_PV { self.clear_remaining_pv(pv_index) }
-            return Ok(0);
-        }
-        
-        if pos.leader_is_captured() {
-            if IS_PV { self.clear_remaining_pv(pv_index) }
-            return Ok(self.checkmate_score(pv_index));
-        }
-        
         let mut known_check = false;
         if IS_PV {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
@@ -82,7 +71,7 @@ impl Searcher {
         }
         
         if depth == 0 {
-            let quiesce_score = self.quiesce(pos, alpha, beta, 0)?;
+            let quiesce_score = self.quiesce(pos, alpha, beta, pv_index)?;
             let flag = {
                 if quiesce_score <= alpha { EntryFlag::Alpha }
                 else if quiesce_score >= beta { EntryFlag::Beta }
@@ -142,7 +131,10 @@ impl Searcher {
 
             num_legal_moves += 1;
             let mut score: Centipawns;
-            if num_legal_moves == 1 {
+            if let Some(end_score) = self.is_game_over(pos, mv, pv_index+1) {
+                if IS_PV { self.clear_remaining_pv(pv_index) }
+                score = -end_score;
+            } else if num_legal_moves == 1 {
                 score = -self.alphabeta::<IS_PV>(pos, depth-1, pv_index+1, -beta, -alpha, true)?;
             } else {
                 // Try late move reduction
@@ -284,6 +276,28 @@ impl Searcher {
             }
         }
         Ok(alpha)
+    }
+    
+    #[inline]
+    // Check for instant game over conditions (does not check for checkmate or stalemate)
+    fn is_game_over(&mut self, pos: &mut Position, mv: Move, pv_index: usize) -> Option<Centipawns> {
+        // There is repetition, the result is always a draw
+        if pos.draw_by_repetition() {
+            return Some(0);
+        }
+        // The leader is captured
+        if pos.leader_is_captured() {
+            return Some(self.checkmate_score(pv_index));
+        }
+        // The opponent has moved the leader to a winning position
+        let opponent = 1 - pos.whos_turn;
+        let to = mv.get_to();
+        if pos.global_rules.win_positions[opponent as usize].get_bit(to)
+            && pos.player_piece_at(opponent, to).unwrap().is_leader()
+        {
+            return Some(self.checkmate_score(pv_index));
+        }
+        None
     }
 
     #[inline]
