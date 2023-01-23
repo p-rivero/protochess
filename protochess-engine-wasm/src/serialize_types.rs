@@ -160,7 +160,8 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     translate_northeast, bool,
     translate_northwest, bool,
     translate_southeast, bool,
-    translate_southwest, bool
+    translate_southwest, bool,
+    win_squares, Vec<(u8, u8)>
 ]);
 
 
@@ -174,8 +175,6 @@ generate_wrapper!(PiecePlacementSer, PiecePlacement, [
 ]);
 
 generate_wrapper!(GlobalRulesSer, GlobalRules, [
-    win_positions_white, Vec<(u8, u8)>,
-    win_positions_black, Vec<(u8, u8)>,
     capturing_is_forced, bool,
     stalemated_player_loses, bool,
     invert_win_conditions, bool,

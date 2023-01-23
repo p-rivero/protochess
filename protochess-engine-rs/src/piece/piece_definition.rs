@@ -1,4 +1,4 @@
-use crate::types::{Bitboard, BCoord, Player};
+use crate::types::{BCoord, Player};
 use super::PieceId;
 
 
@@ -49,15 +49,12 @@ pub struct PieceDefinition {
     pub translate_northwest: bool,
     pub translate_southeast: bool,
     pub translate_southwest: bool,
+    
+    // Successfully moving the piece to a win square is an instant win
+    pub win_squares: Vec<(BCoord, BCoord)>,
 }
 
 impl PieceDefinition {
-    pub fn promotion_squares_bb(&self) -> Bitboard {
-        Bitboard::from_coord_list(&self.promotion_squares)
-    }
-    pub fn double_jump_squares_bb(&self) -> Bitboard {
-        Bitboard::from_coord_list(&self.double_jump_squares)
-    }
     pub fn can_slide_north(&self) -> bool {
         self.translate_north || self.attack_north
     }
@@ -152,6 +149,7 @@ impl Default for PieceDefinition {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
+            win_squares: Vec::new(),
         }
     }
 }

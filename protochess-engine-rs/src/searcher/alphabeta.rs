@@ -292,9 +292,7 @@ impl Searcher {
         // The opponent has moved the leader to a winning position
         let opponent = 1 - pos.whos_turn;
         let to = mv.get_to();
-        if pos.global_rules.win_positions[opponent as usize].get_bit(to)
-            && pos.player_piece_at(opponent, to).unwrap().is_leader()
-        {
+        if pos.player_piece_at(opponent, to).unwrap().wins_at(to) {
             return Some(self.checkmate_score(pv_index));
         }
         None

@@ -56,6 +56,7 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
+            win_squares: vec![],
         }
     }
     
@@ -93,6 +94,7 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
+            win_squares: vec![],
         }
     }
     
@@ -130,6 +132,7 @@ impl PieceFactory {
             translate_northwest: true,
             translate_southeast: true,
             translate_southwest: true,
+            win_squares: vec![],
         }
     }
     
@@ -167,10 +170,18 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
+            win_squares: vec![],
         }
     }
     
     pub fn make_king(&self, id: PieceId) -> PieceDefinition {
+        let win_squares = {
+            if self.mode == GameMode::KingOfTheHill {
+                vec![(3,3), (3,4), (4,3), (4,4)]
+            } else {
+                vec![]
+            }
+        };
         PieceDefinition {
             id,
             char_rep: 'K',
@@ -204,6 +215,7 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
+            win_squares
         }
     }
     
@@ -241,6 +253,7 @@ impl PieceFactory {
             translate_northwest: true,
             translate_southeast: true,
             translate_southwest: true,
+            win_squares: vec![],
         }
     }
 }

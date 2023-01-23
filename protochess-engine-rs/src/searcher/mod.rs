@@ -2,9 +2,8 @@ use std::collections::BTreeMap;
 
 use instant::{Instant, Duration};
 
-use crate::position::global_rules::GlobalRulesInternal;
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
-use crate::{Position, MoveGen};
+use crate::{Position, MoveGen, GlobalRules};
 
 mod alphabeta;
 mod transposition_table;
@@ -26,7 +25,7 @@ pub struct Searcher {
     end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
     known_checks: BTreeMap<u64, ()>,
-    rules: GlobalRulesInternal,
+    rules: GlobalRules,
 }
 
 impl Searcher {

@@ -1,7 +1,6 @@
 use rand::rngs::StdRng;
 use rand::{SeedableRng, Rng};
 
-use crate::utils::from_index;
 use crate::{types::*, Position};
 
 pub type PieceId = u32;
@@ -11,12 +10,14 @@ mod piece_factory;
 mod material_score;
 mod positional_score;
 mod movement;
+mod precomputed_piece_def;
 
 pub use piece_factory::PieceFactory;
 pub use piece_definition::PieceDefinition;
 
 use material_score::compute_material_score;
 use positional_score::compute_piece_square_table;
+use precomputed_piece_def::PrecomputedPieceDef;
 use movement::{output_translations, output_captures};
 
 // Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
@@ -24,6 +25,8 @@ use movement::{output_translations, output_captures};
 pub struct Piece {
     // Info about this piece type
     type_def: PieceDefinition,
+    // Derived from type_def
+    precomp: PrecomputedPieceDef,
     // Occupancy bitboard
     bitboard: Bitboard,
     //Player num for the owner of this piece
@@ -44,17 +47,6 @@ pub struct Piece {
     
     // Positions at which this piece can castle. Used if can_castle or is_castle_rook are true
     castle_squares: Bitboard,
-    // Positions at which this piece can promote
-    promotion_squares: Bitboard,
-    // Positions at which this piece can double jump
-    double_jump_squares: Bitboard,
-    
-    // Precompute the jump bitboards for this piece
-    jump_bitboards_translate: Vec<Bitboard>,
-    jump_bitboards_capture: Vec<Bitboard>,
-    
-    // Precompute explosion bitboards for this piece
-    explosion_bitboards: Vec<Bitboard>,
 }
 
 impl Piece {
@@ -65,18 +57,13 @@ impl Piece {
         } else {
             definition.char_rep = definition.char_rep.to_ascii_lowercase();
         }
-        // Convert promotion_squares and double_jump_squares to bitboard, make sure they are within bounds
-        let promotion_squares = definition.promotion_squares_bb() & &dims.bounds;
-        let double_jump_squares = definition.double_jump_squares_bb() & &dims.bounds;
         
         let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims, false);
         let piece_square_table_endgame = compute_piece_square_table(&definition, dims, true);
-        let jump_bitboards_translate = Piece::precompute_jumps(&definition.translate_jump_deltas, dims);
-        let jump_bitboards_capture = Piece::precompute_jumps(&definition.attack_jump_deltas, dims);
-        let explosion_bitboards = Piece::precompute_jumps(&definition.explosion_deltas, dims);
         Piece {
+            precomp: PrecomputedPieceDef::from((&definition, dims)),
             type_def: definition,
             player_num,
             zobrist_hashes,
@@ -87,11 +74,6 @@ impl Piece {
             num_pieces: 0,
             total_material_score: 0,
             castle_squares: Bitboard::zero(),
-            promotion_squares,
-            double_jump_squares,
-            jump_bitboards_translate,
-            jump_bitboards_capture,
-            explosion_bitboards,
         }
     }
     
@@ -146,6 +128,10 @@ impl Piece {
     
     pub fn explodes(&self) -> bool {
         self.type_def.explodes
+    }
+    
+    pub fn wins_at(&self, index: BIndex) -> bool {
+        self.precomp.instant_win_squares.get_bit(index)
     }
     
     pub fn immune_to_explosion(&self) -> bool {
@@ -258,11 +244,11 @@ impl Piece {
                 index,
                 position,
                 enemies,
-                &self.promotion_squares,
+                &self.precomp.promotion_squares,
                 occ_or_not_in_bounds,
                 can_castle,
-                &self.double_jump_squares,
-                &self.jump_bitboards_translate,
+                &self.precomp.double_jump_squares,
+                &self.precomp.jump_bitboards_translate,
                 out_moves
             );
             bb_copy.clear_bit(index);
@@ -279,9 +265,9 @@ impl Piece {
                 index,
                 position,
                 enemies,
-                &self.promotion_squares,
+                &self.precomp.promotion_squares,
                 occ_or_not_in_bounds,
-                &self.jump_bitboards_capture[index as usize],
+                &self.precomp.jump_bitboards_capture[index as usize],
                 out_moves
             );
             bb_copy.clear_bit(index);
@@ -292,10 +278,10 @@ impl Piece {
         &self.type_def
     }
     pub fn get_capture_jumps(&self, index: BIndex) -> &Bitboard {
-        &self.jump_bitboards_capture[index as usize]
+        &self.precomp.jump_bitboards_capture[index as usize]
     }
     pub fn get_explosion(&self, index: BIndex) -> &Bitboard {
-        &self.explosion_bitboards[index as usize]
+        &self.precomp.explosion_bitboards[index as usize]
     }
     
     fn random_zobrist(piece_id: u32, player: Player) -> Vec<u64> {
@@ -308,25 +294,6 @@ impl Piece {
             zobrist.push(rng.gen::<u64>());
         }
         zobrist
-    }
-    
-    fn precompute_jumps(deltas: &Vec<(i8, i8)>, dims: &BDimensions) -> Vec<Bitboard> {
-        let mut jumps = Vec::with_capacity(256);
-        for index in 0..=255 {
-            let mut jump = Bitboard::zero();
-            let (x, y) = from_index(index);
-            for (dx, dy) in deltas {
-                let (x2, y2) = (x as i8 + *dx, y as i8 + *dy);
-                if x2 < 0 || y2 < 0 {
-                    continue;
-                }
-                if dims.in_bounds(x2 as BCoord, y2 as BCoord) {
-                    jump.set_bit_at(x2 as BCoord, y2 as BCoord);
-                }
-            }
-            jumps.push(jump);
-        }
-        jumps
     }
 }
 

@@ -9,7 +9,7 @@ pub mod global_rules;
 pub mod game_state;
 pub mod piece_set;
 
-use global_rules::{GlobalRules, GlobalRulesInternal};
+use global_rules::GlobalRules;
 use position_properties::PositionProperties;
 use piece_set::PieceSet;
 
@@ -30,7 +30,7 @@ pub struct Position {
     // In regular chess, this will be a maximum of 1 piece. In atomic chess, there can be up to 9.
     captures_stack: Vec<(PieceId, Player, bool, BIndex)>,
     // Global rules of the game
-    pub global_rules: GlobalRulesInternal,
+    pub global_rules: GlobalRules,
 }
 
 impl Position {
@@ -324,7 +324,7 @@ impl Position {
     
     #[inline]
     pub fn draw_by_repetition(&self) -> bool {
-        if self.global_rules.repetition_draw == 0 {
+        if self.global_rules.repetitions_draw == 0 {
             return false;
         }
         let mut num_reps = 1;
@@ -340,7 +340,7 @@ impl Position {
                 break;
             }
         }
-        num_reps >= self.global_rules.repetition_draw
+        num_reps >= self.global_rules.repetitions_draw
     }
     
     #[inline]
