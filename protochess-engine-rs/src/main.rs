@@ -63,10 +63,11 @@ pub fn main() {
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
         print_pgn(&mut pgn_file, ply, &to_long_algebraic_notation(&mv, &engine));
-        println!("{}", engine);
-        match engine.make_move(&mv) {
+        let result = engine.make_move(&mv);
+        println!("{}\n", engine);
+        match result {
             MakeMoveResult::Ok => {
-                println!("\n----------------------------------------\n");
+                println!("----------------------------------------\n");
             },
             MakeMoveResult::IllegalMove => {
                 panic!("An illegal move was made");
