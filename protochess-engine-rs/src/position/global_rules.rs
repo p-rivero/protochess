@@ -22,6 +22,11 @@ pub struct GlobalRules {
 
 impl GlobalRules {
     pub fn for_mode(mode: GameMode) -> GlobalRules {
+        let checks_to_lose = match mode {
+            GameMode::ThreeCheck => 3,
+            GameMode::FiveCheck => 5,
+            _ => 0,
+        };
         match mode {
             GameMode::Antichess => {
                 GlobalRules {
@@ -43,16 +48,6 @@ impl GlobalRules {
                     checks_to_lose: 0,
                 }
             },
-            GameMode::ThreeCheck => {
-                GlobalRules {
-                    capturing_is_forced: false,
-                    check_is_forbidden: false,
-                    stalemated_player_loses: false,
-                    invert_win_conditions: false,
-                    repetitions_draw: 3,
-                    checks_to_lose: 3,
-                }
-            },
             _ => {
                 GlobalRules {
                     capturing_is_forced: false,
@@ -60,7 +55,7 @@ impl GlobalRules {
                     stalemated_player_loses: false,
                     invert_win_conditions: false,
                     repetitions_draw: 3,
-                    checks_to_lose: 0,
+                    checks_to_lose,
                 }
             },
         }

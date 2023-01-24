@@ -353,6 +353,39 @@ mod perft {
         assert_eq!(engine.perft(4), 296242);
         assert_eq!(engine.perft(5), 9472927);
     }
-    // We cannot test endgame positions because the engine does not check for moving the king into win squares,
-    // so it will keep generating more moves after the game is over.
+    // We cannot test Racing Kings endgame positions because this engine does not implement the
+    // draw rule where black has the option move their king to the end immediately after white.
+    // In King of the Hill, this draw rule does not exist.
+    
+    #[test]
+    fn kingofthehill_end() {
+        let mut engine = Engine::from_fen("r1bq1bnr/pppp1ppp/2n1pk2/8/8/2N1PK2/PPPP1PPP/R1BQ1BNR w - - 6 5 KINGOFTHEHILL");
+        assert_eq!(engine.perft(1), 32);
+        assert_eq!(engine.perft(2), 921);
+        assert_eq!(engine.perft(3), 26371);
+        assert_eq!(engine.perft(4), 749025);
+        assert_eq!(engine.perft(5), 21562005);
+    }
+    
+    
+    // https://github.com/niklasf/python-chess/blob/master/examples/perft/3check.perft
+    
+    #[test]
+    fn three_check_kiwipete() {
+        let mut engine = Engine::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 +2+2 3CHECK");
+        assert_eq!(engine.perft(1), 48);
+        assert_eq!(engine.perft(2), 2039);
+        assert_eq!(engine.perft(3), 97848);
+        assert_eq!(engine.perft(4), 4081798);
+    }
+    
+    #[test]
+    fn three_check_castling() {
+        let mut engine = Engine::from_fen("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 +2+2 3CHECK");
+        assert_eq!(engine.perft(1), 26);
+        assert_eq!(engine.perft(2), 562);
+        assert_eq!(engine.perft(3), 13410);
+        assert_eq!(engine.perft(4), 302770);
+        assert_eq!(engine.perft(5), 7193131);
+    }
 }

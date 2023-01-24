@@ -15,6 +15,15 @@ pub fn perft(position: &mut Position, depth: Depth) -> u64 {
         if !MoveGen::make_move_if_legal(mv, position) {
             continue;
         }
+        // Check for game over
+        if position.leader_is_captured() || position.piece_is_on_winning_square() {
+            position.unmake_move();
+            continue;
+        }
+        if position.global_rules.checks_to_lose != 0 && MoveGen::in_check(position) && position.increment_num_checks() {
+            position.unmake_move();
+            continue;
+        }
         nodes += perft(position, depth - 1);
         position.unmake_move();
     }

@@ -20,6 +20,7 @@ pub enum GameMode {
     KingOfTheHill,
     RacingKings,
     ThreeCheck,
+    FiveCheck,
 }
 
 impl TryFrom<&str> for GameMode {
@@ -33,6 +34,7 @@ impl TryFrom<&str> for GameMode {
             "kingofthehill" => Ok(GameMode::KingOfTheHill),
             "racingkings" => Ok(GameMode::RacingKings),
             "3check" => Ok(GameMode::ThreeCheck),
+            "5check" => Ok(GameMode::FiveCheck),
             _ => Err("Invalid game mode"),
         }
     }
