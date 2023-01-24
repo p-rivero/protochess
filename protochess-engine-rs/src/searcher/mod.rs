@@ -20,7 +20,6 @@ pub struct Searcher {
     transposition_table: TranspositionTable,
     // Stats
     nodes_searched: u64,
-    current_searching_depth: Depth,
     max_searching_depth: Depth,
     end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
@@ -35,7 +34,6 @@ impl Searcher {
             history_moves: [[0;256];256],
             transposition_table: TranspositionTable::new(),
             nodes_searched: 0,
-            current_searching_depth: 0,
             max_searching_depth: 0,
             end_time: Instant::now(),
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
@@ -73,10 +71,8 @@ impl Searcher {
         for search_depth in 1..=max_depth {
             self.nodes_searched = 0;
             self.max_searching_depth = 2 * search_depth;
-            self.current_searching_depth = search_depth;
             match self.search(pos, search_depth) {
                 Ok(score) => {
-                    assert!(self.max_searching_depth == 2 * search_depth);
                     pv.clear();
                     // Copy the pv into a vector
                     for mv in self.principal_variation {
@@ -86,7 +82,7 @@ impl Searcher {
                         pv.push(mv);
                     }
                     // Clean up the pv
-                    for i in 0..self.current_searching_depth {
+                    for i in 0..self.max_searching_depth {
                         self.principal_variation[i as usize] = Move::null();
                     }
                     pv_depth = search_depth;

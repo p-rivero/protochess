@@ -47,6 +47,13 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
         score = -score;
     }
     
+    if position.global_rules.checks_to_lose != 0 {
+        const CHECK_PENALTY: Centipawns = 512;
+        let times_checked = position.get_times_checked();
+        score -= CHECK_PENALTY * times_checked[player_num as usize] as Centipawns;
+        score += CHECK_PENALTY * times_checked[1-player_num as usize] as Centipawns;
+    }
+    
     score
 }
 

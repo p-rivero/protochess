@@ -63,41 +63,39 @@ pub fn main() {
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {} Engine plays: \n", ply);
         print_pgn(&mut pgn_file, ply, &to_long_algebraic_notation(&mv, &engine));
+        println!("{}", engine);
         match engine.make_move(&mv) {
             MakeMoveResult::Ok => {
-                println!("{}", engine);
                 println!("\n----------------------------------------\n");
             },
             MakeMoveResult::IllegalMove => {
                 panic!("An illegal move was made");
             },
             MakeMoveResult::Checkmate{winner} => {
-                println!("{}", engine);
                 println!("CHECKMATE! {} wins!", if winner == 0 { "White" } else { "Black" });
                 break;
             },
             MakeMoveResult::LeaderCaptured{winner} => {
-                println!("{}", engine);
                 println!("KING HAS BEEN CAPTURED! {} wins!", if winner == 0 { "White" } else { "Black" });
                 break;
             },
             MakeMoveResult::PieceInWinSquare{winner} => {
-                println!("{}", engine);
                 println!("KING IN WINNING SQUARE! {} wins!", if winner == 0 { "White" } else { "Black" });
                 break;
             },
+            MakeMoveResult::CheckLimit{winner} => {
+                println!("CHECK LIMIT REACHED! {} wins!", if winner == 0 { "White" } else { "Black" });
+                break;
+            },
             MakeMoveResult::Stalemate{winner: Some(winner)} => {
-                println!("{}", engine);
                 println!("STALEMATE! {} wins!", if winner == 0 { "White" } else { "Black" });
                 break;
             },
             MakeMoveResult::Stalemate{winner: None} => {
-                println!("{}", engine);
                 println!("DRAW BY STALEMATE!");
                 break;
             },
             MakeMoveResult::Repetition => {
-                println!("{}", engine);
                 println!("DRAW BY REPETITION!");
                 break;
             },

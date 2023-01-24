@@ -14,6 +14,9 @@ pub struct GlobalRules {
     // Number of times that the same position is reached to draw by repetition
     // 0 means no repetition draw
     pub repetitions_draw: u8,
+    // Number of times that a player is put in check to lose instantly
+    // 0 means checks are not counted
+    pub checks_to_lose: u8,
 }
 
 
@@ -27,6 +30,7 @@ impl GlobalRules {
                     stalemated_player_loses: true,
                     invert_win_conditions: true,
                     repetitions_draw: 3,
+                    checks_to_lose: 0,
                 }
             },
             GameMode::RacingKings => {
@@ -36,6 +40,17 @@ impl GlobalRules {
                     stalemated_player_loses: false,
                     invert_win_conditions: false,
                     repetitions_draw: 3,
+                    checks_to_lose: 0,
+                }
+            },
+            GameMode::ThreeCheck => {
+                GlobalRules {
+                    capturing_is_forced: false,
+                    check_is_forbidden: false,
+                    stalemated_player_loses: false,
+                    invert_win_conditions: false,
+                    repetitions_draw: 3,
+                    checks_to_lose: 3,
                 }
             },
             _ => {
@@ -45,6 +60,7 @@ impl GlobalRules {
                     stalemated_player_loses: false,
                     invert_win_conditions: false,
                     repetitions_draw: 3,
+                    checks_to_lose: 0,
                 }
             },
         }

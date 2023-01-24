@@ -27,6 +27,7 @@ pub enum MakeMoveResult {
     Checkmate{winner: Player},
     LeaderCaptured{winner: Player},
     PieceInWinSquare{winner: Player},
+    CheckLimit{winner: Player},
     Stalemate{winner: Option<Player>},
     Repetition,
 }
@@ -112,15 +113,20 @@ impl Engine {
             if self.position.piece_is_on_winning_square() {
                 return MakeMoveResult::PieceInWinSquare{winner};
             }
+            let in_check = MoveGen::in_check(&mut self.position);
             // No legal moves, check if it's checkmate or stalemate
             if MoveGen::count_legal_moves(&mut self.position) == 0 {
-                if MoveGen::in_check(&mut self.position) {
+                if in_check {
                     return MakeMoveResult::Checkmate{winner};
                 }
                 if self.position.global_rules.stalemated_player_loses {
                     return MakeMoveResult::Stalemate{winner: Some(winner)};
                 }
                 return MakeMoveResult::Stalemate{winner: None};
+            }
+            if in_check && self.position.increment_num_checks() {
+                // Checked N times (N=3 in 3-check)
+                return MakeMoveResult::CheckLimit { winner };
             }
             if self.position.draw_by_repetition() {
                 // Threefold Repetition

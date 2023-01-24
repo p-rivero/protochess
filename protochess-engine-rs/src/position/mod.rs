@@ -353,6 +353,27 @@ impl Position {
     }
     
     #[inline]
+    pub fn get_times_checked(&self) -> &[u8; 2] {
+        &self.get_properties().times_in_check
+    }
+    #[inline]
+    pub fn increment_num_checks(&mut self) -> bool {
+        if self.global_rules.checks_to_lose == 0 {
+            return false;
+        }
+        let checked_player = self.whos_turn as usize;
+        let i = self.properties_stack.len() - 1;
+        let old_checks = self.properties_stack[i-1].times_in_check[checked_player];
+        let new_checks = old_checks + 1;
+        
+        self.properties_stack[i].times_in_check[checked_player] = new_checks;
+        // Update the zobrist key (use bits 8-9 for white, 10-11 for black)
+        self.properties_stack[i].zobrist_key ^= (new_checks as u64) << (8 + 2 * checked_player);
+        // Return true if the player has lost
+        new_checks >= self.global_rules.checks_to_lose
+    }
+    
+    #[inline]
     pub fn leader_is_captured(&self) -> bool {
         self.get_num_leader_pieces(self.whos_turn) == 0
     }

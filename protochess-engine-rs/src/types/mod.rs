@@ -2,6 +2,8 @@ mod bitboard;
 mod chess_move;
 mod searcher;
 
+use std::convert::TryFrom;
+
 pub use bitboard::*;
 pub use chess_move::*;
 pub use searcher::*;
@@ -16,18 +18,21 @@ pub enum GameMode {
     Antichess,
     KingOfTheHill,
     RacingKings,
+    ThreeCheck,
 }
 
-impl From<&str> for GameMode {
-    fn from(s: &str) -> GameMode {
-        match s.to_ascii_lowercase().as_str() {
-            "standard" => GameMode::Standard,
-            "atomic" => GameMode::Atomic,
-            "horde" => GameMode::Horde,
-            "antichess" => GameMode::Antichess,
-            "kingofthehill" => GameMode::KingOfTheHill,
-            "racingkings" => GameMode::RacingKings,
-            _ => panic!("Invalid game mode: {}", s)
+impl TryFrom<&str> for GameMode {
+    type Error = &'static str;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_ascii_lowercase().as_str() {
+            "standard" => Ok(GameMode::Standard),
+            "atomic" => Ok(GameMode::Atomic),
+            "horde" => Ok(GameMode::Horde),
+            "antichess" => Ok(GameMode::Antichess),
+            "kingofthehill" => Ok(GameMode::KingOfTheHill),
+            "racingkings" => Ok(GameMode::RacingKings),
+            "3check" => Ok(GameMode::ThreeCheck),
+            _ => Err("Invalid game mode"),
         }
     }
 }

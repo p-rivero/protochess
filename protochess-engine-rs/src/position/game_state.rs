@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use ahash::AHashSet;
 
 use crate::piece::PieceFactory;
@@ -28,6 +30,7 @@ pub struct GameState {
     pub pieces: Vec<PiecePlacement>,
     pub whos_turn: Player,
     pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
+    pub times_in_check: Option<[u8; 2]>,
     pub global_rules: GlobalRules,
 }
 
@@ -39,7 +42,15 @@ impl GameState {
         
         let fen_parts: Vec<&str> = fen.split_whitespace().collect();
         assert!(fen_parts.len() >= 6, "Invalid FEN string: {}", fen);
-        let mode = fen_parts.get(6).map_or(GameMode::Standard, |s| (*s).into());
+        let mode = (*fen_parts.last().unwrap()).try_into().unwrap_or(GameMode::Standard);
+        
+        let mut times_in_check = [0, 0];
+        if fen_parts.len() >= 7 && fen_parts[6].starts_with('+') {
+            let mut n_checks = fen_parts[6].chars().skip(1);
+            times_in_check[1] = n_checks.next().unwrap().to_digit(10).unwrap() as u8;
+            n_checks.next(); // Skip '+'
+            times_in_check[0] = n_checks.next().unwrap().to_digit(10).unwrap() as u8;
+        }
         
         let whos_turn = if fen_parts[1] == "w" {0} else {1};
         let (piece_types, id_king, id_rook) = Self::generate_pieces(mode);
@@ -131,8 +142,9 @@ impl GameState {
         };
         
         let global_rules = GlobalRules::for_mode(mode);
+        let times_in_check = Some(times_in_check);
         
-        GameState { piece_types, valid_squares, pieces, whos_turn, ep_square_and_victim, global_rules }
+        GameState { piece_types, valid_squares, pieces, whos_turn, ep_square_and_victim, times_in_check, global_rules }
     }
     
     fn get_piece_id(piece_types: &Vec<PieceDefinition>, c: char) -> PieceId {
@@ -203,6 +215,7 @@ impl From<&Position> for GameState {
             pieces,
             whos_turn: pos.whos_turn,
             ep_square_and_victim,
+            times_in_check: Some(*pos.get_times_checked()),
             global_rules: pos.global_rules.clone(),
         }
     }
@@ -227,6 +240,9 @@ impl From<GameState> for Position {
         if state.whos_turn == 1 {
             // Use the top bit as player zobrist key
             props.zobrist_key ^= 0x8000_0000_0000_0000;
+        }
+        if let Some(times_in_check) = state.times_in_check {
+            props.times_in_check = times_in_check;
         }
 
         // Instantiate position and register piecetypes

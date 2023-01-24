@@ -70,6 +70,10 @@ impl From<MakeMoveResult> for MakeMoveResultSer {
                 result = "PieceInWinSquare".to_string();
                 winner_player = Some(winner);
             },
+            MakeMoveResult::CheckLimit{winner} => {
+                result = "CheckLimit".to_string();
+                winner_player = Some(winner);
+            },
             MakeMoveResult::Stalemate{winner} => {
                 result = "Stalemate".to_string();
                 winner_player = winner;
@@ -183,7 +187,8 @@ generate_wrapper!(GlobalRulesSer, GlobalRules, [
     check_is_forbidden, bool,
     stalemated_player_loses, bool,
     invert_win_conditions, bool,
-    repetitions_draw, u8
+    repetitions_draw, u8,
+    checks_to_lose, u8
 ]);
 
 generate_wrapper!(GameStateSer, GameState, [
@@ -192,6 +197,7 @@ generate_wrapper!(GameStateSer, GameState, [
     pieces, SerVec<PiecePlacementSer>,
     whos_turn, u8,
     ep_square_and_victim, Option<((u8, u8), (u8, u8))>,
+    times_in_check, Option<[u8; 2]>,
     global_rules, GlobalRulesSer
 ]);
 

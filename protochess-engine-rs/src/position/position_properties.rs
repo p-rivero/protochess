@@ -15,6 +15,8 @@ pub struct PositionProperties {
     // true if the piece that moved could castle
     pub moved_piece_castle: bool,
     pub num_captures: u8,
+    // Number of times that each player has been in check
+    pub times_in_check: [u8; 2],
 }
 
 impl PositionProperties {

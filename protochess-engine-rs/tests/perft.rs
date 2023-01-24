@@ -199,6 +199,16 @@ mod perft {
     }
     
     #[test]
+    fn atomic_double_check() {
+        let mut engine = Engine::from_fen("r3k1nr/ppp2ppp/8/8/P3q3/1n1b1P2/RPPb2PP/1NBQKBNR w Kkq - 1 18 ATOMIC");
+        assert_eq!(engine.perft(1), 3);
+        assert_eq!(engine.perft(2), 113);
+        assert_eq!(engine.perft(3), 3011);
+        assert_eq!(engine.perft(4), 110029);
+        assert_eq!(engine.perft(5), 2972933);
+    }
+    
+    #[test]
     fn atomic960_castle_1() {
         let mut engine = Engine::from_fen("8/8/8/8/8/8/2k5/rR4KR w KQ - 0 1 ATOMIC");
         assert_eq!(engine.perft(1), 18);
