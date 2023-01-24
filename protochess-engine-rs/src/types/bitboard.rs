@@ -9,6 +9,7 @@ pub type BCoord = u8; // Coordinate the board: [0..15]
 
 // Store bounds of the board (bit set to 1 for valid positions) and dimensions (width and height)
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[must_use]
 pub struct BDimensions {
     pub width: BCoord,
     pub height: BCoord,
@@ -50,6 +51,7 @@ impl BDimensions {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use]
 pub struct Bitboard {
     board_internal: numext_fixed_uint::U256,
 }

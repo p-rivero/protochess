@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use instant::{Instant, Duration};
 
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
-use crate::{Position, MoveGen, GlobalRules};
+use crate::{Position, MoveGen};
 
 mod alphabeta;
 mod transposition_table;
@@ -11,7 +11,10 @@ pub mod eval;
 
 use transposition_table::TranspositionTable;
 
+#[derive(Debug, Clone)]
 pub struct Searcher {
+    // The position we are currently searching
+    pos: Position,
     //We store two killer moves per ply,
     //indexed by killer_moves[depth][0] or killer_moves[depth][0]
     killer_moves: [[Move;2];64],
@@ -24,12 +27,12 @@ pub struct Searcher {
     end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
     known_checks: BTreeSet<u64>,
-    rules: GlobalRules,
 }
 
 impl Searcher {
-    fn new() -> Searcher {
+    fn new(position: &Position) -> Searcher {
         Searcher{
+            pos: position.clone(),
             killer_moves: [[Move::null(); 2];64],
             history_moves: [[0;256];256],
             transposition_table: TranspositionTable::new(),
@@ -38,25 +41,24 @@ impl Searcher {
             end_time: Instant::now(),
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
             known_checks: BTreeSet::new(),
-            rules: GlobalRules::default(),
         }
     }
     
     pub fn get_best_move(position: &Position, depth: Depth) -> (Vec<Move>, Centipawns, Depth) {
         // Create a new copy of the heuristics for each search
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
-        Searcher::new().get_best_move_impl(&mut position.clone(), depth, 1_000_000)
+        Searcher::new(position).get_best_move_impl(depth, 1_000_000)
     }
 
     pub fn get_best_move_timeout(position: &Position, time_sec: u64) -> (Vec<Move>, Centipawns, Depth) {
         // Create a new copy of the heuristics for each search
-        Searcher::new().get_best_move_impl(&mut position.clone(), Depth::MAX, time_sec)
+        Searcher::new(position).get_best_move_impl(Depth::MAX, time_sec)
     }
     
     // Run for some time, then return the PV, the position score, and the depth
-    fn get_best_move_impl(&mut self, pos: &mut Position, max_depth: Depth, time_sec: u64) -> (Vec<Move>, Centipawns, Depth) {
-        assert!(!pos.leader_is_captured(), "Attempting to get best move but leader is captured");
-        assert!(MoveGen::count_legal_moves(pos) != 0, "Attempting to get best move but there are no legal moves");
+    fn get_best_move_impl(&mut self, max_depth: Depth, time_sec: u64) -> (Vec<Move>, Centipawns, Depth) {
+        assert!(!self.pos.leader_is_captured(), "Attempting to get best move but leader is captured");
+        assert!(MoveGen::count_legal_moves(&mut self.pos) != 0, "Attempting to get best move but there are no legal moves");
         
         // Limit the max depth to 127 to avoid overflow when doubling
         let max_depth = std::cmp::min(max_depth, 127);
@@ -65,13 +67,12 @@ impl Searcher {
         let mut pv_score: Centipawns = 0;
         self.known_checks.clear();
         self.end_time = Instant::now() + Duration::from_secs(time_sec);
-        self.rules = pos.global_rules.clone();
         
         // Iterative deepening
         for search_depth in 1..=max_depth {
             self.nodes_searched = 0;
             self.max_searching_depth = 2 * search_depth;
-            match self.search(pos, search_depth) {
+            match self.search(search_depth) {
                 Ok(score) => {
                     pv.clear();
                     // Copy the pv into a vector

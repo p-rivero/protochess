@@ -11,10 +11,12 @@ const TABLE_SIZE: usize = 2_usize.pow(21);
 const ENTRIES_PER_CLUSTER: usize = 4;
 
 
+#[derive(Debug, Clone, Copy)]
 pub struct Cluster {
     entries: [Entry; ENTRIES_PER_CLUSTER]
 }
 
+#[derive(Debug, Clone)]
 pub struct TranspositionTable {
     data: Vec<Cluster>
 }
@@ -65,7 +67,7 @@ impl TranspositionTable {
     }
 
     /// Returns a handle to an Entry in the table, if it exists
-    pub fn retrieve(&mut self, zobrist_key:u64) -> Option<&Entry> {
+    pub fn retrieve(&self, zobrist_key:u64) -> Option<&Entry> {
         let cluster = &self.data[zobrist_key as usize % TABLE_SIZE];
         for i in 0..ENTRIES_PER_CLUSTER {
             let entry = &cluster.entries[i];

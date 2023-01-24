@@ -8,6 +8,7 @@ macro_rules! generate_wrapper {
     ($wrapper_name:ident, $wrapped_type:ident, [$($field:ident, $type:ty),*]) => {
         #[derive(serde::Serialize, serde::Deserialize)]
         #[wasm_bindgen(inspectable)]
+        #[must_use]
         pub struct $wrapper_name {
             $( $field: $type ),*
         }

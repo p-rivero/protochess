@@ -1,8 +1,10 @@
 use crate::position::Position;
 use crate::types::{Move, Centipawns};
 
+use super::Searcher;
+
 /// Retrieves the score for the player to move (`position.whos_turn`)
-pub fn evaluate(position: &mut Position) -> Centipawns {
+pub fn evaluate(position: &Position) -> Centipawns {
     // Material score (without leaders) of both players combined, below which the game is considered to be in the endgame
     // Arbitrary threshold of roughly 2 queens and 2 rooks, feel free to experiment
     const ENDGAME_THRESHOLD: Centipawns = 3000;
@@ -60,23 +62,23 @@ pub fn evaluate(position: &mut Position) -> Centipawns {
 
 /// Scores a move on a position
 /// This is used for move ordering in order to search the moves with the most potential first
-pub fn score_move(history_moves: &[[Centipawns;256];256], killer_moves: &[Move;2], position: &mut Position, mv: Move) -> Centipawns {
+pub fn score_move(search: &Searcher, depth: usize, mv: Move) -> Centipawns {
     const CAPTURE_BASE_SCORE: Centipawns = 10000;
     const KILLERMOVE_SCORE: Centipawns = 9000;
     if mv.is_capture() {
-        let current_player = position.whos_turn;
-        let attacker = position.player_piece_at(current_player, mv.get_from()).unwrap();
-        let victim = position.player_piece_at(1-current_player, mv.get_target()).unwrap();
+        let current_player = search.pos.whos_turn;
+        let attacker = search.pos.player_piece_at(current_player, mv.get_from()).unwrap();
+        let victim = search.pos.player_piece_at(1-current_player, mv.get_target()).unwrap();
 
         let attack_score = attacker.get_material_score();
         let victim_score = victim.get_material_score();
 
         return CAPTURE_BASE_SCORE + victim_score - attack_score
     }
-    if mv == killer_moves[0] || mv == killer_moves[1] {
+    if mv == search.killer_moves[depth][0] || mv == search.killer_moves[depth][1] {
         KILLERMOVE_SCORE
     } else {
-        history_moves[mv.get_from() as usize][mv.get_to() as usize]
+        search.history_moves[mv.get_from() as usize][mv.get_to() as usize]
     }
 }
 

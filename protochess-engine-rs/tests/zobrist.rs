@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod zobrist_test {
-    use protochess_engine_rs::{Engine, MoveInfo};
+    use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResult};
     const ID_KING: u32 = 0;
     const ID_QUEEN: u32 = 1;
     const ID_ROOK: u32 = 2;
@@ -224,7 +224,7 @@ mod zobrist_test {
         engine1.add_piece(0, ID_PAWN, 3, 2, true);
         engine1.remove_piece(3, 1);
         
-        engine2.make_move(&MoveInfo::from_string("d2d3"));
+        assert_eq!(engine2.make_move(&MoveInfo::from_string("d2d3")), MakeMoveResult::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -238,8 +238,8 @@ mod zobrist_test {
         engine1.remove_piece(4, 4);
         engine1.add_piece(1, ID_PAWN, 3, 3, true);
         
-        engine2.make_move(&MoveInfo::from_string("d2d4"));
-        engine2.make_move(&MoveInfo::from_string("e5d4"));
+        assert_eq!(engine2.make_move(&MoveInfo::from_string("d2d4")), MakeMoveResult::Ok);
+        assert_eq!(engine2.make_move(&MoveInfo::from_string("e5d4")), MakeMoveResult::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -251,7 +251,7 @@ mod zobrist_test {
         engine1.add_piece(0, ID_ROOK, 7, 4, true);
         engine1.remove_piece(7, 0);
         
-        engine2.make_move(&MoveInfo::from_string("h1h5"));
+        assert_eq!(engine2.make_move(&MoveInfo::from_string("h1h5")), MakeMoveResult::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -264,7 +264,7 @@ mod zobrist_test {
         engine1.remove_piece(7, 7);
         engine1.add_piece(0, ID_ROOK, 7, 7, true);
         
-        engine2.make_move(&MoveInfo::from_string("h1h8"));
+        assert_eq!(engine2.make_move(&MoveInfo::from_string("h1h8")), MakeMoveResult::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -338,8 +338,8 @@ mod zobrist_test {
         assert_eq!(zob_start_1, zob_start_2);
         
         for m in moves {
-            engine1.make_move(&MoveInfo::from_string(m));
-            engine2.make_move(&MoveInfo::from_string(m));
+            assert_eq!(engine1.make_move(&MoveInfo::from_string(m)), MakeMoveResult::Ok);
+            assert_eq!(engine2.make_move(&MoveInfo::from_string(m)), MakeMoveResult::Ok);
             let zob_1 = engine1.get_zobrist();
             let zob_2 = engine2.get_zobrist();
             assert_eq!(zob_1, zob_2);

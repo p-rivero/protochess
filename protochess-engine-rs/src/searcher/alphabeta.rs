@@ -1,6 +1,6 @@
 use instant::Instant;
 
-use crate::{Position, MoveGen};
+use crate::MoveGen;
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
 
 use super::Searcher;
@@ -14,16 +14,15 @@ impl Searcher {
     /// Populates the principal variation vector and returns the score of the position.
     /// # Errors
     /// Returns `Err(SearchTimeout)` if the search timed out.
-    pub fn search(&mut self, pos: &mut Position, depth: Depth) -> Result<Centipawns, SearchTimeout> {
+    pub fn search(&mut self, depth: Depth) -> Result<Centipawns, SearchTimeout> {
         // Use -MAX instead of MIN to avoid overflow when negating
-        self.alphabeta::<true>(pos, depth, depth, 0, -Centipawns::MAX, Centipawns::MAX, true)
+        self.alphabeta::<true>(depth, depth, 0, -Centipawns::MAX, Centipawns::MAX, true)
     }
     
     // alpha is the best score that I can currently guarantee at this level or above.
     // beta is the worst score for me that the opponent can currently guarantee at this level or above.
     #[allow(clippy::too_many_lines)]
     fn alphabeta<const IS_PV: bool>(&mut self,
-            pos: &mut Position,
             mut depth: Depth,
             mut search_depth: Depth,
             pv_index: usize,
@@ -35,7 +34,7 @@ impl Searcher {
         let mut known_check = false;
         if IS_PV {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
-            known_check = self.known_checks.contains(&pos.get_zobrist());
+            known_check = self.known_checks.contains(&self.zobrist());
             if known_check && search_depth < self.max_searching_depth {
                 depth += 1;
                 search_depth += 1;
@@ -43,7 +42,7 @@ impl Searcher {
         }
 
         // Probe transposition table
-        if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {
+        if let Some(entry) = self.transposition_table.retrieve(self.zobrist()) {
             if entry.depth >= depth {
                 match entry.flag {
                     EntryFlag::Exact => {
@@ -77,14 +76,14 @@ impl Searcher {
         }
         
         if depth == 0 {
-            let quiesce_score = self.quiesce(pos, alpha, beta, pv_index)?;
+            let quiesce_score = self.quiesce(alpha, beta, pv_index)?;
             let flag = {
                 if quiesce_score <= alpha { EntryFlag::Alpha }
                 else if quiesce_score >= beta { EntryFlag::Beta }
                 else { EntryFlag::Exact }
             };
-            self.transposition_table.insert(pos.get_zobrist(), Entry{
-                key: pos.get_zobrist(),
+            self.transposition_table.insert(self.zobrist(), Entry{
+                key: self.zobrist(),
                 flag,
                 value: quiesce_score,
                 mv: Move::null(),
@@ -103,13 +102,13 @@ impl Searcher {
         // Null move pruning
         if  !IS_PV && depth > 3 && // Don't skip a turn in PV nodes or close to the leaves
             do_null && // Don't do 2 null moves in a row
-            !self.rules.capturing_is_forced && // Don't skip a turn if capturing is forced
-            eval::can_do_null_move(pos) && // Don't skip a turn in endgame
-            !MoveGen::in_check(pos) // Don't skip a turn in check
+            !self.pos.global_rules.capturing_is_forced && // Don't skip a turn if capturing is forced
+            eval::can_do_null_move(&self.pos) && // Don't skip a turn in endgame
+            !MoveGen::in_check(&mut self.pos) // Don't skip a turn in check
         {
-            pos.make_move(Move::null());
-            let nscore = -self.alphabeta::<false>(pos, depth-3, search_depth, pv_index+1, -beta, -beta+1, false)?;
-            pos.unmake_move();
+            self.pos.make_move(Move::null());
+            let nscore = -self.alphabeta::<false>(depth-3, search_depth, pv_index+1, -beta, -beta+1, false)?;
+            self.pos.unmake_move();
             if nscore >= beta {
                 return Ok(beta);
             }
@@ -119,8 +118,8 @@ impl Searcher {
         let mut num_legal_moves = 0;
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
-        let in_check = known_check || MoveGen::in_check(pos);
-        if in_check && pv_index != 0 && pos.increment_num_checks() {
+        let in_check = known_check || MoveGen::in_check(&mut self.pos);
+        if in_check && pv_index != 0 && self.pos.increment_num_checks() {
             // If the player has been checked N times, the game is over.
             // Don't increment the check counter in the root node
             if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
@@ -130,24 +129,24 @@ impl Searcher {
             // If in check, extend search by 1 ply. Limit the extension to 2x the original depth.
             depth += 1;
             search_depth += 1;
-            self.known_checks.insert(pos.get_zobrist());
+            self.known_checks.insert(self.zobrist());
         }
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
-        let moves = MoveGen::get_pseudo_moves(pos, true);
-        for (_move_score, mv) in self.sort_moves_by_score(pos, moves, depth) {
+        let moves = MoveGen::get_pseudo_moves(&mut self.pos, true);
+        for (_move_score, mv) in self.sort_moves_by_score(moves, depth) {
             
-            if !MoveGen::make_move_if_legal(mv, pos) {
+            if !MoveGen::make_move_if_legal(mv, &mut self.pos) {
                 continue;
             }
 
             num_legal_moves += 1;
             let mut score: Centipawns;
-            if let Some(end_score) = self.is_game_over(pos, mv, pv_index+1) {
+            if let Some(end_score) = self.is_game_over(mv, pv_index+1) {
                 if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
                 score = -end_score;
             } else if num_legal_moves == 1 {
-                score = -self.alphabeta::<IS_PV>(pos, depth-1, search_depth, pv_index+1, -beta, -alpha, true)?;
+                score = -self.alphabeta::<IS_PV>(depth-1, search_depth, pv_index+1, -beta, -alpha, true)?;
             } else {
                 // Try late move reduction
                 if !IS_PV && num_legal_moves > 4 && mv.is_quiet() && depth >= 5 && !in_check {
@@ -156,7 +155,7 @@ impl Searcher {
                         if num_legal_moves > 10 { depth - 4 }
                         else { depth - 3 }
                     };
-                    score = -self.alphabeta::<false>(pos, reduced_depth, search_depth, pv_index+1, -alpha-1, -alpha, true)?;
+                    score = -self.alphabeta::<false>(reduced_depth, search_depth, pv_index+1, -alpha-1, -alpha, true)?;
                 } else {
                     // Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
@@ -165,15 +164,15 @@ impl Searcher {
                 if IS_PV || score > alpha {
                     // PVS
                     // Null window search
-                    score = -self.alphabeta::<false>(pos, depth-1, search_depth, pv_index+1, -alpha-1, -alpha, true)?;
+                    score = -self.alphabeta::<false>(depth-1, search_depth, pv_index+1, -alpha-1, -alpha, true)?;
                     // Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta::<IS_PV>(pos, depth-1, search_depth, pv_index+1, -beta, -alpha, true)?;
+                        score = -self.alphabeta::<IS_PV>(depth-1, search_depth, pv_index+1, -beta, -alpha, true)?;
                     }
                 }
             }
 
-            pos.unmake_move();
+            self.pos.unmake_move();
 
             if score > best_score {
                 best_score = score;
@@ -184,8 +183,8 @@ impl Searcher {
                         // Record new killer moves
                         self.update_killers(depth, mv);
                         // Beta cutoff, store in transpositon table
-                        self.transposition_table.insert(pos.get_zobrist(), Entry{
-                            key: pos.get_zobrist(),
+                        self.transposition_table.insert(self.zobrist(), Entry{
+                            key: self.zobrist(),
                             flag: EntryFlag::Beta,
                             value: beta,
                             mv,
@@ -205,7 +204,7 @@ impl Searcher {
         }
 
         if num_legal_moves == 0 {
-            return if in_check || pos.global_rules.stalemated_player_loses {
+            return if in_check || self.pos.global_rules.stalemated_player_loses {
                 // No legal moves and in check: Checkmate
                 if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
                 Ok(self.checkmate_score(pv_index))
@@ -218,8 +217,8 @@ impl Searcher {
 
         if IS_PV && alpha != old_alpha {
             //Alpha improvement, record PV
-            self.transposition_table.insert(pos.get_zobrist(), Entry{
-                key: pos.get_zobrist(),
+            self.transposition_table.insert(self.zobrist(), Entry{
+                key: self.zobrist(),
                 flag: EntryFlag::Exact,
                 value: best_score,
                 mv: best_move,
@@ -228,8 +227,8 @@ impl Searcher {
             self.principal_variation[pv_index] = best_move;
             
         } else {
-            self.transposition_table.insert(pos.get_zobrist(), Entry{
-                key: pos.get_zobrist(),
+            self.transposition_table.insert(self.zobrist(), Entry{
+                key: self.zobrist(),
                 flag: EntryFlag::Alpha,
                 value: alpha,
                 mv: best_move,
@@ -242,9 +241,9 @@ impl Searcher {
 
 
     // Keep seaching, but only consider capture moves (avoid horizon effect)
-    fn quiesce(&mut self, pos: &mut Position, mut alpha: Centipawns, beta: Centipawns, pv_index: usize) -> Result<Centipawns, SearchTimeout> {
+    fn quiesce(&mut self, mut alpha: Centipawns, beta: Centipawns, pv_index: usize) -> Result<Centipawns, SearchTimeout> {
         
-        if pos.leader_is_captured() {
+        if self.pos.leader_is_captured() {
             return Ok(self.checkmate_score(pv_index));
         }
         
@@ -254,7 +253,7 @@ impl Searcher {
             return Err(SearchTimeout);
         }
         
-        let score = eval::evaluate(pos);
+        let score = eval::evaluate(&self.pos);
         
         if score >= beta {
             return Ok(beta);
@@ -264,14 +263,14 @@ impl Searcher {
         }
 
         // Get only captures, sorted by move ordering heuristics (try the most promising moves first)
-        let moves = MoveGen::get_pseudo_moves(pos, false);
-        for (_move_score, mv) in self.sort_moves_by_score(pos, moves, 0) {
+        let moves = MoveGen::get_pseudo_moves(&mut self.pos, false);
+        for (_move_score, mv) in self.sort_moves_by_score(moves, 0) {
             // This is a capture move, so there is no need to check for repetition
-            if !MoveGen::make_move_if_legal(mv, pos) {
+            if !MoveGen::make_move_if_legal(mv, &mut self.pos) {
                 continue;
             }
-            let score = -self.quiesce(pos, -beta, -alpha, pv_index+1)?;
-            pos.unmake_move();
+            let score = -self.quiesce(-beta, -alpha, pv_index+1)?;
+            self.pos.unmake_move();
 
             if score >= beta {
                 return Ok(beta);
@@ -284,20 +283,25 @@ impl Searcher {
     }
     
     #[inline]
+    fn zobrist(&self) -> u64 {
+        self.pos.get_zobrist()
+    } 
+    
+    #[inline]
     // Check for instant game over conditions (does not check for checkmate or stalemate)
-    fn is_game_over(&mut self, pos: &mut Position, mv: Move, pv_index: usize) -> Option<Centipawns> {
+    fn is_game_over(&mut self, mv: Move, pv_index: usize) -> Option<Centipawns> {
         // There is repetition, the result is always a draw
-        if pos.draw_by_repetition() {
+        if self.pos.draw_by_repetition() {
             return Some(0);
         }
         // The leader is captured
-        if pos.leader_is_captured() {
+        if self.pos.leader_is_captured() {
             return Some(self.checkmate_score(pv_index));
         }
         // The opponent has moved the leader to a winning position
-        let opponent = 1 - pos.whos_turn;
+        let opponent = 1 - self.pos.whos_turn;
         let to = mv.get_to();
-        if pos.player_piece_at(opponent, to).unwrap().wins_at(to) {
+        if self.pos.player_piece_at(opponent, to).unwrap().wins_at(to) {
             return Some(self.checkmate_score(pv_index));
         }
         None
@@ -321,18 +325,17 @@ impl Searcher {
     }
 
     #[inline]
-    fn sort_moves_by_score(&mut self, pos: &mut Position, moves: Vec<Move>, depth: Depth) -> Vec<(Centipawns, Move)> {
+    fn sort_moves_by_score(&self, moves: Vec<Move>, depth: Depth) -> Vec<(Centipawns, Move)> {
         // Limit depth to the size of the killer moves array
         let depth = std::cmp::min(self.killer_moves.len() - 1, depth as usize);
-        let killer_moves_at_depth = &self.killer_moves[depth];
         let mut moves_and_score = Vec::with_capacity(moves.len());
         for mv in moves {
-            let score = eval::score_move(&self.history_moves, killer_moves_at_depth, pos, mv);
+            let score = eval::score_move(self, depth, mv);
             moves_and_score.push((score, mv));
         }
 
         // Assign PV/hash moves to Centipawns::MAX (search first in the PV)
-        if let Some(entry) = self.transposition_table.retrieve(pos.get_zobrist()) {
+        if let Some(entry) = self.transposition_table.retrieve(self.zobrist()) {
             let best_move = &entry.mv;
             for (score, mv) in &mut moves_and_score {
                 if mv == best_move {
@@ -344,7 +347,7 @@ impl Searcher {
         // Sort moves by decreasing score
         moves_and_score.sort_unstable_by(|a, b| b.0.cmp(&a.0));
         
-        if self.rules.invert_win_conditions {
+        if self.pos.global_rules.invert_win_conditions {
             moves_and_score.reverse();
         }
         
@@ -356,7 +359,7 @@ impl Searcher {
         // A checkmate is effectively -inf, but if we are losing we prefer the longest sequence
         // Add 1 centipawn per ply to the score to prefer shorter checkmates (or longer when losing)
         let score = GAME_OVER_SCORE + pv_index as Centipawns;
-        if self.rules.invert_win_conditions { -score } else { score }
+        if self.pos.global_rules.invert_win_conditions { -score } else { score }
     }
     
     #[inline]

@@ -11,6 +11,7 @@ pub use searcher::*;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
 pub enum GameMode {
     Standard,
     Atomic,

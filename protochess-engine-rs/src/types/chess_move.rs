@@ -5,6 +5,7 @@ use crate::utils::{to_rank_file, from_index};
 use super::{BCoord, BIndex};
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[must_use]
 pub enum MoveType {
     // The least significant bit is used to indicate capture
     Quiet = 0b0000,
@@ -21,6 +22,7 @@ pub enum MoveType {
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
+#[must_use]
 pub struct Move {
     /// Stores a move in a u32
     ///0-7:   from index:u8
@@ -137,6 +139,7 @@ impl Default for Move {
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
 pub struct MoveInfo {
     pub from: (BCoord, BCoord),
     pub to: (BCoord, BCoord),

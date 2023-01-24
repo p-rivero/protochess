@@ -1,6 +1,7 @@
 use crate::types::{Move, Depth, Centipawns};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[must_use]
 pub enum EntryFlag{
     Exact = 0,
     Alpha = 1,
@@ -16,6 +17,7 @@ impl EntryFlag {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[must_use]
 pub struct Entry {
     pub key: u64,
     pub flag: EntryFlag,

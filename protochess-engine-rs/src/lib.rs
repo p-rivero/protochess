@@ -21,6 +21,7 @@ pub use piece::{Piece, PieceId, PieceDefinition};
 pub use types::MoveInfo;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[must_use]
 pub enum MakeMoveResult {
     Ok,
     IllegalMove,
@@ -61,8 +62,8 @@ impl Engine {
     }
 
     /// Returns the score of the current position for the side to move
-    pub fn get_score(&mut self) -> Centipawns {
-        eval::evaluate(&mut self.position)
+    pub fn get_score(&self) -> Centipawns {
+        eval::evaluate(&self.position)
     }
     
     /// Returns the id of the piece at the given coordinates

@@ -4,10 +4,12 @@ use std::collections::VecDeque;
 
 use crate::types::{BCoord, BIndex, Bitboard};
 
+#[must_use]
 pub fn to_index(x: BCoord, y: BCoord) -> BIndex{
     (16 * y + x) as BIndex
 }
 
+#[must_use]
 pub fn from_index(index: BIndex) -> (BCoord, BCoord) {
     ((index % 16) as BCoord , (index / 16) as BCoord)
 }

@@ -11,6 +11,7 @@ use super::global_rules::GlobalRules;
 use super::position_properties::PositionProperties;
 use super::{BCoord, Player, BDimensions, GameMode};
 
+#[must_use]
 pub struct PiecePlacement {
     pub owner: Player,
     pub piece_id: PieceId,
@@ -24,6 +25,7 @@ impl PiecePlacement {
         PiecePlacement { owner, piece_id, x, y, can_castle: Some(can_castle), }
     }
 }
+#[must_use]
 pub struct GameState {
     pub piece_types: Vec<PieceDefinition>,
     pub valid_squares: Vec<(BCoord, BCoord)>,
