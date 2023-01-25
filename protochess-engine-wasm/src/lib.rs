@@ -8,20 +8,22 @@ use wasm_bindgen::prelude::*;
 use serialize_types::*;
 use utils::{set_panic_hook, SerVec};
 
+#[cfg(feature = "parallel")]
+pub use wasm_bindgen_rayon::init_thread_pool;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen]
-extern {
-    fn alert(s: &str);
-}
 
 #[wasm_bindgen]
 pub fn greet() {
-    alert("Hello, protochess-engine-wasm!");
+    #[cfg(feature = "parallel")]
+    console_log!("Hello from protochess-engine-wasm! (multithreading enabled)");
+    #[cfg(not(feature = "parallel"))]
+    console_log!("Hello from protochess-engine-wasm! (multithreading disabled)");
 }
 
 #[wasm_bindgen]
@@ -59,6 +61,10 @@ impl Protochess {
     pub fn make_move(&mut self, mv: JsValue) -> JsValue {
         let mv = MoveInfoSer::from_js(mv);
         let move_result = self.engine.make_move(&mv);
+        MakeMoveResultSer::to_js(move_result)
+    }
+    pub fn make_move_str(&mut self, mv: &str) -> JsValue {
+        let move_result = self.engine.make_move_str(mv);
         MakeMoveResultSer::to_js(move_result)
     }
 

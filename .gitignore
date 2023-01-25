@@ -8,3 +8,5 @@ protochess-engine-rs/perf.data.old
 protochess-engine-wasm/target
 protochess-engine-wasm/Cargo.lock
 protochess-engine-rs/pgn.txt
+protochess-engine-wasm/example-js/dist
+protochess-engine-wasm/example-js/node_modules

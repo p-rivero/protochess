@@ -1,7 +1,7 @@
 [package]
 name = "protochess-engine-wasm"
 description = "A wasm wrapper for the protochess engine"
-repository = "https://github.com/p-rivero/protochess"
+repository = "https://github.com/p-rivero/protochess-engine"
 license = "GPL-3.0"
 version = "1.0.0"
 authors = ["raymond <raytran@mit.edu>", "p-rivero"]
@@ -16,11 +16,13 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["console_error_panic_hook"]
+parallel = ["protochess-engine-rs/parallel", "wasm-bindgen-rayon"]
 
 [dependencies]
 wasm-bindgen = "0.2.63"
-serde = {version = "1.0.152", features = ["derive"] }
-protochess-engine-rs = {path = "../protochess-engine-rs"}
+wasm-bindgen-rayon = { version = "1.0", optional = true }
+serde = { version = "1.0.152", features = ["derive"] }
+protochess-engine-rs = { path = "../protochess-engine-rs", features = ["wasm-bindgen"] }
 
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

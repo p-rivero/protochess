@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  
+<head>
+  <meta charset="utf-8">
+  <script type="module" src="index.js"></script>
+  <title>Protochess Engine using WebAssembly threads</title>
+</head>
+<body>
+  <p><b>Board state:</b></p>
+  <span style="white-space: pre; font-family: monospace" id="boardDisplay"></span>
+  <p style="white-space: pre; color: darkred" id="boardStatus"></p>
+  <br/>
+  <form>
+    <label for="manualMoveInput"><b>Make move (human):</b></label><br>
+    <input type="text" id="manualMoveInput">
+    <input type="button" id="manualMoveButton" value="Go"/>
+    <p>Examples: "e2e4", "e1h1" (short castle), "a7a8=2 (promote to piece type with ID 2, by default Q=1, R=2, B=3, N=4)"</p>
+    <p style="color: red" id="manualMoveError"></p>
+  </form> 
+  <br/>
+  <form>
+    <label for="engineMoveInput"><b>Make move (engine):</b></label><br>
+    <input type="text" id="engineMoveInput" placeholder="Time to search (seconds)">
+    <input type="button" id="engineMoveButton" value="Go"/>
+    <p style="color: red" id="engineMoveError"></p>
+    <p id="engineDepth"></p>
+  <br/>
+  </form>
+    <label for="fenInput"><b>Load FEN:</b></label><br>
+    <input type="text" id="fenInput" placeholder="FEN string">
+    <input type="button" id="fenButton" value="Load"/>
+    <p style="color: red" id="fenError"></p>
+  <br/>
+</body>
+
+</html>

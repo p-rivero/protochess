@@ -1,3 +1,5 @@
+use wasm_bindgen::prelude::wasm_bindgen;
+
 pub fn set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
     // `set_panic_hook` function at least once during initialization, and then
@@ -32,4 +34,16 @@ impl<'de, T> serde::Deserialize<'de> for SerVec<T> where T: serde::Deserialize<'
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
         Vec::deserialize(deserializer).map(|x| SerVec(x))
     }
+}
+
+
+// Print to browser console
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    pub fn log(s: &str);
+}
+#[macro_export]
+macro_rules! console_log {
+    ($($t:tt)*) => (utils::log(&format_args!($($t)*).to_string()))
 }

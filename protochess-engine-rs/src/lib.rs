@@ -137,6 +137,11 @@ impl Engine {
         }
         MakeMoveResult::IllegalMove
     }
+    
+    pub fn make_move_str(&mut self, target_move: &str) -> MakeMoveResult {
+        let mv = MoveInfo::from_string(target_move);
+        self.make_move(&mv)
+    }
 
     /// Undoes the most recent move on the current board position
     pub fn undo(&mut self) {

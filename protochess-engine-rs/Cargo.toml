@@ -1,7 +1,7 @@
 [package]
 name = "protochess-engine-rs"
 description = "A chess engine with user-defined piece movement rules, written in Rust"
-repository = "https://github.com/p-rivero/protochess"
+repository = "https://github.com/p-rivero/protochess-engine"
 license = "GPL-3.0"
 version = "1.0.0"
 authors = ["raytr <ray.tran120@gmail.com>", "p-rivero"]
@@ -26,10 +26,11 @@ opt-level = 3
 [features]
 stdweb = [ "instant/stdweb" ]
 wasm-bindgen = [ "instant/wasm-bindgen" ]
+parallel = [ "rayon" ]
 
 [dependencies]
-instant = { version = "0.1", features = [ "now", "wasm-bindgen" ] }
-scan-rules = "0.2.0"
+instant = { version = "0.1", features = [ "now" ] }
+rayon = { version = "1.6.1", optional = true }
 rand = "0.7.3"
 arrayvec = "0.5.1"
 numext-fixed-uint = "0.1.4"
