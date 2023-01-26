@@ -188,14 +188,15 @@ impl Engine {
     }
 
     /// Returns a list of all legal moves from the given square
-    pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<MoveInfo>{
-        // TODO assert coordinates are in bounds
+    pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> wrap_res!(Vec<MoveInfo>) {
+        err_assert!(self.position.in_bounds(x, y), "Coordinates ({x}, {y}) are out of bounds");
         let from = to_index(x,y);
-        MoveGen::get_legal_moves(&mut self.position)
+        let moves = MoveGen::get_legal_moves(&mut self.position)
             .into_iter()
             .filter(|mv| mv.get_from() == from)
             .map(MoveInfo::from)
-            .collect()
+            .collect();
+        Ok(moves)
     }
 
     /// Returns true if the player to move is in check

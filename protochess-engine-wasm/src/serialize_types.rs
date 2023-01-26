@@ -16,8 +16,11 @@ macro_rules! generate_wrapper {
             pub fn to_js(val: $wrapped_type) -> JsValue {
                 to_value(&Self::from(val)).unwrap()
             }
-            pub fn from_js(val: JsValue) -> $wrapped_type {
-                from_value::<$wrapper_name>(val).unwrap().into()
+            pub fn from_js(val: JsValue) -> Result<$wrapped_type, String> {         
+                const TYPE_NAME: &str = stringify!($wrapper_name);       
+                let wrapper = from_value::<$wrapper_name>(val)
+                    .map_err(|e| format!("Argument must be of type {TYPE_NAME}. {e}"))?;
+                Ok(wrapper.into())
             }
         }
         impl From<$wrapped_type> for $wrapper_name {

@@ -58,10 +58,10 @@ impl Protochess {
         Ok(MakeMoveResultWithDepthSer::to_js(move_result, search_depth))
     }
 
-    pub fn make_move(&mut self, mv: JsValue) -> JsValue {
-        let mv = MoveInfoSer::from_js(mv);
+    pub fn make_move(&mut self, mv: JsValue) -> Result<JsValue, String> {
+        let mv = MoveInfoSer::from_js(mv)?;
         let move_result = self.engine.make_move(&mv);
-        MakeMoveResultSer::to_js(move_result)
+        Ok(MakeMoveResultSer::to_js(move_result))
     }
     pub fn make_move_str(&mut self, mv: &str) -> Result<JsValue, String> {
         let move_result = self.engine.make_move_str(mv)?;
@@ -82,7 +82,7 @@ impl Protochess {
     }
     
     pub fn set_state(&mut self, state: JsValue) -> Result<(), String> {
-        let state = GameStateSer::from_js(state);
+        let state = GameStateSer::from_js(state)?;
         self.engine.set_state(state)?;
         Ok(())
     }
@@ -97,8 +97,8 @@ impl Protochess {
         Ok(())
     }
     
-    pub fn moves_from(&mut self, x: u8, y: u8) -> JsValue {
-        let moves: SerVec<MoveInfoSer> = self.engine.moves_from(x, y).into();
-        to_value(&moves).unwrap()
+    pub fn moves_from(&mut self, x: u8, y: u8) -> Result<JsValue, String> {
+        let moves: SerVec<MoveInfoSer> = self.engine.moves_from(x, y)?.into();
+        Ok(to_value(&moves).unwrap())
     }
 }
