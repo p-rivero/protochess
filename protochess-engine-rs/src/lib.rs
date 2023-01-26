@@ -9,6 +9,8 @@ pub mod position;
 pub mod searcher;
 pub mod utils;
 
+use std::convert::TryFrom;
+
 use types::{BCoord, Centipawns, Depth, Player};
 use searcher::{Searcher, eval};
 use utils::to_index;
@@ -42,14 +44,18 @@ pub struct Engine{
 impl Engine {
     /// Initializes a new engine
     pub fn default() -> Engine {
-        Engine{ position: GameState::default().into() }
+        let position = Position::try_from(GameState::default()).unwrap();
+        Engine{ position }
     }
-    pub fn from_fen(fen: &str) -> Engine {
-        Engine{ position: GameState::from_fen(fen).into() }
+    pub fn from_fen(fen: &str) -> wrap_res!(Engine) {
+        let state = GameState::from_fen(fen)?;
+        let position = Position::try_from(state)?;
+        Ok(Engine{ position })
     }
 
-    pub fn set_state(&mut self, state: GameState) {
-        self.position = state.into();
+    pub fn set_state(&mut self, state: GameState) -> wrap_res!() {
+        self.position = Position::try_from(state)?;
+        Ok(())
     }
     
     pub fn get_state(&self) -> GameState {
@@ -77,20 +83,23 @@ impl Engine {
     }
 
     /// Adds a new piece on the board. If the piece is not used for castling, `has_moved` is ignored.
-    pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord, has_moved: bool) {
-        self.position.public_add_piece(owner, piece_type, to_index(x,y), !has_moved);
+    pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord, has_moved: bool) -> wrap_res!() {
+        self.position.public_add_piece(owner, piece_type, to_index(x,y), !has_moved)?;
+        Ok(())
     }
 
     /// Removes a piece on the board, if it exists
-    pub fn remove_piece(&mut self, x: BCoord, y: BCoord) {
-        self.position.public_remove_piece(to_index(x,y));
+    pub fn remove_piece(&mut self, x: BCoord, y: BCoord) -> wrap_res!() {
+        err_assert!(self.position.in_bounds(x, y), "Coordinates ({x}, {y}) are out of bounds");
+        self.position.public_remove_piece(to_index(x,y))?;
+        Ok(())
     }
 
     /// Attempts a move on the current board position
     pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
         let moves = MoveGen::get_pseudo_moves(&mut self.position, true);
         for mv in moves {
-            if !target_move.matches_move(mv) {
+            if target_move != &mv {
                 continue;
             }
             // Found the move, try to play it
@@ -138,14 +147,18 @@ impl Engine {
         MakeMoveResult::IllegalMove
     }
     
-    pub fn make_move_str(&mut self, target_move: &str) -> MakeMoveResult {
-        let mv = MoveInfo::from_string(target_move);
-        self.make_move(&mv)
+    pub fn make_move_str(&mut self, target_move: &str) -> wrap_res!(MakeMoveResult) {
+        let mv = MoveInfo::try_from(target_move)?;
+        Ok(self.make_move(&mv))
     }
 
     /// Undoes the most recent move on the current board position
-    pub fn undo(&mut self) {
+    pub fn undo(&mut self) -> wrap_res!() {
+        if !self.position.can_unmake_move() {
+            return Err("There is no move to undo".to_string());
+        }
         self.position.unmake_move();
+        Ok(())
     }
     
     pub fn whos_turn(&self) -> Player {
@@ -161,26 +174,27 @@ impl Engine {
     }
     
     /// Returns the best move for the current position, along with the evaluation score
-    pub fn get_best_move(&mut self, depth: Depth) -> (MoveInfo, Centipawns) {
-        assert!(depth != 0, "Depth must be greater than 0");
-        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth);
-        assert!(search_depth == depth);
-        (MoveInfo::from_move(pv[0]), score)
+    pub fn get_best_move(&mut self, depth: Depth) -> wrap_res!(MoveInfo, Centipawns) {
+        err_assert!(depth != 0, "Depth must be greater than 0");
+        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth)?;
+        err_assert!(search_depth == depth, "Search depth ({search_depth}) != requested depth ({depth})");
+        Ok((pv[0].into(), score))
     }
 
     /// Returns the best move for the current position, along with the evaluation score and the search depth
-    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> (MoveInfo, Centipawns, Depth) {
-        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec);
-        (MoveInfo::from_move(pv[0]), score, search_depth)
+    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> wrap_res!(MoveInfo, Centipawns, Depth) {
+        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec)?;
+        Ok((pv[0].into(), score, search_depth))
     }
 
     /// Returns a list of all legal moves from the given square
     pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> Vec<MoveInfo>{
+        // TODO assert coordinates are in bounds
         let from = to_index(x,y);
         MoveGen::get_legal_moves(&mut self.position)
             .into_iter()
             .filter(|mv| mv.get_from() == from)
-            .map(MoveInfo::from_move)
+            .map(MoveInfo::from)
             .collect()
     }
 

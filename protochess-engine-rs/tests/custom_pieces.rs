@@ -8,7 +8,7 @@ mod custom_pieces {
 
     #[test]
     fn piece_factory_pawn() {
-        let dims = BDimensions::new_without_walls(8, 8);
+        let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
         let white_pawn = Piece::new(factory.make_pawn(123, true, vec![1, 2, 3]), 0, &dims);
         
@@ -46,7 +46,7 @@ mod custom_pieces {
     
     #[test]
     fn piece_factory_knight() {
-        let dims = BDimensions::new_without_walls(8, 8);
+        let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
         let knight = Piece::new(factory.make_knight(123), 0, &dims);
         
@@ -67,7 +67,7 @@ mod custom_pieces {
     
     #[test]
     fn piece_factory_bishop() {
-        let dims = BDimensions::new_without_walls(8, 8);
+        let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
         let bishop = Piece::new(factory.make_bishop(123), 0, &dims);
         
@@ -88,7 +88,7 @@ mod custom_pieces {
     
     #[test]
     fn piece_factory_rook() {
-        let dims = BDimensions::new_without_walls(8, 8);
+        let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
         let rook = Piece::new(factory.make_rook(123), 0, &dims);
         
@@ -109,7 +109,7 @@ mod custom_pieces {
     
     #[test]
     fn piece_factory_queen() {
-        let dims = BDimensions::new_without_walls(8, 8);
+        let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
         let queen = Piece::new(factory.make_queen(123), 0, &dims);
         
@@ -130,7 +130,7 @@ mod custom_pieces {
     
     #[test]
     fn piece_factory_king() {
-        let dims = BDimensions::new_without_walls(8, 8);
+        let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
         let king = Piece::new(factory.make_king(123), 0, &dims);
         

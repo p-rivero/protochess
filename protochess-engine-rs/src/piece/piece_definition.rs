@@ -96,10 +96,7 @@ impl PieceDefinition {
         self.can_slide_west() || self.can_slide_northwest() || self.can_slide_southwest()
     }
     pub fn can_promote(&self) -> bool {
-        let has_promotion_squares = !self.promotion_squares.is_empty();
-        let has_promo_vals = !self.promo_vals.is_empty();
-        assert!(has_promotion_squares == has_promo_vals);
-        has_promotion_squares
+        !self.promotion_squares.is_empty()
     }
     pub fn can_jump(&self) -> bool {
         !self.translate_jump_deltas.is_empty() || !self.attack_jump_deltas.is_empty()

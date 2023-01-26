@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use instant::{Instant, Duration};
 
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
-use crate::{Position, MoveGen};
+use crate::{Position, MoveGen, err_assert, wrap_res};
 
 mod alphabeta;
 mod transposition_table;
@@ -44,21 +44,21 @@ impl Searcher {
         }
     }
     
-    pub fn get_best_move(position: &Position, depth: Depth) -> (Vec<Move>, Centipawns, Depth) {
+    pub fn get_best_move(position: &Position, depth: Depth) -> wrap_res!(Vec<Move>, Centipawns, Depth) {
         // Create a new copy of the heuristics for each search
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
         Searcher::new(position).get_best_move_impl(depth, 1_000_000)
     }
 
-    pub fn get_best_move_timeout(position: &Position, time_sec: u64) -> (Vec<Move>, Centipawns, Depth) {
+    pub fn get_best_move_timeout(position: &Position, time_sec: u64) -> wrap_res!(Vec<Move>, Centipawns, Depth) {
         // Create a new copy of the heuristics for each search
         Searcher::new(position).get_best_move_impl(Depth::MAX, time_sec)
     }
     
     // Run for some time, then return the PV, the position score, and the depth
-    fn get_best_move_impl(&mut self, max_depth: Depth, time_sec: u64) -> (Vec<Move>, Centipawns, Depth) {
-        assert!(!self.pos.leader_is_captured(), "Attempting to get best move but leader is captured");
-        assert!(MoveGen::count_legal_moves(&mut self.pos) != 0, "Attempting to get best move but there are no legal moves");
+    fn get_best_move_impl(&mut self, max_depth: Depth, time_sec: u64) -> wrap_res!(Vec<Move>, Centipawns, Depth) {
+        err_assert!(!self.pos.leader_is_captured(), "Attempting to get best move but leader is captured");
+        err_assert!(MoveGen::count_legal_moves(&mut self.pos) != 0, "Attempting to get best move but there are no legal moves");
         
         // Limit the max depth to 127 to avoid overflow when doubling
         let max_depth = std::cmp::min(max_depth, 127);
@@ -116,6 +116,6 @@ impl Searcher {
                 break;
             }
         }
-        (pv, pv_score, pv_depth)
+        Ok((pv, pv_score, pv_depth))
     }
 }

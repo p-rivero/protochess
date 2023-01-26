@@ -1,7 +1,7 @@
 use std::ops;
 use impl_ops::*;
 
-use crate::utils::to_index;
+use crate::{utils::to_index, wrap_res, err_assert};
 
 
 pub type BIndex = u8; // 256 positions in 16x16 board
@@ -18,28 +18,28 @@ pub struct BDimensions {
 
 impl BDimensions {
     // Create a BDimensions object of a given width and height, with all squares valid
-    pub fn new_without_walls(width: BCoord, height: BCoord) -> BDimensions {
-        assert!(width <= 16 && height <= 16, "Board dimensions must be <= 16x16");
+    pub fn new_without_walls(width: BCoord, height: BCoord) -> wrap_res!(BDimensions) {
+        err_assert!(width <= 16 && height <= 16, "Board dimensions ({width}x{height}) must be <= 16x16");
         let mut bounds = Bitboard::zero();
         for x in 0..width {
             for y in 0..height {
                 bounds.set_bit_at(x, y);
             }
         }
-        BDimensions { width, height, bounds }
+        Ok(BDimensions { width, height, bounds })
     }
     // Given a list of valid squares (coordinates), return a BDimensions object
-    pub fn from_valid_squares(valid_squares: &Vec<(BCoord, BCoord)>) -> BDimensions {
+    pub fn from_valid_squares(valid_squares: &Vec<(BCoord, BCoord)>) -> wrap_res!(BDimensions) {
         let mut width = 0;
         let mut height = 0;
         let mut bounds = Bitboard::zero();
         for sq in valid_squares {
-            assert!(sq.0 < 16 && sq.1 < 16, "Board dimensions must be <= 16x16");
+            err_assert!(sq.0 < 16 && sq.1 < 16, "Board dimensions must be <= 16x16");
             if sq.0 >= width { width = sq.0 + 1; }
             if sq.1 >= height { height = sq.1 + 1; }
             bounds.set_bit_at(sq.0, sq.1);
         }
-        BDimensions{width, height, bounds}
+        Ok(BDimensions{width, height, bounds})
     }
     // Return true if the given coordinates are within the bounds of the board
     pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {

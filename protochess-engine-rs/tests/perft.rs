@@ -458,7 +458,7 @@ mod perft {
     }
     
     fn test_perft(fen: &str, results: Vec<u64>) {
-        let mut engine = Engine::from_fen(fen);
+        let mut engine = Engine::from_fen(fen).unwrap();
         for (i, result) in results.iter().enumerate() {
             let depth = i as u8 + 1;
             assert_eq!(engine.perft(depth), *result);

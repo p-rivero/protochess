@@ -1,10 +1,11 @@
 use std::fmt;
 
-use crate::{types::*, PieceDefinition};
+use crate::{types::*, PieceDefinition, err_assert, wrap_res, err};
 use crate::utils::{from_index, to_index};
 use crate::piece::{Piece, PieceId};
 
 mod position_properties;
+mod parse_fen;
 pub mod global_rules;
 pub mod game_state;
 pub mod piece_set;
@@ -51,12 +52,15 @@ impl Position {
     }
 
     /// Registers a new piece type for a given player in this position
-    pub fn register_piecetype(&mut self, definition: &PieceDefinition) {
+    pub fn register_piecetype(&mut self, definition: &PieceDefinition) -> wrap_res!() {
+        err_assert!(definition.promotion_squares.is_empty() == definition.promo_vals.is_empty(), 
+            "Promotion squares and pieces must be specified together");
         // Insert piece for all players specified in the definition
         for player in &definition.available_for {
-            assert!(*player < self.pieces.len() as Player, "Player {} does not exist", player);
-            self.pieces[*player as usize].register_piecetype(definition.clone(), &self.dimensions);
+            err_assert!(*player < self.pieces.len() as Player, "In piece definition, player {player} does not exist");
+            self.pieces[*player as usize].register_piecetype(definition.clone(), &self.dimensions)?;
         }
+        Ok(())
     }
 
 
@@ -287,6 +291,11 @@ impl Position {
         // Update occupied bbs for future calculations
         self.update_occupied();
     }
+    
+    pub fn can_unmake_move(&self) -> bool {
+        // We always have at least one move in the stack
+        self.properties_stack.len() > 1
+    }
 
     /// Return piece for (owner, x, y, char)
     pub fn pieces_as_tuples(&self) -> Vec<(Player, BCoord, BCoord, PieceId)>{
@@ -421,7 +430,13 @@ impl Position {
 
     
     /// Public interface for modifying the position
-    pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex, can_castle: bool) {
+    pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex, can_castle: bool) -> wrap_res!() {
+        err_assert!((owner as usize) < self.pieces.len(), 
+            "Attempted to add piece {piece_type} to invalid player {owner}");
+        err_assert!(self.pieces[owner as usize].contains_piece(piece_type), 
+            "Attempted to add piece with ID={piece_type}, which doesn't exist for player {owner}");
+        err_assert!(!self.pieces[owner as usize].index_has_piece(index), 
+            "Attempted to add piece {piece_type} to square that was already occupied: {index}");
         let mut zob = self.get_zobrist();
         self.pieces[owner as usize].add_piece(piece_type, index, can_castle);
         let piece = self.player_piece_at(owner, index).unwrap();
@@ -433,13 +448,15 @@ impl Position {
         self.update_occupied();
         let stack_len = self.properties_stack.len();
         self.properties_stack[stack_len - 1].zobrist_key = zob;
+        Ok(())
     }
 
     /// Removes a piece from the position, assuming the piece is there
-    pub fn public_remove_piece(&mut self, index: BIndex) {
+    pub fn public_remove_piece(&mut self, index: BIndex) -> wrap_res!() {
         let owner = {
             if self.pieces[0].index_has_piece(index) { 0 }
-            else { 1 }
+            else if self.pieces[1].index_has_piece(index) { 1 }
+            else { err!("Attempted to remove piece from square that was empty") }
         };
         let mut zob = self.get_zobrist();
         let piece = self.piece_at_mut(index).unwrap();
@@ -454,6 +471,7 @@ impl Position {
         self.update_occupied();
         let stack_len = self.properties_stack.len();
         self.properties_stack[stack_len - 1].zobrist_key = zob;
+        Ok(())
     }
     
     /// Returns true if any of the pieces on the board is on a winning square

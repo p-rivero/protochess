@@ -8,6 +8,8 @@ pub use bitboard::*;
 pub use chess_move::*;
 pub use searcher::*;
 
+use crate::{wrap_res, err};
+
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,8 +26,8 @@ pub enum GameMode {
 }
 
 impl TryFrom<&str> for GameMode {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    type Error = String;
+    fn try_from(value: &str) -> wrap_res!(Self) {
         match value.to_ascii_lowercase().as_str() {
             "standard" => Ok(GameMode::Standard),
             "atomic" => Ok(GameMode::Atomic),
@@ -35,7 +37,7 @@ impl TryFrom<&str> for GameMode {
             "racingkings" => Ok(GameMode::RacingKings),
             "3check" => Ok(GameMode::ThreeCheck),
             "5check" => Ok(GameMode::FiveCheck),
-            _ => Err("Invalid game mode"),
+            _ => err!("Invalid game mode '{}'", value),
         }
     }
 }

@@ -1,6 +1,11 @@
+use std::convert::TryFrom;
 use std::fmt;
+use regex::Regex;
+use scan_fmt::scan_fmt;
+
 use crate::piece::PieceId;
 use crate::utils::{to_rank_file, from_index};
+use crate::{wrap_res, err_assert, err};
 
 use super::{BCoord, BIndex};
 
@@ -146,8 +151,8 @@ pub struct MoveInfo {
     pub promotion: Option<PieceId>,
 }
 
-impl MoveInfo {
-    pub fn from_move(m: Move) -> MoveInfo {
+impl From<Move> for MoveInfo {
+    fn from(m: Move) -> Self {
         let from = from_index(m.get_from());
         let to = {
             if m.is_castling() {
@@ -159,30 +164,39 @@ impl MoveInfo {
         };
         MoveInfo { from, to, promotion: m.get_promotion_piece() }
     }
-    
-    // Create a MoveInfo from a string like "e2e4" or "e7e8=123" (promotion to piece with id 123)
-    pub fn from_string(s: &str) -> MoveInfo {
-        let mut chars = s.chars();
-        let from_x = chars.next().unwrap() as u8 - b'a';
-        let from_y = chars.next().unwrap() as u8 - b'1';
-        let to_x = chars.next().unwrap() as u8 - b'a';
-        let to_y = chars.next().unwrap() as u8 - b'1';
-        let promotion = {
-            if chars.next() == Some('=') {
-                let id = chars.as_str().parse::<PieceId>().unwrap();
-                Some(id)
-            } else {
-                None
-            }
+}
+
+// Create a MoveInfo from a string like "e2e4" or "e7e8=123" (promotion to piece with id 123)
+impl TryFrom<&str> for MoveInfo {
+    type Error = String;
+    fn try_from(s: &str) -> wrap_res!(Self) {
+        const EXPECTED_REGEX: &str = r"^[a-p][0-9]+[a-p][0-9]+(=[0-9]+)?$";
+        let s = s.trim();
+        err_assert!(Regex::new(EXPECTED_REGEX).unwrap().is_match(s), "Invalid move format: '{s}' (expected 'e2e4', 'e7e8=123')");
+        let (from_x, from_y, to_x, to_y) = match scan_fmt!(s, "{[a-p]}{d}{[a-p]}{d}", char, isize, char, isize) {
+            Ok(parts) => parts,
+            Err(_) => err!("Invalid move format: '{s}'"),
         };
-        MoveInfo {
-            from: (from_x, from_y),
-            to: (to_x, to_y),
-            promotion
-        }
+        let promotion = match scan_fmt!(s, "{*[a-p]}{*d}{*[a-p]}{*d}={d}", PieceId) {
+            Ok(promo) => Some(promo),
+            Err(_) => None,
+        };
+        // from_x, to_x are guaranteed to be between 'a' and 'p' (inclusive)
+        let from_x = from_x.to_digit(36).unwrap() as BCoord - 10;
+        let to_x = to_x.to_digit(36).unwrap() as BCoord - 10;
+        // Ranks are 1-indexed
+        err_assert!(from_y <= 0 || to_y <= 0 || from_y > 16 || to_y > 16,
+            "Invalid move format (rank must be between 1 and 16");
+        Ok(MoveInfo {
+            from: (from_x, from_y as BCoord - 1),
+            to: (to_x, to_y as BCoord - 1),
+            promotion,
+        })
     }
-    
-    pub fn matches_move(&self, m: Move) -> bool {
-        self == &MoveInfo::from_move(m)
+}
+
+impl PartialEq<Move> for MoveInfo {
+    fn eq(&self, other: &Move) -> bool {
+        self == &MoveInfo::from(*other)
     }
 }

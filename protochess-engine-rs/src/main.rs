@@ -33,7 +33,7 @@ pub fn main() {
         if args.len() > 2 && args[2] != "default" {
             let fen = &args[2];
             print_pgn_header(fen, &mut pgn_file);
-            Engine::from_fen(fen)
+            Engine::from_fen(fen).unwrap()
         } else {
             Engine::default()
         }
@@ -49,14 +49,16 @@ pub fn main() {
     
     println!("Start Position:\n{}", engine);
     println!("\n----------------------------------------\n");
+    
+    engine.remove_piece(123, 2).unwrap();
 
     let start = instant::Instant::now();
     for ply in 0..max_ply {
         let mv = {
             if fixed_depth {
-                engine.get_best_move(depth).0
+                engine.get_best_move(depth).unwrap().0
             } else {
-                engine.get_best_move_timeout(depth as u64).0
+                engine.get_best_move_timeout(depth as u64).unwrap().0
             }
         };
         println!("\n========================================\n");

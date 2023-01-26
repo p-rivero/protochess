@@ -1,12 +1,14 @@
 #[cfg(test)]
 mod position_test {
+    use std::convert::TryFrom;
+
     use protochess_engine_rs::{Position, GameState};
     use protochess_engine_rs::types::Move;
     
     
     #[test]
     fn pieces_tiles_as_tuples() {
-        let pos = Position::from(GameState::default());
+        let pos = Position::try_from(GameState::default()).unwrap();
         let pieces = pos.pieces_as_tuples();
         assert!(pieces.len() == 32);
         let mut white_pieces = 0;
@@ -41,7 +43,7 @@ mod position_test {
 
     #[test]
     fn null_move_eq() {
-        let mut pos = Position::from(GameState::default());
+        let mut pos = Position::try_from(GameState::default()).unwrap();
         //let movegen = MoveGenerator::new();
         let zob_0 = pos.get_zobrist();
         pos.make_move(Move::null());

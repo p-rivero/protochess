@@ -79,19 +79,18 @@ async function updateBoard(result, winner) {
     boardStatus.innerHTML = ' '
   }
 }
+function clearErrors() {
+  manualMoveError.innerHTML = ''
+  engineMoveError.innerHTML = ''
+  fenError.innerHTML = ''
+}
 
 
 // BUTTON CLICK HANDLERS
 
 async function manualMoveButtonClick() {
-  // Clear error message
-  manualMoveError.innerHTML = ''
+  clearErrors()
   try {
-    // Basic input validation (this is just a simple example)
-    const move = manualMoveInput.value
-    if (move === '' || !move[0].match(/[a-h]/i) || !move[1].match(/[1-8]/i) || !move[2].match(/[a-h]/i) || !move[3].match(/[1-8]/i)) {
-      throw 'Invalid move format'
-    }
     // Attempt to make the move
     const {result, winner_player} = await protochess.make_move_str(manualMoveInput.value)
     if (result === 'IllegalMove') {
@@ -104,8 +103,7 @@ async function manualMoveButtonClick() {
 }
 
 async function engineMoveButtonClick() {
-  // Clear error message
-  engineMoveError.innerHTML = ''
+  clearErrors()
   engineDepth.innerHTML = 'Searching...'
   try {
     // Attempt to convert the input to a number
@@ -119,7 +117,7 @@ async function engineMoveButtonClick() {
     // Get the engine to make a move
     const {make_move_result, depth} = await protochess.play_best_move_timeout(timeout)
     const {result, winner_player} = make_move_result
-    updateBoard(result, winner_player)
+    await updateBoard(result, winner_player)
     engineDepth.innerHTML = 'Done! Search depth: ' + depth
   } catch (e) {
     engineMoveError.innerHTML = e
@@ -127,8 +125,7 @@ async function engineMoveButtonClick() {
 }
 
 async function fenButtonClick() {
-  // Clear error message
-  fenError.innerHTML = ''
+  clearErrors()
   try {
     // Attempt to set the FEN
     await protochess.load_fen(fenInput.value)

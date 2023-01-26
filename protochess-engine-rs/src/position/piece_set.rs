@@ -1,6 +1,6 @@
 use std::slice::{Iter, IterMut};
 
-use crate::PieceDefinition;
+use crate::{PieceDefinition, wrap_res, err_assert};
 //Pieces that a player has
 use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns, BCoord};
 use crate::piece::{Piece, PieceId};
@@ -38,20 +38,24 @@ impl PieceSet {
         }
     }
     
-    pub fn register_piecetype(&mut self, definition: PieceDefinition, dims: &BDimensions) {
+    pub fn register_piecetype(&mut self, definition: PieceDefinition, dims: &BDimensions) -> wrap_res!() {
         // Update the inverse movement pattern
         self.update_inverse_attack(&definition, dims);
-        
         if definition.is_leader {
-            assert!(self.leader_piece_index == -1, "Only one leader piece per player");
+            err_assert!(self.leader_piece_index == -1, "Cannot have more than one leader piece per player");
             self.leader_piece_index = self.pieces.len() as isize;
         }
         for p in &self.pieces {
-            assert!(p.get_piece_id() != definition.id, "There is already a piece with this id");
+            err_assert!(p.get_piece_id() != definition.id, "There is already a piece the id {}", definition.id);
         }
         
         let piece = Piece::new(definition, self.player_num, dims);
         self.pieces.push(piece);
+        Ok(())
+    }
+    
+    pub fn contains_piece(&self, piece_id: PieceId) -> bool {
+        self.pieces.iter().any(|p| p.get_piece_id() == piece_id)
     }
     
     pub fn iter(&self) -> Iter<Piece> {
