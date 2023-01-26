@@ -37,7 +37,7 @@ impl TryFrom<&str> for GameMode {
             "racingkings" => Ok(GameMode::RacingKings),
             "3check" => Ok(GameMode::ThreeCheck),
             "5check" => Ok(GameMode::FiveCheck),
-            _ => err!("Invalid game mode '{}'", value),
+            _ => err!("Invalid game mode '{value}'"),
         }
     }
 }

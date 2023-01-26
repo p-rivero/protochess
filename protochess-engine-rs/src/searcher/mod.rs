@@ -98,10 +98,10 @@ impl Searcher {
                             format!("cp {:<4}", score)
                         }
                     };
-                    println!("Depth {:<2} Score: {} [nodes: {}]", search_depth, score_str, self.nodes_searched);
+                    println!("Depth {search_depth:<2} Score: {score_str} [nodes: {}]", self.nodes_searched);
                     print!("  PV: ");
                     for m in &pv {
-                        print!("{} ", m);
+                        print!("{m} ");
                     }
                     println!();
                 },

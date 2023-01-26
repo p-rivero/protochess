@@ -290,7 +290,7 @@ mod zobrist_test {
             if castling.is_empty() {
                 castling.push('-');
             }
-            let fen = format!("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w {} - 0 1", castling);
+            let fen = format!("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w {castling} - 0 1");
             let engine = Engine::from_fen(&fen).unwrap();
             zobrist.push(engine.get_zobrist());
         }

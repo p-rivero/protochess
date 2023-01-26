@@ -47,11 +47,9 @@ pub fn main() {
         }
     }
     
-    println!("Start Position:\n{}", engine);
+    println!("Start Position:\n{engine}");
     println!("\n----------------------------------------\n");
     
-    engine.remove_piece(123, 2).unwrap();
-
     let start = instant::Instant::now();
     for ply in 0..max_ply {
         let mv = {
@@ -63,10 +61,10 @@ pub fn main() {
         };
         println!("\n========================================\n");
         println!("(Time since start: {:?})", start.elapsed());
-        println!("PLY: {} Engine plays: \n", ply);
+        println!("PLY: {ply} Engine plays:\n");
         print_pgn(&mut pgn_file, ply, &to_long_algebraic_notation(&mv, &engine));
         let result = engine.make_move(&mv);
-        println!("{}\n", engine);
+        println!("{engine}\n");
         match result {
             MakeMoveResult::Ok => {
                 println!("----------------------------------------\n");
@@ -133,7 +131,7 @@ pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
     
     if let Some(prom) = mv.promotion {
         let prom_char = engine.get_piece_char(prom).unwrap().to_ascii_uppercase();
-        return format!("{}={}", move_string, prom_char);
+        return format!("{move_string}={prom_char}");
     }
     
     let piece_id = engine.get_piece_at(mv.from).unwrap();
@@ -143,7 +141,7 @@ pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
             move_string
         } else {
             // If the piece is not a pawn, write the piece letter
-            format!("{}{}", piece_char, move_string)
+            format!("{piece_char}{move_string}")
         }
     };
     

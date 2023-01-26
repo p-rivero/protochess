@@ -61,7 +61,7 @@ pub fn perft_divide(position: &mut Position, depth: Depth) -> u64 {
     }
     printing.sort();
     for s in printing {
-        println!("{}",s);
+        println!("{s}");
     }
     nodes
 }
