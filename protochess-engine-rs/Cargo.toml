@@ -32,7 +32,6 @@ parallel = [ "rayon" ]
 instant = { version = "0.1", features = [ "now" ] }
 rayon = { version = "1.6.1", optional = true }
 rand = "0.7.3"
-arrayvec = "0.5.1"
 numext-fixed-uint = "0.1.4"
 ahash = "0.3.5"
 lazy_static = "1.4.0"

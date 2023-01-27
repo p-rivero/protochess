@@ -38,19 +38,22 @@ pub enum MakeMoveResult {
 /// Starting point for the engine
 #[derive(Debug, Clone)]
 pub struct Engine{
-    pub position: Position,
+    position: Position,
+    num_threads: u32,
 }
 
 impl Engine {
     /// Initializes a new engine
     pub fn default() -> Engine {
         let position = Position::try_from(GameState::default()).unwrap();
-        Engine{ position }
+        let num_threads = Self::get_max_threads();
+        Engine{ position, num_threads }
     }
     pub fn from_fen(fen: &str) -> wrap_res!(Engine) {
         let state = GameState::from_fen(fen)?;
         let position = Position::try_from(state)?;
-        Ok(Engine{ position })
+        let num_threads = Self::get_max_threads();
+        Ok(Engine{ position, num_threads })
     }
 
     pub fn set_state(&mut self, state: GameState) -> wrap_res!() {
@@ -176,14 +179,14 @@ impl Engine {
     /// Returns the best move for the current position, along with the evaluation score
     pub fn get_best_move(&mut self, depth: Depth) -> wrap_res!(MoveInfo, Centipawns) {
         err_assert!(depth != 0, "Depth must be greater than 0");
-        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth)?;
+        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth, self.num_threads)?;
         err_assert!(search_depth == depth, "Search depth ({search_depth}) != requested depth ({depth})");
         Ok((pv[0].into(), score))
     }
 
     /// Returns the best move for the current position, along with the evaluation score and the search depth
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> wrap_res!(MoveInfo, Centipawns, Depth) {
-        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec)?;
+        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec, self.num_threads)?;
         Ok((pv[0].into(), score, search_depth))
     }
 
@@ -212,6 +215,33 @@ impl Engine {
     }
     pub fn perft_divide(&mut self, depth: Depth) -> u64 {
         utils::perft::perft_divide(&mut self.position, depth)
+    }
+    
+    
+    /// Returns the number of threads that can be used for multithreaded operations.
+    /// This corresponds to the size of the global thread pool, which by default is the number of logical cores.
+    /// Set the `RAYON_NUM_THREADS` environment variable to change the thread pool size.
+    /// 
+    /// When compiled to WASM, you must first call `wasm_module.initThreadPool(navigator.hardwareConcurrency)`
+    /// from JavaScript (see `protochess-engine-wasm/example-js/wasm-worker.js`).
+    pub fn get_max_threads() -> u32 {
+        #[cfg(not(feature = "parallel"))] {
+            1
+        }
+        #[cfg(feature = "parallel")] {
+            // Return the size of the global thread pool
+            rayon::current_num_threads() as u32
+        }
+    }
+    /// Sets the number of threads to use. This does not resize the global thread pool,
+    /// but rather changes the number of tasks that will be submitted to the pool.
+    /// By default, all available threads are used (see `get_max_threads()`).
+    pub fn set_num_threads(&mut self, num_threads: u32) -> wrap_res!() {
+        if num_threads > Self::get_max_threads() {
+            return Err(format!("The maximum number of threads is {}", Self::get_max_threads()));
+        }
+        self.num_threads = num_threads;
+        Ok(())
     }
 }
 

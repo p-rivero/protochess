@@ -14,7 +14,7 @@ impl Searcher {
     /// Populates the principal variation vector and returns the score of the position.
     /// # Errors
     /// Returns `Err(SearchTimeout)` if the search timed out.
-    pub fn search(&mut self, depth: Depth) -> Result<Centipawns, SearchTimeout> {
+    pub fn start_alphabeta(&mut self, depth: Depth) -> Result<Centipawns, SearchTimeout> {
         // Use -MAX instead of MIN to avoid overflow when negating
         self.alphabeta::<true>(depth, depth, 0, -Centipawns::MAX, Centipawns::MAX, true)
     }

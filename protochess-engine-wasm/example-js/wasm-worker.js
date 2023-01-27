@@ -10,6 +10,7 @@ async function initWasm() {
   if (supportsThreads) {
     const multiThread = await import('../pkg-parallel/' + BINARY + '.js');
     await multiThread.default();
+    // Initialize the thread pool with the number of logical cores
     await multiThread.initThreadPool(navigator.hardwareConcurrency);
     wasmObject = await new multiThread[OBJECT_NAME]();
   } else {

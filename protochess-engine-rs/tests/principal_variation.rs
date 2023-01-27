@@ -98,7 +98,7 @@ mod principal_variation {
     fn test_pv(fen: &str, depth: u8) {
         let gs = GameState::from_fen(fen).unwrap();
         let mut pos = Position::try_from(gs).unwrap();
-        let (pv, _score, search_depth) = Searcher::get_best_move(&pos, depth).unwrap();
+        let (pv, _score, search_depth) = Searcher::get_best_move(&pos, depth, 1).unwrap();
         assert!(search_depth == depth);
         // Make sure that the moves in the PV legal
         for m in pv {

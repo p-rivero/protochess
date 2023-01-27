@@ -1,5 +1,10 @@
 use std::collections::BTreeSet;
 
+#[cfg(feature = "parallel")]
+use std::sync::{Arc, Mutex};
+#[cfg(feature = "parallel")]
+use std::sync::atomic::{Ordering, AtomicBool, AtomicU8};
+
 use instant::{Instant, Duration};
 
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
@@ -27,12 +32,25 @@ pub struct Searcher {
     end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
     known_checks: BTreeSet<u64>,
+    
+    // Attributes for parallel search
+    #[cfg(feature = "parallel")]
+    thread_num: u32,
+    #[cfg(feature = "parallel")]
+    stop_flag: Arc<AtomicBool>,
+    #[cfg(feature = "parallel")]
+    current_searched_depth: Arc<AtomicU8>,
 }
 
+type SearchRes = wrap_res!(Vec<Move>, Centipawns, Depth);
+
 impl Searcher {
-    fn new(position: &Position) -> Searcher {
-        Searcher{
-            pos: position.clone(),
+    fn new(position: &Position) -> wrap_res!(Searcher) {
+        let mut pos = position.clone();
+        err_assert!(!pos.leader_is_captured(), "Attempting to get best move but leader is captured");
+        err_assert!(MoveGen::count_legal_moves(&mut pos) != 0, "Attempting to get best move but there are no legal moves");
+        Ok(Searcher{
+            pos,
             killer_moves: [[Move::null(); 2];64],
             history_moves: [[0;256];256],
             transposition_table: TranspositionTable::new(),
@@ -41,39 +59,117 @@ impl Searcher {
             end_time: Instant::now(),
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
             known_checks: BTreeSet::new(),
-        }
+            
+            #[cfg(feature = "parallel")]
+            thread_num: 0,
+            #[cfg(feature = "parallel")]
+            stop_flag: Default::default(),
+            #[cfg(feature = "parallel")]
+            current_searched_depth: Default::default(),
+        })
     }
     
-    pub fn get_best_move(position: &Position, depth: Depth) -> wrap_res!(Vec<Move>, Centipawns, Depth) {
+    pub fn get_best_move(position: &Position, depth: Depth, num_threads: u32) -> SearchRes {
         // Create a new copy of the heuristics for each search
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
-        Searcher::new(position).get_best_move_impl(depth, 1_000_000)
+        Searcher::get_best_move_impl(position, depth, 1_000_000, num_threads)
     }
 
-    pub fn get_best_move_timeout(position: &Position, time_sec: u64) -> wrap_res!(Vec<Move>, Centipawns, Depth) {
+    pub fn get_best_move_timeout(position: &Position, time_sec: u64, num_threads: u32) -> SearchRes {
         // Create a new copy of the heuristics for each search
-        Searcher::new(position).get_best_move_impl(Depth::MAX, time_sec)
+        Searcher::get_best_move_impl(position, Depth::MAX, time_sec, num_threads)
     }
     
     // Run for some time, then return the PV, the position score, and the depth
-    fn get_best_move_impl(&mut self, max_depth: Depth, time_sec: u64) -> wrap_res!(Vec<Move>, Centipawns, Depth) {
-        err_assert!(!self.pos.leader_is_captured(), "Attempting to get best move but leader is captured");
-        err_assert!(MoveGen::count_legal_moves(&mut self.pos) != 0, "Attempting to get best move but there are no legal moves");
-        
+    fn get_best_move_impl(position: &Position, max_depth: Depth, time_sec: u64, num_threads: u32) -> SearchRes {
         // Limit the max depth to 127 to avoid overflow when doubling
         let max_depth = std::cmp::min(max_depth, 127);
+        if num_threads == 1 {
+            Searcher::new(position)?.search(max_depth, time_sec)
+        } else {
+            #[cfg(not(feature = "parallel"))] {
+                crate::err!("Cannot use multiple threads without the 'parallel' feature");
+            }
+            #[cfg(feature = "parallel")] {
+                Self::search_multi_thread(position, max_depth, time_sec, num_threads)
+            }
+        }
+    }
+    
+    #[cfg(feature = "parallel")]
+    fn search_multi_thread(position: &Position, max_depth: Depth, time_sec: u64, num_threads: u32) -> SearchRes {
+        // Arc pointer to a vector of results
+        let res = vec![Default::default(); num_threads as usize];
+        let results_arc = Arc::new(Mutex::new(res));
+        // Arc pointers to global search state
+        let stop_arc = Arc::new(AtomicBool::new(false));
+        let depth_arc = Arc::new(AtomicU8::new(0));
+        rayon::scope(|scope| {
+            for thread_num in 0..num_threads {
+                // Clone the pointers on each iteration
+                let results_arc = results_arc.clone();
+                let stop_arc = stop_arc.clone();
+                let depth_arc = depth_arc.clone();
+                // Spawn a new task in the thread pool, take ownership of the pointers
+                scope.spawn(move |_scope| {
+                    // Create a new searcher (with cloned position) for each thread
+                    let mut searcher = Searcher::new(position).unwrap();
+                    searcher.thread_num = thread_num;
+                    searcher.stop_flag = stop_arc;
+                    searcher.current_searched_depth = depth_arc;
+                    let thread_result = searcher.search(max_depth, time_sec).unwrap();
+                    // When the thread is done, store the result in the results vector
+                    let mut results_vec = results_arc.lock().unwrap();
+                    results_vec[thread_num as usize] = thread_result;
+                });
+            }
+        });
+        let mut best_pv = Vec::new();
+        let mut best_score = -Centipawns::MAX;
+        let mut best_depth = 0;
+        // Consume the results vector, return the best result (prefer higher depth, then higher score)
+        let results_mutex = Arc::try_unwrap(results_arc).expect("Arc still has owners");
+        let results_vec = results_mutex.into_inner().expect("Mutex is poisoned");
+        for (pv, score, depth) in results_vec.into_iter() {
+            if depth > best_depth || (depth == best_depth && score > best_score) {
+                best_score = score;
+                best_depth = depth;
+                best_pv = pv;
+            }
+        }
+        Ok((best_pv, best_score, best_depth))
+    }
+    
+    fn search(&mut self, max_depth: Depth, time_sec: u64) -> SearchRes {
         let mut pv = Vec::with_capacity(max_depth as usize);
-        let mut pv_depth: Depth = 0;
         let mut pv_score: Centipawns = 0;
+        let mut pv_depth: Depth = 0;
         self.known_checks.clear();
         self.end_time = Instant::now() + Duration::from_secs(time_sec);
         
-        // Iterative deepening
-        for search_depth in 1..=max_depth {
+        let mut search_depth;
+        #[cfg(not(feature = "parallel"))] {
+            search_depth = 1; // In single-threaded search, start at depth 1
+        }
+        // When using multiple threads, start threads at different depths
+        #[cfg(feature = "parallel")] {
+            search_depth = self.thread_num.trailing_ones() as Depth + 1;
+            // Limit the depth to the max depth
+            search_depth = std::cmp::min(search_depth, max_depth);
+            // If another thread has already searched this depth, skip it
+            search_depth = std::cmp::max(search_depth, self.current_searched_depth.load(Ordering::Relaxed));
+        }
+        
+        // Iterative deepening search
+        loop {
             self.nodes_searched = 0;
             self.max_searching_depth = 2 * search_depth;
-            match self.search(search_depth) {
+            match self.start_alphabeta(search_depth) {
                 Ok(score) => {
+                    // Update the current searched depth
+                    #[cfg(feature = "parallel")] {
+                        self.current_searched_depth.fetch_max(search_depth, Ordering::Relaxed);
+                    }
                     pv.clear();
                     // Copy the pv into a vector
                     for mv in self.principal_variation {
@@ -98,6 +194,9 @@ impl Searcher {
                             format!("cp {:<4}", score)
                         }
                     };
+                    #[cfg(feature = "parallel")] {
+                        print!("T{:<2} ", self.thread_num);
+                    }
                     println!("Depth {search_depth:<2} Score: {score_str} [nodes: {}]", self.nodes_searched);
                     print!("  PV: ");
                     for m in &pv {
@@ -111,9 +210,28 @@ impl Searcher {
                 },
             }
 
-            if Instant::now() >= self.end_time {
+            #[cfg(feature = "parallel")]
+            if self.stop_flag.load(Ordering::Relaxed) {
+                // Stop flag set, return the best move found so far
+                break;
+            }
+            
+            if Instant::now() >= self.end_time || search_depth == max_depth {
+                // Set stop flag to stop other threads
+                #[cfg(feature = "parallel")] {
+                    self.stop_flag.store(true, Ordering::Relaxed);
+                }
                 // Return the best move found so far
                 break;
+            }
+            
+            #[cfg(not(feature = "parallel"))] {
+                search_depth += 1;
+            }
+            #[cfg(feature = "parallel")] {
+                // TODO: Variable increment? (If num_threads == 1, increment by 1)
+                let next_depth = self.current_searched_depth.load(Ordering::Relaxed) + 1;
+                search_depth = std::cmp::min(next_depth, max_depth);
             }
         }
         Ok((pv, pv_score, pv_depth))

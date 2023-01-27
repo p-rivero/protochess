@@ -101,4 +101,11 @@ impl Protochess {
         let moves: SerVec<MoveInfoSer> = self.engine.moves_from(x, y)?.into();
         Ok(to_value(&moves).unwrap())
     }
+    
+    pub fn get_max_threads(&self) -> u32 {
+        Engine::get_max_threads()
+    }
+    pub fn set_num_threads(&mut self, num_threads: u32) -> Result<(), String> {
+        self.engine.set_num_threads(num_threads)
+    }
 }
