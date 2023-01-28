@@ -43,12 +43,7 @@ pub struct Engine{
 }
 
 impl Engine {
-    /// Initializes a new engine
-    pub fn default() -> Engine {
-        let position = Position::try_from(GameState::default()).unwrap();
-        let num_threads = Self::get_max_threads();
-        Engine{ position, num_threads }
-    }
+    /// Initializes a new engine from a given fen string
     pub fn from_fen(fen: &str) -> wrap_res!(Engine) {
         let state = GameState::from_fen(fen)?;
         let position = Position::try_from(state)?;
@@ -178,16 +173,25 @@ impl Engine {
     
     /// Returns the best move for the current position, along with the evaluation score
     pub fn get_best_move(&mut self, depth: Depth) -> wrap_res!(MoveInfo, Centipawns) {
+        self.assert_position_is_valid()?;
         err_assert!(depth != 0, "Depth must be greater than 0");
-        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth, self.num_threads)?;
+        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth, self.num_threads);
         err_assert!(search_depth == depth, "Search depth ({search_depth}) != requested depth ({depth})");
+        err_assert!(pv.len() > 0, "No moves found");
         Ok((pv[0].into(), score))
     }
 
     /// Returns the best move for the current position, along with the evaluation score and the search depth
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> wrap_res!(MoveInfo, Centipawns, Depth) {
-        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec, self.num_threads)?;
+        self.assert_position_is_valid()?;
+        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec, self.num_threads);
+        err_assert!(pv.len() > 0, "No moves found");
         Ok((pv[0].into(), score, search_depth))
+    }
+    fn assert_position_is_valid(&mut self) -> wrap_res!() {
+        err_assert!(!self.position.leader_is_captured(), "Attempting to get best move but leader is captured");
+        err_assert!(MoveGen::count_legal_moves(&mut self.position) != 0, "Attempting to get best move but there are no legal moves");
+        Ok(())
     }
 
     /// Returns a list of all legal moves from the given square
@@ -251,3 +255,10 @@ impl std::fmt::Display for Engine {
     }
 }
 
+impl Default for Engine {
+    fn default() -> Self {
+        let position = Position::try_from(GameState::default()).unwrap();
+        let num_threads = Self::get_max_threads();
+        Engine{ position, num_threads }
+    }
+}
