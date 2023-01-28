@@ -1,5 +1,8 @@
 use instant::Instant;
 
+#[cfg(feature = "parallel")]
+use std::sync::atomic::Ordering;
+
 use crate::MoveGen;
 use crate::types::{Move, Depth, Centipawns, SearchTimeout};
 
@@ -93,11 +96,7 @@ impl Searcher {
             return Ok(quiesce_score); 
         }
         
-        self.nodes_searched += 1;
-        // Check for timeout periodically
-        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= self.end_time {
-            return Err(SearchTimeout);
-        }
+        self.increment_num_nodes()?;
 
         // Null move pruning
         if  !IS_PV && depth > 3 && // Don't skip a turn in PV nodes or close to the leaves
@@ -246,13 +245,8 @@ impl Searcher {
         if self.pos.leader_is_captured() {
             return Ok(self.checkmate_score(pv_index));
         }
-        
-        self.nodes_searched += 1;
-        // Check for timeout periodically
-        if self.nodes_searched.trailing_zeros() >= 20 && Instant::now() >= self.end_time {
-            return Err(SearchTimeout);
-        }
-        
+        self.increment_num_nodes()?;
+
         let score = eval::evaluate(&self.pos);
         
         if score >= beta {
@@ -286,6 +280,25 @@ impl Searcher {
     fn zobrist(&self) -> u64 {
         self.pos.get_zobrist()
     } 
+    
+    #[inline]
+    fn increment_num_nodes(&mut self) -> Result<(), SearchTimeout> {
+        self.nodes_searched += 1;
+        // Check for timeout periodically
+        if self.nodes_searched.trailing_zeros() >= 20 {
+            #[cfg(feature = "parallel")]
+            if self.stop_flag.load(Ordering::Relaxed) {
+                return Err(SearchTimeout);
+            }
+            if Instant::now() >= self.end_time {
+                // Signal other threads to stop
+                #[cfg(feature = "parallel")]
+                self.stop_flag.store(true, Ordering::Relaxed);
+                return Err(SearchTimeout);
+            }
+        }
+        Ok(())
+    }
     
     #[inline]
     // Check for instant game over conditions (does not check for checkmate or stalemate)

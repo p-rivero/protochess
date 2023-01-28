@@ -185,7 +185,7 @@ impl TryFrom<&str> for MoveInfo {
         let from_x = from_x.to_digit(36).unwrap() as BCoord - 10;
         let to_x = to_x.to_digit(36).unwrap() as BCoord - 10;
         // Ranks are 1-indexed
-        err_assert!(from_y <= 0 || to_y <= 0 || from_y > 16 || to_y > 16,
+        err_assert!(from_y > 0 && to_y > 0 && from_y <= 16 && to_y <= 16,
             "Invalid move format (rank must be between 1 and 16");
         Ok(MoveInfo {
             from: (from_x, from_y as BCoord - 1),
