@@ -4,7 +4,7 @@ use instant::Instant;
 use std::sync::atomic::Ordering;
 
 use crate::MoveGen;
-use crate::types::{Move, Depth, Centipawns, SearchTimeout};
+use crate::types::{Move, Depth, Centipawns, SearchTimeout, ZobKey};
 
 use super::Searcher;
 use super::eval;
@@ -277,7 +277,7 @@ impl Searcher {
     }
     
     #[inline]
-    fn zobrist(&self) -> u64 {
+    fn zobrist(&self) -> ZobKey {
         self.pos.get_zobrist()
     } 
     

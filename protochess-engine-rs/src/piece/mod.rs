@@ -32,7 +32,7 @@ pub struct Piece {
     //Player num for the owner of this piece
     player_num: Player,
     // Zobrist hashes for this piece at each board index
-    zobrist_hashes: Vec<u64>,
+    zobrist_hashes: Vec<ZobKey>,
     
     // Material score for this piece
     material_score: Centipawns,
@@ -142,12 +142,12 @@ impl Piece {
     }
     
     // Get the zobrist hash for this piece at the given index
-    pub fn get_zobrist(&self, index: BIndex) -> u64 {
+    pub fn get_zobrist(&self, index: BIndex) -> ZobKey {
         self.zobrist_hashes[index as usize]
     }
     
     // Get the zobrist hash for the castling right of this piece at the given index
-    pub fn get_castle_zobrist(&self, index: BIndex) -> u64 {
+    pub fn get_castle_zobrist(&self, index: BIndex) -> ZobKey {
         // This could be implemented with a separate random array, but this is simpler
         self.zobrist_hashes[index as usize] >> 1
     }
@@ -287,14 +287,14 @@ impl Piece {
         &self.precomp.explosion_bitboards[index as usize]
     }
     
-    fn random_zobrist(piece_id: u32, player: Player) -> Vec<u64> {
+    fn random_zobrist(piece_id: u32, player: Player) -> Vec<ZobKey> {
         // Generate a predictable seed for the rng
         let seed = (player as u64) << 32 | (piece_id as u64);
         let mut rng = StdRng::seed_from_u64(seed);
         
         let mut zobrist = Vec::with_capacity(256);
         for _ in 0..=255 {
-            zobrist.push(rng.gen::<u64>());
+            zobrist.push(rng.gen::<ZobKey>());
         }
         zobrist
     }

@@ -7,14 +7,14 @@ use std::sync::atomic::{Ordering, AtomicBool, AtomicU8};
 
 use instant::{Instant, Duration};
 
-use crate::types::{Move, Depth, Centipawns, SearchTimeout};
+use crate::types::{Move, Depth, Centipawns, SearchTimeout, ZobKey};
 use crate::Position;
 
 mod alphabeta;
 mod transposition_table;
 pub mod eval;
 
-use transposition_table::TranspositionTable;
+use transposition_table::{TranspositionTable, TranspositionHandle};
 
 #[derive(Debug, Clone)]
 pub struct Searcher {
@@ -25,13 +25,13 @@ pub struct Searcher {
     killer_moves: [[Move;2];64],
     //Indexed by history_moves[side2move][from][to]
     history_moves: [[Centipawns;256];256],
-    transposition_table: TranspositionTable,
+    transposition_table: TranspositionHandle,
     // Stats
     nodes_searched: u64,
     max_searching_depth: Depth,
     end_time: Instant,
     principal_variation: [Move; Depth::MAX as usize + 1],
-    known_checks: BTreeSet<u64>,
+    known_checks: BTreeSet<ZobKey>,
     
     // Attributes for parallel search
     #[cfg(feature = "parallel")]
@@ -45,12 +45,12 @@ pub struct Searcher {
 type SearchRes = (Vec<Move>, Centipawns, Depth);
 
 impl Searcher {
-    fn new(position: &Position) -> Searcher {
+    fn new(position: &Position, transposition_table: TranspositionHandle) -> Searcher {
         Searcher{
             pos: position.clone(),
             killer_moves: [[Move::null(); 2];64],
             history_moves: [[0;256];256],
-            transposition_table: TranspositionTable::new(),
+            transposition_table,
             nodes_searched: 0,
             max_searching_depth: 0,
             end_time: Instant::now(),
@@ -81,15 +81,13 @@ impl Searcher {
     fn get_best_move_impl(position: &Position, max_depth: Depth, time_sec: u64, num_threads: u32) -> SearchRes {
         // Limit the max depth to 127 to avoid overflow when doubling
         let max_depth = std::cmp::min(max_depth, 127);
-        if num_threads == 1 {
-            Searcher::new(position).search(max_depth, time_sec)
-        } else {
-            #[cfg(not(feature = "parallel"))] {
-                unreachable!("Cannot use multiple threads without the 'parallel' feature");
-            }
-            #[cfg(feature = "parallel")] {
-                Self::search_multi_thread(position, max_depth, time_sec, num_threads)
-            }
+        #[cfg(not(feature = "parallel"))] {
+            assert!(num_threads == 1);
+            let table = TranspositionTable::new();
+            Searcher::new(position, table.into()).search(max_depth, time_sec)
+        }
+        #[cfg(feature = "parallel")] {
+            Self::search_multi_thread(position, max_depth, time_sec, num_threads)
         }
     }
     
@@ -101,16 +99,19 @@ impl Searcher {
         // Arc pointers to global search state
         let stop_arc = Arc::new(AtomicBool::new(false));
         let depth_arc = Arc::new(AtomicU8::new(0));
+        // Global transposition table
+        let table = Arc::new(TranspositionTable::new());
         rayon::scope(|scope| {
             for thread_num in 0..num_threads {
                 // Clone the pointers on each iteration
                 let results_arc = results_arc.clone();
                 let stop_arc = stop_arc.clone();
                 let depth_arc = depth_arc.clone();
+                let table = table.clone();
                 // Spawn a new task in the thread pool, take ownership of the pointers
                 scope.spawn(move |_scope| {
                     // Create a new searcher (with cloned position) for each thread
-                    let mut searcher = Searcher::new(position);
+                    let mut searcher = Searcher::new(position, table.into());
                     searcher.thread_num = thread_num;
                     searcher.stop_flag = stop_arc;
                     searcher.current_searched_depth = depth_arc;

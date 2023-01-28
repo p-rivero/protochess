@@ -51,6 +51,7 @@ async function init() {
   }
   
   protochess = wasm.wasmObject
+  protochess.set_num_threads(4)
   initUI()
 }
 

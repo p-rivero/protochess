@@ -11,7 +11,7 @@ pub mod utils;
 
 use std::convert::TryFrom;
 
-use types::{BCoord, Centipawns, Depth, Player};
+use types::{BCoord, Centipawns, Depth, Player, ZobKey};
 use searcher::{Searcher, eval};
 use utils::to_index;
 
@@ -61,7 +61,7 @@ impl Engine {
     }
 
     /// Returns the zobrist hash key for the current position
-    pub fn get_zobrist(&self) -> u64 {
+    pub fn get_zobrist(&self) -> ZobKey {
         self.position.get_zobrist()
     }
 

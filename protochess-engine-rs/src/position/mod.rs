@@ -327,7 +327,7 @@ impl Position {
     }
 
     #[inline]
-    pub fn get_zobrist(&self) -> u64 {
+    pub fn get_zobrist(&self) -> ZobKey {
         self.get_properties().zobrist_key
     }
     
@@ -377,7 +377,7 @@ impl Position {
         
         self.properties_stack[i].times_in_check[checked_player] = new_checks;
         // Update the zobrist key (use bits 8-9 for white, 10-11 for black)
-        self.properties_stack[i].zobrist_key ^= (new_checks as u64) << (8 + 2 * checked_player);
+        self.properties_stack[i].zobrist_key ^= (new_checks as ZobKey) << (8 + 2 * checked_player);
         // Return true if the player has lost
         new_checks >= self.global_rules.checks_to_lose
     }

@@ -1,4 +1,4 @@
-use crate::types::{Move, Depth, Centipawns};
+use crate::types::{Move, Depth, Centipawns, ZobKey};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[must_use]
@@ -19,7 +19,7 @@ impl EntryFlag {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[must_use]
 pub struct Entry {
-    pub key: u64,
+    pub key: ZobKey,
     pub flag: EntryFlag,
     pub value: Centipawns,
     pub mv: Move,

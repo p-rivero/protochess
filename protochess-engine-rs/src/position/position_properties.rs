@@ -1,11 +1,11 @@
-use crate::types::{BIndex, Move};
+use crate::types::{BIndex, Move, ZobKey};
 
 use crate::piece::PieceId;
 
 /// Properties that are hard to recover from a Move
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PositionProperties {
-    pub zobrist_key: u64,
+    pub zobrist_key: ZobKey,
     pub move_played: Move,
     //If the last move was a promotion, promote_from is the previous piecetype
     pub promote_from: PieceId,
@@ -26,12 +26,12 @@ impl PositionProperties {
         self.ep_square = Some(ep_square);
         self.ep_victim = ep_victim;
         // Update zobrist. For simplicity, use the ep index as the zobrist key
-        self.zobrist_key ^= ep_square as u64;
+        self.zobrist_key ^= ep_square as ZobKey;
     }
     pub fn clear_ep_square(&mut self) {
         if let Some(sq) = self.ep_square {
             // If the last prop had some ep square then we want to clear zob by xoring again
-            self.zobrist_key ^= sq as u64;
+            self.zobrist_key ^= sq as ZobKey;
         }
         self.ep_square = None;
     }

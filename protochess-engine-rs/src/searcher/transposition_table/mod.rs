@@ -1,8 +1,19 @@
 use crate::types::Depth;
+use crate::types::ZobKey;
 
 pub mod entry;
 pub use self::entry::Entry;
 pub use self::entry::EntryFlag;
+
+#[cfg(feature = "parallel")]
+mod handle_multithread;
+#[cfg(feature = "parallel")]
+pub use handle_multithread::TranspositionHandle;
+
+#[cfg(not(feature = "parallel"))]
+mod handle_singlethread;
+#[cfg(not(feature = "parallel"))]
+pub use handle_singlethread::TranspositionHandle;
 
 
 // Since we will be computing zobrist_key % TABLE_SIZE, we want it to be a power of 2
@@ -33,12 +44,12 @@ impl TranspositionTable {
     }
 
     /// Inserts a new Entry item into the transposition table
-    pub fn insert(&mut self, zobrist_key:u64, entry: Entry) {
-        let cluster = &mut self.data[zobrist_key as usize % TABLE_SIZE];
+    pub fn insert(&mut self, key: ZobKey, entry: Entry) {
+        let cluster = &mut self.data[key as usize % TABLE_SIZE];
         // As a first option, replace the first exact match for this key that has lower depth
         for i in 0..ENTRIES_PER_CLUSTER {
             let table_entry = cluster.entries[i];
-            if table_entry.key == zobrist_key && table_entry.flag != EntryFlag::Null {
+            if table_entry.key == key && table_entry.flag != EntryFlag::Null {
                 // Exact match, replace it only if the new entry is better
                 if entry.equal_or_better_than(&table_entry) {
                     cluster.entries[i] = entry;
@@ -67,11 +78,11 @@ impl TranspositionTable {
     }
 
     /// Returns a handle to an Entry in the table, if it exists
-    pub fn retrieve(&self, zobrist_key:u64) -> Option<&Entry> {
-        let cluster = &self.data[zobrist_key as usize % TABLE_SIZE];
+    pub fn retrieve(&self, key: ZobKey) -> Option<&Entry> {
+        let cluster = &self.data[key as usize % TABLE_SIZE];
         for i in 0..ENTRIES_PER_CLUSTER {
             let entry = &cluster.entries[i];
-            if entry.key == zobrist_key && entry.flag != EntryFlag::Null {
+            if entry.key == key && entry.flag != EntryFlag::Null {
                 return Some(entry)
             }
         }

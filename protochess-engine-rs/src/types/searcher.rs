@@ -1,5 +1,8 @@
-// Class for storing the value of a position, must allow negative values
+// Type for storing the value of a position, must allow negative values
 pub type Centipawns = i32;
+
+// Type for storing a zobrist hash key
+pub type ZobKey = u64;
 
 // Don't make this too big, PV is an array of size Depth::MAX
 pub type Depth = u8;
