@@ -20,3 +20,8 @@ This is a fork of [raytran/protochess](https://github.com/raytran/protochess) wi
 - Fixed some bugs in the original engine and added more tests.
 
 - Faster move generation and more aggresive game tree pruning.
+
+- Multithreading support, using the Lazy SMP algorithm with a lockless transposition table.
+  (Use the `parallel` feature when compiling. For example: `cargo build --release --features parallel`)
+
+- Better WASM support, using web workers to run the engine (with or without multithreading) without blocking the UI.
