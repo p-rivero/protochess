@@ -125,11 +125,14 @@ impl Searcher {
         let mut best_pv = Vec::new();
         let mut best_score = -Centipawns::MAX;
         let mut best_depth = 0;
-        // Consume the results vector, return the best result (prefer higher depth, then higher score)
+        // Consume the results vector, return the best result (prefer higher depth, then higher score, then longer PV)
         let results_mutex = Arc::try_unwrap(results_arc).expect("Arc still has owners");
         let results_vec = results_mutex.into_inner().expect("Mutex is poisoned");
         for (pv, score, depth) in results_vec.into_iter() {
-            if depth > best_depth || (depth == best_depth && score > best_score) {
+            if depth > best_depth ||
+                (depth == best_depth && score > best_score) ||
+                (depth == best_depth && score == best_score && pv.len() > best_pv.len())
+            {
                 best_score = score;
                 best_depth = depth;
                 best_pv = pv;
@@ -183,24 +186,7 @@ impl Searcher {
                     pv_depth = search_depth;
                     pv_score = score;
                     // Print PV info
-                    let diff = -(score.abs() + alphabeta::GAME_OVER_SCORE);
-                    let score_str = {
-                        if diff < 200 {
-                            let sign = if score > 0 { "" } else { "-" };
-                            format!("MATE {}{}", sign, (diff+1) / 2)
-                        } else {
-                            format!("cp {:<4}", score)
-                        }
-                    };
-                    #[cfg(feature = "parallel")] {
-                        print!("T{:<2} ", self.thread_num);
-                    }
-                    println!("Depth {search_depth:<2} Score: {score_str} [nodes: {}]", self.nodes_searched);
-                    print!("  PV: ");
-                    for m in &pv {
-                        print!("{m} ");
-                    }
-                    println!();
+                    println!("{}", self.format_result(score, &pv, search_depth));
                 },
                 Err(SearchTimeout) => {
                     // Thread timed out, return the best move found so far
@@ -234,4 +220,29 @@ impl Searcher {
         }
         (pv, pv_score, pv_depth)
     }
+    
+    // Format the result as a string in order to print it all at once. This prevents 2 threads from printing at the same time.
+    fn format_result(&self, score: i32, pv: &Vec<Move>, depth: Depth) -> String {
+        #[cfg(feature = "parallel")]
+        let thread_str = format!("T{:<2} ", self.thread_num);
+        #[cfg(not(feature = "parallel"))]
+        let thread_str = String::new();
+        
+        let diff = -(score.abs() + alphabeta::GAME_OVER_SCORE);
+        let score_str = {
+            if diff < 200 {
+                let sign = if score > 0 { "" } else { "-" };
+                format!("MATE {}{}", sign, (diff+1) / 2)
+            } else {
+                format!("cp {:<4}", score)
+            }
+        };
+        let mut pv_str = String::new();
+        for m in pv {
+            pv_str.push_str(&format!("{} ", m));
+        }
+        
+        format!("{thread_str}Depth {depth:<2} Score: {score_str} [nodes: {n}] PV: {pv_str}", n=self.nodes_searched)
+    }
 }
+

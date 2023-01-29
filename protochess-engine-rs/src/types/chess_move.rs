@@ -26,7 +26,7 @@ pub enum MoveType {
     Null = 0b1010,
 }
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Copy, Clone)]
 #[must_use]
 pub struct Move {
     /// Stores a move in a u32
@@ -133,6 +133,26 @@ impl fmt::Display for Move {
             else { "".to_string() }
         };
         write!(f, "{}{}{}", to_rank_file(x1, y1), to_rank_file(x2, y2), suffix)
+    }
+}
+impl fmt::Debug for Move {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_null() {
+            return write!(f, "[NULL]");
+        }
+        let (fx, fy) = from_index(self.get_from());
+        let from = to_rank_file(fx, fy);
+        let (tox, toy) = from_index(self.get_to());
+        let to = to_rank_file(tox, toy);
+        let (tax, tay) = from_index(self.get_target());
+        let target = to_rank_file(tax, tay);
+        let suffix = {
+            if self.is_promotion() { format!("={}", self.promotion) }
+            else if self.is_capture() { "x".to_string() }
+            else if self.is_castling() { "(Castle)".to_string() }
+            else { "".to_string() }
+        };
+        write!(f, "{from}->{to}{suffix} [t:{target}]")
     }
 }
 
