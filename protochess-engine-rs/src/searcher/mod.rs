@@ -11,7 +11,7 @@ use crate::types::{Move, Depth, Centipawns, SearchTimeout, ZobKey};
 use crate::Position;
 
 mod alphabeta;
-mod transposition_table;
+pub mod transposition_table;
 pub mod eval;
 
 use transposition_table::{TranspositionTable, TranspositionHandle};

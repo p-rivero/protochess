@@ -44,17 +44,23 @@ impl TranspositionTable {
     }
 
     /// Inserts a new Entry item into the transposition table
-    pub fn insert(&mut self, key: ZobKey, entry: Entry) {
-        let cluster = &mut self.data[key as usize % TABLE_SIZE];
+    pub fn insert(&mut self, mut entry: Entry) {
+        // T = W1(p) & MASK;
+        // W1(T) = W1(p) ^ W2(p)
+        // W2(T) = W2(p)
+        // https://craftychess.com/hyatt/hashing.html
+        let original_key = entry.key;
+        entry.mask_key();
+        
+        let cluster = &mut self.data[original_key as usize % TABLE_SIZE];
         // As a first option, replace the first exact match for this key that has lower depth
         for i in 0..ENTRIES_PER_CLUSTER {
             let table_entry = cluster.entries[i];
-            if table_entry.key == key && table_entry.flag != EntryFlag::Null {
+            if table_entry.original_key() == original_key && table_entry.flag != EntryFlag::Null {
                 // Exact match, replace it only if the new entry is better
                 if entry.equal_or_better_than(&table_entry) {
                     cluster.entries[i] = entry;
                 }
-                // Drop _guard and return
                 return;
             }
         }
@@ -74,15 +80,14 @@ impl TranspositionTable {
             // Only replace the entry if it's not shallower than all existing entries
             cluster.entries[lowest_depth_index] = entry;
         }
-        // Drop _guard and return
     }
 
     /// Returns a handle to an Entry in the table, if it exists
-    pub fn retrieve(&self, key: ZobKey) -> Option<&Entry> {
-        let cluster = &self.data[key as usize % TABLE_SIZE];
+    pub fn retrieve(&self, original_key: ZobKey) -> Option<&Entry> {
+        let cluster = &self.data[original_key as usize % TABLE_SIZE];
         for i in 0..ENTRIES_PER_CLUSTER {
             let entry = &cluster.entries[i];
-            if entry.key == key && entry.flag != EntryFlag::Null {
+            if entry.original_key() == original_key && entry.flag != EntryFlag::Null {
                 return Some(entry)
             }
         }

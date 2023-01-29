@@ -94,8 +94,8 @@ impl TryFrom<GameState> for Position {
             props.set_ep_square(to_index(sx, sy), to_index(vx, vy));
         }
         if state.whos_turn == 1 {
-            // Use the top bit as player zobrist key
-            props.zobrist_key ^= 0x8000_0000_0000_0000;
+            // Use the lowest bit as player zobrist key
+            props.zobrist_key ^= 1;
         }
         if let Some(times_in_check) = state.times_in_check {
             props.times_in_check = times_in_check;

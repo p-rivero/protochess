@@ -11,8 +11,8 @@ pub struct TranspositionHandle {
 
 impl TranspositionHandle {
     #[inline]
-    pub fn insert(&mut self, key: ZobKey, entry: Entry) {
-        self.table.insert(key, entry);
+    pub fn insert(&mut self, entry: Entry) {
+        self.table.insert(entry);
     }
     #[inline]
     pub fn retrieve(&self, key: ZobKey) -> Option<&Entry> {

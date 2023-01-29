@@ -85,13 +85,13 @@ impl Searcher {
                 else if quiesce_score >= beta { EntryFlag::Beta }
                 else { EntryFlag::Exact }
             };
-            self.transposition_table.insert(self.zobrist(), Entry{
-                key: self.zobrist(),
+            self.transposition_table.insert(Entry::new(
+                self.zobrist(),
                 flag,
-                value: quiesce_score,
-                mv: Move::null(),
+                quiesce_score,
+                Move::null(),
                 depth,
-            });
+            ));
             if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
             return Ok(quiesce_score); 
         }
@@ -182,13 +182,13 @@ impl Searcher {
                         // Record new killer moves
                         self.update_killers(depth, mv);
                         // Beta cutoff, store in transpositon table
-                        self.transposition_table.insert(self.zobrist(), Entry{
-                            key: self.zobrist(),
-                            flag: EntryFlag::Beta,
-                            value: beta,
+                        self.transposition_table.insert(Entry::new(
+                            self.zobrist(),
+                            EntryFlag::Beta,
+                            beta,
                             mv,
                             depth,
-                        });
+                        ));
                         if IS_PV {
                             self.clear_remaining_pv(pv_index, search_depth);
                         }
@@ -216,23 +216,23 @@ impl Searcher {
 
         if IS_PV && alpha != old_alpha {
             //Alpha improvement, record PV
-            self.transposition_table.insert(self.zobrist(), Entry{
-                key: self.zobrist(),
-                flag: EntryFlag::Exact,
-                value: best_score,
-                mv: best_move,
+            self.transposition_table.insert(Entry::new(
+                self.zobrist(),
+                EntryFlag::Exact,
+                best_score,
+                best_move,
                 depth,
-            });
+            ));
             self.principal_variation[pv_index] = best_move;
             
         } else {
-            self.transposition_table.insert(self.zobrist(), Entry{
-                key: self.zobrist(),
-                flag: EntryFlag::Alpha,
-                value: alpha,
-                mv: best_move,
+            self.transposition_table.insert(Entry::new(
+                self.zobrist(),
+                EntryFlag::Alpha,
+                alpha,
+                best_move,
                 depth,
-            });
+            ));
         }
         
         Ok(alpha)

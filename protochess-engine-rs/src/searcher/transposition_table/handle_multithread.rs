@@ -12,16 +12,14 @@ pub struct TranspositionHandle {
 
 impl TranspositionHandle {
     #[inline]
-    pub fn insert(&mut self, key: ZobKey, entry: Entry) {
+    pub fn insert(&mut self, entry: Entry) {
         unsafe {
-            // TODO: Implement lockless transposition table
-            (*self.ptr).insert(key, entry);
+            (*self.ptr).insert(entry);
         }
     }
     #[inline]
     pub fn retrieve(&self, key: ZobKey) -> Option<&Entry> {
         unsafe {
-            // TODO: Implement lockless transposition table
             (*self.ptr).retrieve(key)
         }
     }

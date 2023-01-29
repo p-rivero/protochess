@@ -74,8 +74,8 @@ impl Position {
         // Update the player
         self.whos_turn = 1 - self.whos_turn;
         // Update the player zobrist key
-        // For simplicity, use the top bit to represent the player
-        new_props.zobrist_key ^= 0x8000_0000_0000_0000;
+        // For simplicity, use the lowest bit to represent the player
+        new_props.zobrist_key ^= 1;
         
         // In the special case of the null move, don't do anything except update whos_turn
         // And update props
