@@ -177,7 +177,7 @@ impl Engine {
         err_assert!(depth != 0, "Depth must be greater than 0");
         let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth, self.num_threads);
         err_assert!(search_depth == depth, "Search depth ({search_depth}) != requested depth ({depth})");
-        err_assert!(pv.len() > 0, "No moves found");
+        err_assert!(!pv.is_empty(), "No moves found");
         Ok((pv[0].into(), score))
     }
 
@@ -185,7 +185,7 @@ impl Engine {
     pub fn get_best_move_timeout(&mut self, max_sec: u64) -> wrap_res!(MoveInfo, Centipawns, Depth) {
         self.assert_position_is_valid()?;
         let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec, self.num_threads);
-        err_assert!(pv.len() > 0, "No moves found");
+        err_assert!(!pv.is_empty(), "No moves found");
         Ok((pv[0].into(), score, search_depth))
     }
     fn assert_position_is_valid(&mut self) -> wrap_res!() {

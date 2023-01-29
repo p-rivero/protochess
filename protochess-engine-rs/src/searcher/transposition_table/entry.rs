@@ -21,7 +21,7 @@ impl EntryFlag {
 /// the value was computed.
 /// 
 /// **WARNING**: If you add fields to this struct, make sure to 1) update the padding field
-/// so that no bits are left uninitialized, and 2) update the get_hash_mask() function to XOR all the bits
+/// so that no bits are left uninitialized, and 2) update the `get_hash_mask()` function to XOR all the bits
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[must_use]
 pub struct Entry {
@@ -56,13 +56,13 @@ impl Entry {
     }
     
     /// Get the original key, before it was masked by the hash mask
-    /// See https://craftychess.com/hyatt/hashing.html
+    /// See <https://craftychess.com/hyatt/hashing.html>
     #[inline]
     pub fn original_key(&self) -> ZobKey {
         self.get_hash_mask()
     }
     /// Mask the key with the hash mask, so that it can be stored in memory
-    /// See https://craftychess.com/hyatt/hashing.html
+    /// See <https://craftychess.com/hyatt/hashing.html>
     #[inline]
     pub fn mask_key(&mut self) {
         self.key = self.get_hash_mask();
@@ -71,12 +71,18 @@ impl Entry {
     /// In a lockless transposition table, XOR the key with the value to get a hash.
     /// In case of 2 threads writing at the same time, the entry will become invalid (instead
     /// of being incorrectly detected as valid and reading the wrong data).
-    /// See https://craftychess.com/hyatt/hashing.html
+    /// See <https://craftychess.com/hyatt/hashing.html>
     #[inline]
     fn get_hash_mask(&self) -> ZobKey {
         // Unsafely cast the struct to a [u64; 3] to get the raw bytes
-        let data: &[u64; 3] = unsafe { std::mem::transmute(self) };
+        let data: &[u64; 3] = unsafe { &*(self as *const Entry).cast::<[u64; 3]>() };
         // XOR all the bytes
         data[0] ^ data[1] ^ data[2]
+    }
+}
+
+impl Default for Entry {
+    fn default() -> Self {
+        Entry::null()
     }
 }

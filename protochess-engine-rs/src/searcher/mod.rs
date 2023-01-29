@@ -21,8 +21,8 @@ pub struct Searcher {
     // The position we are currently searching
     pos: Position,
     //We store two killer moves per ply,
-    //indexed by killer_moves[depth][0] or killer_moves[depth][0]
-    killer_moves: [[Move;2];64],
+    //indexed by killer_moves[depth][0/1]
+    killer_moves: [[Move;2];256],
     //Indexed by history_moves[side2move][from][to]
     history_moves: [[Centipawns;256];256],
     transposition_table: TranspositionHandle,
@@ -48,7 +48,7 @@ impl Searcher {
     fn new(position: &Position, transposition_table: TranspositionHandle) -> Searcher {
         Searcher{
             pos: position.clone(),
-            killer_moves: [[Move::null(); 2];64],
+            killer_moves: [[Move::null(); 2];256],
             history_moves: [[0;256];256],
             transposition_table,
             nodes_searched: 0,
@@ -60,9 +60,9 @@ impl Searcher {
             #[cfg(feature = "parallel")]
             thread_num: 0,
             #[cfg(feature = "parallel")]
-            stop_flag: Default::default(),
+            stop_flag: Arc::default(),
             #[cfg(feature = "parallel")]
-            current_searched_depth: Default::default(),
+            current_searched_depth: Arc::default(),
         }
     }
     
@@ -83,7 +83,7 @@ impl Searcher {
         let max_depth = std::cmp::min(max_depth, 127);
         #[cfg(not(feature = "parallel"))] {
             assert!(num_threads == 1);
-            let table = TranspositionTable::new();
+            let table = TranspositionTable::default();
             Searcher::new(position, table.into()).search(max_depth, time_sec)
         }
         #[cfg(feature = "parallel")] {
@@ -100,7 +100,7 @@ impl Searcher {
         let stop_arc = Arc::new(AtomicBool::new(false));
         let depth_arc = Arc::new(AtomicU8::new(0));
         // Global transposition table
-        let table = Arc::new(TranspositionTable::new());
+        let table = Arc::new(TranspositionTable::default());
         rayon::scope(|scope| {
             for thread_num in 0..num_threads {
                 // Clone the pointers on each iteration
@@ -128,7 +128,7 @@ impl Searcher {
         // Consume the results vector, return the best result (prefer higher depth, then higher score, then longer PV)
         let results_mutex = Arc::try_unwrap(results_arc).expect("Arc still has owners");
         let results_vec = results_mutex.into_inner().expect("Mutex is poisoned");
-        for (pv, score, depth) in results_vec.into_iter() {
+        for (pv, score, depth) in results_vec {
             if depth > best_depth ||
                 (depth == best_depth && score > best_score) ||
                 (depth == best_depth && score == best_score && pv.len() > best_pv.len())
@@ -213,7 +213,6 @@ impl Searcher {
                 search_depth += 1;
             }
             #[cfg(feature = "parallel")] {
-                // TODO: Variable increment? (If num_threads == 1, increment by 1)
                 let next_depth = self.current_searched_depth.load(Ordering::Relaxed) + 1;
                 search_depth = std::cmp::min(next_depth, max_depth);
             }

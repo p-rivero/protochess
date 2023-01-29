@@ -33,16 +33,6 @@ pub struct TranspositionTable {
 }
 
 impl TranspositionTable {
-    pub fn new() -> TranspositionTable {
-        let mut data = Vec::with_capacity(TABLE_SIZE);
-        for _ in 0..TABLE_SIZE {
-            data.push(Cluster { entries: [Entry::null(); ENTRIES_PER_CLUSTER] });
-        }
-        TranspositionTable {
-            data
-        }
-    }
-
     /// Inserts a new Entry item into the transposition table
     pub fn insert(&mut self, mut entry: Entry) {
         // T = W1(p) & MASK;
@@ -92,5 +82,15 @@ impl TranspositionTable {
             }
         }
         None
+    }
+}
+
+impl Default for TranspositionTable {
+    fn default() -> Self {
+        let mut data = Vec::with_capacity(TABLE_SIZE);
+        for _ in 0..TABLE_SIZE {
+            data.push(Cluster{ entries: [Entry::default(); ENTRIES_PER_CLUSTER] });
+        }
+        TranspositionTable{ data }
     }
 }

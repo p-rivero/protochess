@@ -284,7 +284,8 @@ impl Searcher {
     #[inline]
     fn increment_num_nodes(&mut self) -> Result<(), SearchTimeout> {
         self.nodes_searched += 1;
-        // Check for timeout periodically
+        // Check for timeout periodically (every 2^20 nodes)
+        #[allow(clippy::collapsible_if)]
         if self.nodes_searched.trailing_zeros() >= 20 {
             #[cfg(feature = "parallel")]
             if self.stop_flag.load(Ordering::Relaxed) {

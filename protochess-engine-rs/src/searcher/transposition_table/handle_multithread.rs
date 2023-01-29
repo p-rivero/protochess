@@ -4,7 +4,7 @@ use crate::types::ZobKey;
 
 use super::{TranspositionTable, Entry};
 
-/// Wrapper around a pointer to a TranspositionTable, which is used to pass the table to the threads.
+/// Wrapper around a pointer to a `TranspositionTable`, which is used to pass the table to the threads.
 /// It's responsible for implementing the ugly unsafe code to access the table.
 pub struct TranspositionHandle {
     ptr: *mut TranspositionTable
@@ -54,6 +54,6 @@ impl std::fmt::Debug for TranspositionHandle {
 impl Clone for TranspositionHandle {
     fn clone(&self) -> Self {
         let arc = unsafe { Arc::from_raw(self.ptr) };
-        arc.clone().into()
+        arc.into()
     }
 }

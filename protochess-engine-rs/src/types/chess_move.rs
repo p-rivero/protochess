@@ -142,10 +142,10 @@ impl fmt::Debug for Move {
         }
         let (fx, fy) = from_index(self.get_from());
         let from = to_rank_file(fx, fy);
-        let (tox, toy) = from_index(self.get_to());
-        let to = to_rank_file(tox, toy);
-        let (tax, tay) = from_index(self.get_target());
-        let target = to_rank_file(tax, tay);
+        let (to_x, to_y) = from_index(self.get_to());
+        let to = to_rank_file(to_x, to_y);
+        let (target_x, target_y) = from_index(self.get_target());
+        let target = to_rank_file(target_x, target_y);
         let suffix = {
             if self.is_promotion() { format!("={}", self.promotion) }
             else if self.is_capture() { "x".to_string() }
