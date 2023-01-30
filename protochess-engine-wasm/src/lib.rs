@@ -11,13 +11,6 @@ use utils::{set_panic_hook, SerVec};
 #[cfg(feature = "parallel")]
 pub use wasm_bindgen_rayon::init_thread_pool;
 
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-// allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-
 #[wasm_bindgen]
 pub fn greet() {
     #[cfg(feature = "parallel")]
