@@ -1,12 +1,12 @@
-all: build_singlethreaded build_multithreaded
+all: pkg pkg-parallel
 
-build_singlethreaded:
+pkg: src/*
 	@echo "-------------------------------------------"
 	@echo " Building single-threaded version to ./pkg "
 	@echo "-------------------------------------------"
 	wasm-pack build --target web --release
 
-build_multithreaded:
+pkg-parallel: src/*
 	@echo "---------------------------------------------------"
 	@echo " Building multi-threaded version to ./pkg-parallel "
 	@echo "---------------------------------------------------"
