@@ -15,23 +15,25 @@ pub const GAME_OVER_SCORE: Centipawns = -1_000_000;
 impl Searcher {
     /// Search for the best move to play at the current position.
     /// Populates the principal variation vector and returns the score of the position.
+    /// Use the previous PV as a hint: begin the search by playing the PV, and the rest of the search attempts to refute it.
     /// # Errors
     /// Returns `Err(SearchTimeout)` if the search timed out.
-    pub fn start_alphabeta(&mut self, depth: Depth) -> Result<Centipawns, SearchTimeout> {
+    pub fn start_alphabeta(&mut self, depth: Depth, hint: &Vec<Move>) -> Result<Centipawns, SearchTimeout> {
         // Use -MAX instead of MIN to avoid overflow when negating
-        self.alphabeta::<true>(depth, depth, 0, -Centipawns::MAX, Centipawns::MAX, true)
+        self.alphabeta::<true,true>(depth, depth, 0, -Centipawns::MAX, Centipawns::MAX, true, Some(hint))
     }
     
     // alpha is the best score that I can currently guarantee at this level or above.
     // beta is the worst score for me that the opponent can currently guarantee at this level or above.
     #[allow(clippy::too_many_lines)]
-    fn alphabeta<const IS_PV: bool>(&mut self,
+    fn alphabeta<const IS_PV: bool, const IS_ROOT: bool>(&mut self,
             mut depth: Depth,
             mut search_depth: Depth,
             pv_index: usize,
             mut alpha: Centipawns,
-            beta: Centipawns,
+            mut beta: Centipawns,
             do_null: bool,
+            hint: Option<&Vec<Move>>
         ) -> Result<Centipawns, SearchTimeout>
     {
         let mut known_check = false;
@@ -43,6 +45,16 @@ impl Searcher {
                 search_depth += 1;
             }
         }
+        
+        // Skip position if a mating move at this depth is already available
+        if !IS_ROOT && !self.pos.global_rules.invert_win_conditions {
+            alpha = std::cmp::max(alpha, self.checkmate_score(pv_index));
+            beta = std::cmp::min(beta, -self.checkmate_score(pv_index+1));
+            if alpha >= beta {
+                self.end_pv::<IS_PV>(pv_index-1);
+                return Ok(alpha);
+            }
+        }
 
         // Probe transposition table
         if let Some(entry) = self.transposition_table.retrieve(self.zobrist()) {
@@ -50,7 +62,7 @@ impl Searcher {
                 match entry.flag {
                     EntryFlag::Exact => {
                         let val = entry.value;
-                        if val < alpha {
+                        if val <= alpha {
                             return Ok(alpha);
                         }
                         if val >= beta {
@@ -58,9 +70,7 @@ impl Searcher {
                         }
                         // It's not feasible to store the rest of the PV in the transposition table,
                         // so we don't know what the next moves in the PV are.
-                        if IS_PV {
-                            self.clear_remaining_pv(pv_index, search_depth);
-                        }
+                        self.end_pv::<IS_PV>(pv_index);
                         return Ok(val);
                     }
                     EntryFlag::Beta => {
@@ -92,7 +102,7 @@ impl Searcher {
                 Move::null(),
                 depth,
             ));
-            if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
+            self.end_pv::<IS_PV>(pv_index);
             return Ok(quiesce_score); 
         }
         
@@ -106,7 +116,7 @@ impl Searcher {
             !MoveGen::in_check(&mut self.pos) // Don't skip a turn in check
         {
             self.pos.make_move(Move::null());
-            let nscore = -self.alphabeta::<false>(depth-3, search_depth, pv_index+1, -beta, -beta+1, false)?;
+            let nscore = -self.alphabeta::<false,false>(depth-3, search_depth, pv_index+1, -beta, -beta+1, false, None)?;
             self.pos.unmake_move();
             if nscore >= beta {
                 return Ok(beta);
@@ -118,10 +128,10 @@ impl Searcher {
         let old_alpha = alpha;
         let mut best_score = -Centipawns::MAX; // Use -MAX instead of MIN to avoid overflow when negating
         let in_check = known_check || MoveGen::in_check(&mut self.pos);
-        if in_check && pv_index != 0 && self.pos.increment_num_checks() {
+        if !IS_ROOT && in_check && self.pos.increment_num_checks() {
             // If the player has been checked N times, the game is over.
             // Don't increment the check counter in the root node
-            if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
+            self.end_pv::<IS_PV>(pv_index);
             return Ok(self.checkmate_score(pv_index));
         }
         if IS_PV && in_check && !known_check && search_depth < self.max_searching_depth {
@@ -129,6 +139,31 @@ impl Searcher {
             depth += 1;
             search_depth += 1;
             self.known_checks.insert(self.zobrist());
+        }
+        
+        // If a hint is available, try the hinted move as the leftmost child
+        if let Some(pv_hint) = hint {
+            if IS_PV && pv_hint.len() > pv_index {
+                let mv = pv_hint[pv_index];
+                // Since this move was in the PV, it must be legal
+                self.pos.make_move(mv);
+                num_legal_moves += 1;
+                let score: Centipawns;
+                if let Some(end_score) = self.is_game_over(mv, pv_index+1) {
+                    self.end_pv::<IS_PV>(pv_index);
+                    score = -end_score;
+                } else {
+                    score = -self.alphabeta::<IS_PV,false>(depth-1, search_depth, pv_index+1, -beta, -alpha, true, hint)?;
+                }
+                self.pos.unmake_move();
+                // This is the leftmost branch, we know that best_score = -INF && alpha = -INF
+                assert!(score > best_score);
+                assert!(score > alpha);
+                best_score = score;
+                best_move = mv;
+                alpha = score;
+                self.update_history_heuristic(depth, mv);
+            }
         }
         
         // Get potential moves, sorted by move ordering heuristics (try the most promising moves first)
@@ -142,10 +177,11 @@ impl Searcher {
             num_legal_moves += 1;
             let mut score: Centipawns;
             if let Some(end_score) = self.is_game_over(mv, pv_index+1) {
-                if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
+                self.end_pv::<IS_PV>(pv_index);
                 score = -end_score;
             } else if num_legal_moves == 1 {
-                score = -self.alphabeta::<IS_PV>(depth-1, search_depth, pv_index+1, -beta, -alpha, true)?;
+                // Leftmost child when the hint is not available
+                score = -self.alphabeta::<IS_PV,false>(depth-1, search_depth, pv_index+1, -beta, -alpha, true, None)?;
             } else {
                 // Try late move reduction
                 if !IS_PV && num_legal_moves > 4 && mv.is_quiet() && depth >= 5 && !in_check {
@@ -154,7 +190,7 @@ impl Searcher {
                         if num_legal_moves > 10 { depth - 4 }
                         else { depth - 3 }
                     };
-                    score = -self.alphabeta::<false>(reduced_depth, search_depth, pv_index+1, -alpha-1, -alpha, true)?;
+                    score = -self.alphabeta::<false,false>(reduced_depth, search_depth, pv_index+1, -alpha-1, -alpha, true, None)?;
                 } else {
                     // Cannot reduce, proceed with standard PVS
                     score = alpha + 1;
@@ -163,10 +199,10 @@ impl Searcher {
                 if IS_PV || score > alpha {
                     // PVS
                     // Null window search
-                    score = -self.alphabeta::<false>(depth-1, search_depth, pv_index+1, -alpha-1, -alpha, true)?;
+                    score = -self.alphabeta::<false,false>(depth-1, search_depth, pv_index+1, -alpha-1, -alpha, true, None)?;
                     // Re-search if necessary
                     if score > alpha && score < beta {
-                        score = -self.alphabeta::<IS_PV>(depth-1, search_depth, pv_index+1, -beta, -alpha, true)?;
+                        score = -self.alphabeta::<IS_PV,false>(depth-1, search_depth, pv_index+1, -beta, -alpha, true, None)?;
                     }
                 }
             }
@@ -189,9 +225,7 @@ impl Searcher {
                             mv,
                             depth,
                         ));
-                        if IS_PV {
-                            self.clear_remaining_pv(pv_index, search_depth);
-                        }
+                        self.end_pv::<IS_PV>(pv_index);
                         return Ok(beta);
                     }
                     alpha = score;
@@ -205,11 +239,11 @@ impl Searcher {
         if num_legal_moves == 0 {
             return if in_check || self.pos.global_rules.stalemated_player_loses {
                 // No legal moves and in check: Checkmate
-                if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
+                self.end_pv::<IS_PV>(pv_index);
                 Ok(self.checkmate_score(pv_index))
             } else {
                 // No legal moves but also not in check: Stalemate
-                if IS_PV { self.clear_remaining_pv(pv_index, search_depth) }
+                self.end_pv::<IS_PV>(pv_index);
                 Ok(0)
             };
         }
@@ -377,9 +411,10 @@ impl Searcher {
     }
     
     #[inline]
-    fn clear_remaining_pv(&mut self, index: usize, search_depth: Depth) {
-        for i in index..=search_depth as usize {
-            self.principal_variation[i] = Move::null();
+    fn end_pv<const IS_PV: bool>(&mut self, index: usize) {
+        if IS_PV {
+            // Clear the next position, use null move as a sentinel
+            self.principal_variation[index] = Move::null();
         }
     }
     

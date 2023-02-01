@@ -65,21 +65,30 @@ pub fn evaluate(position: &Position) -> Centipawns {
 pub fn score_move(search: &Searcher, depth: usize, mv: Move) -> Centipawns {
     const CAPTURE_BASE_SCORE: Centipawns = 10000;
     const KILLERMOVE_SCORE: Centipawns = 9000;
+    const PROMOTION_SCORE: Centipawns = 1000;
+    let mut score = 0;
     if mv.is_capture() {
         let current_player = search.pos.whos_turn;
         let attacker = search.pos.player_piece_at(current_player, mv.get_from()).unwrap();
         let victim = search.pos.player_piece_at(1-current_player, mv.get_target()).unwrap();
 
-        let attack_score = attacker.get_material_score();
+        let attacker_score = attacker.get_material_score();
         let victim_score = victim.get_material_score();
 
-        return CAPTURE_BASE_SCORE + victim_score - attack_score
-    }
-    if mv == search.killer_moves[depth][0] || mv == search.killer_moves[depth][1] {
-        KILLERMOVE_SCORE
+        score += CAPTURE_BASE_SCORE;
+        score += 8 * victim_score - attacker_score;
+    } else if mv == search.killer_moves[depth][0] || mv == search.killer_moves[depth][1] {
+        score += KILLERMOVE_SCORE;
     } else {
-        search.history_moves[mv.get_from() as usize][mv.get_to() as usize]
+        score += search.history_moves[mv.get_from() as usize][mv.get_to() as usize];
     }
+    if mv.is_promotion() {
+        score += PROMOTION_SCORE;
+    }
+    if search.pos.global_rules.invert_win_conditions {
+        score = -score;
+    }
+    score
 }
 
 /// Determines whether or not null move pruning can be performed for a Position

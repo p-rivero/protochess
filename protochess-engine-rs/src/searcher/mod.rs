@@ -165,21 +165,34 @@ impl Searcher {
         loop {
             self.nodes_searched = 0;
             self.max_searching_depth = 2 * search_depth;
-            match self.start_alphabeta(search_depth) {
+            match self.start_alphabeta(search_depth, &pv) {
                 Ok(score) => {
                     // Update the current searched depth
                     #[cfg(feature = "parallel")] {
                         self.current_searched_depth.fetch_max(search_depth, Ordering::Relaxed);
                     }
-                    pv.clear();
-                    // Copy the pv into a vector
+                    // If there have been transposition table hits, the new pv won't be complete.
+                    // It might be shorter than the previous pv, in which case we can keep the old pv
+                    // as long as it's consistent with the new pv.
+                    let mut new_pv_len = 0;
+                    let mut consistent = true;
                     for mv in self.principal_variation {
-                        if mv.is_null() {
+                        if mv.is_null() { break; }
+                        new_pv_len += 1;
+                        if pv.len() >= new_pv_len && pv[new_pv_len-1] != mv {
+                            consistent = false;
                             break;
                         }
-                        pv.push(mv);
                     }
-                    // Clean up the pv
+                    if new_pv_len >= pv.len() || !consistent {
+                        // Copy the new pv into a vector
+                        pv.clear();
+                        for mv in self.principal_variation {
+                            if mv.is_null() { break; }
+                            pv.push(mv);
+                        }
+                    }
+                    // Clean up the temporary space for  the new pv
                     for i in 0..self.max_searching_depth {
                         self.principal_variation[i as usize] = Move::null();
                     }
