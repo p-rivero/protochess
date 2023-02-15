@@ -7,6 +7,7 @@ use super::utils::SerVec;
 macro_rules! generate_wrapper {
     ($wrapper_name:ident, $wrapped_type:ident, [$($field:ident, $type:ty),*]) => {
         #[derive(serde::Serialize, serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
         #[wasm_bindgen(inspectable)]
         #[must_use]
         pub struct $wrapper_name {
@@ -48,6 +49,7 @@ generate_wrapper!(MoveInfoSer, MoveInfo, [
 
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MakeMoveResultSer {
     result: String,
     winner_player: Option<u8>,
@@ -93,6 +95,7 @@ impl From<MakeMoveResult> for MakeMoveResultSer {
 
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MoveInfoWithEvalSer {
     move_info: MoveInfoSer,
     evaluation: i32,
@@ -108,6 +111,7 @@ impl MoveInfoWithEvalSer {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MoveInfoWithEvalDepthSer {
     move_info: MoveInfoSer,
     evaluation: i32,
@@ -126,6 +130,7 @@ impl MoveInfoWithEvalDepthSer {
 
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MakeMoveResultWithDepthSer {
     make_move_result: MakeMoveResultSer,
     depth: u8

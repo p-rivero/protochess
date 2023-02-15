@@ -38,7 +38,7 @@ async function init() {
   }
   
   protochess = wasm.wasmObject
-  protochess.set_num_threads(4)
+  protochess.setNumThreads(1)
   initUI()
 }
 
@@ -50,7 +50,7 @@ async function initUI() {
 }
 
 async function updateBoard(result, winner) {
-  boardDisplay.innerHTML = await protochess.to_string()
+  boardDisplay.innerHTML = await protochess.toString()
   if (result !== 'Ok') {
     let winnerString
     if (winner === 0) {
@@ -61,7 +61,7 @@ async function updateBoard(result, winner) {
       winnerString = 'Draw'
     }
     boardStatus.innerHTML = result + ', ' + winnerString
-  } else if (await protochess.to_move_in_check()) {
+  } else if (await protochess.toMoveInCheck()) {
     boardStatus.innerHTML = 'Check!'
   } else {
     boardStatus.innerHTML = ' '
@@ -80,11 +80,11 @@ async function manualMoveButtonClick() {
   clearErrors()
   try {
     // Attempt to make the move
-    const {result, winner_player} = await protochess.make_move_str(manualMoveInput.value)
+    const {result, winnerPlayer} = await protochess.makeMoveStr(manualMoveInput.value)
     if (result === 'IllegalMove') {
       throw 'This move is illegal'
     }
-    updateBoard(result, winner_player)
+    updateBoard(result, winnerPlayer)
   } catch (e) {
     manualMoveError.innerHTML = e
   }
@@ -103,9 +103,9 @@ async function engineMoveButtonClick() {
       throw 'Timeout must be >= 0'
     }
     // Get the engine to make a move
-    const {make_move_result, depth} = await protochess.play_best_move_timeout(timeout)
-    const {result, winner_player} = make_move_result
-    await updateBoard(result, winner_player)
+    const {makeMoveResult, depth} = await protochess.playBestMoveTimeout(timeout)
+    const {result, winnerPlayer} = makeMoveResult
+    await updateBoard(result, winnerPlayer)
     engineDepth.innerHTML = 'Done! Search depth: ' + depth
   } catch (e) {
     engineMoveError.innerHTML = e
@@ -116,7 +116,7 @@ async function fenButtonClick() {
   clearErrors()
   try {
     // Attempt to set the FEN
-    await protochess.load_fen(fenInput.value)
+    await protochess.loadFen(fenInput.value)
     updateBoard('Ok')
   } catch (e) {
     fenError.innerHTML = e
