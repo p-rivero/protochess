@@ -3,7 +3,9 @@ use rand::{SeedableRng, Rng};
 
 use crate::{types::*, Position};
 
-pub type PieceId = u32;
+// Use a unicode character as the id of a piece type
+// Note that in Rust a char is 4 bytes (equivalent to u32)
+pub type PieceId = char;
 
 mod piece_definition;
 mod piece_factory;
@@ -50,14 +52,7 @@ pub struct Piece {
 }
 
 impl Piece {
-    pub fn new(mut definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
-        // Use uppercase for white pieces and lowercase for black pieces
-        if player_num == 0 {
-            definition.char_rep = definition.char_rep.to_ascii_uppercase();
-        } else {
-            definition.char_rep = definition.char_rep.to_ascii_lowercase();
-        }
-        
+    pub fn new(definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
         let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims, false);
@@ -77,14 +72,9 @@ impl Piece {
         }
     }
     
-    // Get the id of this piece (piece type only)
+    // Get the id (char) of this piece type
     pub fn get_piece_id(&self) -> PieceId {
         self.type_def.id
-    }
-    
-    // Get a char representation of this piece
-    pub fn char_rep(&self) -> char {
-        self.type_def.char_rep
     }
     
     // Get the player number of this piece
@@ -287,7 +277,7 @@ impl Piece {
         &self.precomp.explosion_bitboards[index as usize]
     }
     
-    fn random_zobrist(piece_id: u32, player: Player) -> Vec<ZobKey> {
+    fn random_zobrist(piece_id: PieceId, player: Player) -> Vec<ZobKey> {
         // Generate a predictable seed for the rng
         let seed = (player as u64) << 32 | (piece_id as u64);
         let mut rng = StdRng::seed_from_u64(seed);
@@ -303,6 +293,10 @@ impl Piece {
 // Print as a string
 impl std::fmt::Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Piece {} (id={}, player={})", self.type_def.char_rep, self.type_def.id, self.player_num)
+        if self.player_num == 0 {
+            write!(f, "{}", self.type_def.id.to_uppercase())
+        } else {
+            write!(f, "{}", self.type_def.id.to_lowercase())
+        }
     }
 }

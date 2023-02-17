@@ -8,7 +8,6 @@ use super::PieceId;
 #[must_use]
 pub struct PieceDefinition {
     pub id: PieceId,
-    pub char_rep: char,
     pub available_for: Vec<Player>,
     
     pub is_leader: bool,

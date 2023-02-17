@@ -74,11 +74,6 @@ impl Engine {
     pub fn get_piece_at(&self, position: (BCoord, BCoord)) -> Option<PieceId> {
         self.position.piece_at(to_index(position.0, position.1)).map(Piece::get_piece_id)
     }
-    
-    /// Returns the character representation of the piece with a given id for the player to move
-    pub fn get_piece_char(&self, piece_id: PieceId) -> Option<char> {
-        self.position.get_piece_char(self.whos_turn(), piece_id)
-    }
 
     /// Adds a new piece on the board. If the piece is not used for castling, `has_moved` is ignored.
     pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord, has_moved: bool) -> wrap_res!() {

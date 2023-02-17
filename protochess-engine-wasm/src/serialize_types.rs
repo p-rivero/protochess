@@ -44,7 +44,7 @@ macro_rules! generate_wrapper {
 generate_wrapper!(MoveInfoSer, MoveInfo, [
     from, (u8, u8),
     to, (u8, u8),
-    promotion, Option<u32>
+    promotion, Option<char>
 ]);
 
 
@@ -146,8 +146,7 @@ impl MakeMoveResultWithDepthSer {
 }
 
 generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
-    id, u32,
-    char_rep, char,
+    id, char,
     available_for, Vec<u8>,
     is_leader, bool,
     castle_files, Option<(u8, u8)>,
@@ -156,7 +155,7 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     explosion_deltas, Vec<(i8, i8)>,
     immune_to_explosion, bool,
     promotion_squares, Vec<(u8, u8)>,
-    promo_vals, Vec<u32>,
+    promo_vals, Vec<char>,
     double_jump_squares, Vec<(u8, u8)>,
     attack_sliding_deltas, Vec<Vec<(i8, i8)>>,
     attack_jump_deltas, Vec<(i8, i8)>,
@@ -184,7 +183,7 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
 
 generate_wrapper!(PiecePlacementSer, PiecePlacement, [
     owner, u8,
-    piece_id, u32,
+    piece_id, char,
     x, u8,
     y, u8,
     // True if it has not moved. This is an option so that JS can leave it as undefined

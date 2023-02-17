@@ -127,27 +127,22 @@ fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: &str) {
 
 pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
     // Long algebraic notation for mv
-    let move_string = format!("{}{}{}{}", (b'a' + mv.from.0) as char, mv.from.1 + 1, (b'a' + mv.to.0) as char, mv.to.1 + 1);
+    let mut move_string = format!("{}{}{}{}", (b'a' + mv.from.0) as char, mv.from.1 + 1, (b'a' + mv.to.0) as char, mv.to.1 + 1);
     
     if let Some(prom) = mv.promotion {
-        let prom_char = engine.get_piece_char(prom).unwrap().to_ascii_uppercase();
-        return format!("{move_string}={prom_char}");
+        move_string = format!("{move_string}={prom}");
     }
     
-    let piece_id = engine.get_piece_at(mv.from).unwrap();
-    let piece_char = engine.get_piece_char(piece_id).unwrap().to_ascii_uppercase();
-    let result = {
-        if piece_char == 'P' {
-            move_string
-        } else {
-            // If the piece is not a pawn, write the piece letter
-            format!("{piece_char}{move_string}")
-        }
-    };
+    let moved_piece = engine.get_piece_at(mv.from).unwrap();
     
-    match result.as_str() {
+    if moved_piece != 'P' {
+        // If the piece is not a pawn, write the piece letter
+        move_string = format!("{moved_piece}{move_string}")
+    }
+    
+    match move_string.as_str() {
         "Ke1h1" | "Ke8h8" => "O-O".to_string(),
         "Ke1a1" | "Ke8a8" => "O-O-O".to_string(),
-        _ => result
+        _ => move_string
     }
 }

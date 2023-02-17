@@ -94,10 +94,6 @@ impl PieceSet {
         }
     }
     
-    pub fn get_piece_char(&self, id: PieceId) -> Option<char> {
-        self.pieces.iter().find(|p| p.get_piece_id() == id).map(Piece::char_rep)
-    }
-    
     pub fn get_leader(&self) -> Option<&Piece> {
         if self.leader_piece_index == -1 {
             return None;

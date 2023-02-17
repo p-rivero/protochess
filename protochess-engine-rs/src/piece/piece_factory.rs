@@ -1,4 +1,4 @@
-use super::{PieceDefinition, PieceId};
+use super::PieceDefinition;
 use crate::types::GameMode;
 
 pub struct PieceFactory {
@@ -10,7 +10,7 @@ impl PieceFactory {
         PieceFactory { mode }
     }
     
-    pub fn make_pawn(&self, id: PieceId, is_white: bool, promotions: Vec<PieceId>) -> PieceDefinition {
+    pub fn make_pawn(&self, is_white: bool) -> PieceDefinition {
         let promotion_rank = { if is_white { 7 } else { 0 } };
         let double_move_rank1 = { if is_white { 1 } else { 6 } };
         let double_move_rank2 = { if is_white { 0 } else { 7 } }; // Needed for horde
@@ -31,10 +31,13 @@ impl PieceFactory {
                 vec![1]
             }
         };
+        let mut promo_vals = vec!['Q', 'R', 'B', 'N'];
+        if self.mode == GameMode::Antichess {
+            promo_vals.push('K');
+        }
         
         PieceDefinition {
-            id,
-            char_rep: 'P',
+            id: 'P',
             available_for,
             is_leader: false,
             castle_files: None,
@@ -44,7 +47,7 @@ impl PieceFactory {
             immune_to_explosion: true,
             promotion_squares,
             double_jump_squares,
-            promo_vals: promotions,
+            promo_vals,
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(-1, move_dir), (1, move_dir)],
             attack_north: false,
@@ -69,10 +72,9 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_knight(&self, id: PieceId) -> PieceDefinition {
+    pub fn make_knight(&self) -> PieceDefinition {
         PieceDefinition {
-            id,
-            char_rep: 'N',
+            id: 'N',
             available_for: vec![0, 1],
             is_leader: false,
             castle_files: None,
@@ -107,10 +109,9 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_bishop(&self, id: PieceId) -> PieceDefinition {
+    pub fn make_bishop(&self) -> PieceDefinition {
         PieceDefinition {
-            id,
-            char_rep: 'B',
+            id: 'B',
             available_for: vec![0, 1],
             is_leader: false,
             castle_files: None,
@@ -145,10 +146,9 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_rook(&self, id: PieceId) -> PieceDefinition {
+    pub fn make_rook(&self) -> PieceDefinition {
         PieceDefinition {
-            id,
-            char_rep: 'R',
+            id: 'R',
             available_for: vec![0, 1],
             is_leader: false,
             castle_files: None,
@@ -183,7 +183,7 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_king(&self, id: PieceId) -> PieceDefinition {
+    pub fn make_king(&self) -> PieceDefinition {
         let win_squares = {
             if self.mode == GameMode::KingOfTheHill {
                 vec![(3,3), (3,4), (4,3), (4,4)]
@@ -195,8 +195,7 @@ impl PieceFactory {
         };
         let can_castle = self.mode != GameMode::Antichess && self.mode != GameMode::RacingKings;
         PieceDefinition {
-            id,
-            char_rep: 'K',
+            id: 'K',
             available_for: if self.mode == GameMode::Horde { vec![1] } else { vec![0, 1] },
             is_leader: self.mode != GameMode::Antichess,
             castle_files: if can_castle { Some((2, 6)) } else { None },
@@ -231,10 +230,9 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_queen(&self, id: PieceId) -> PieceDefinition {
+    pub fn make_queen(&self) -> PieceDefinition {
         PieceDefinition {
-            id,
-            char_rep: 'Q',
+            id: 'Q',
             available_for: vec![0, 1],
             is_leader: false,
             castle_files: None,

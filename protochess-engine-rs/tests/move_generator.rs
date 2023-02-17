@@ -22,14 +22,14 @@ mod move_generator_test {
     
     #[test]
     fn test_move_type() {
-        let mv = Move::new(0xAB, 0xCD, 0xEF, MoveType::PromotionCapture, Some(123));
+        let mv = Move::new(0xAB, 0xCD, 0xEF, MoveType::PromotionCapture, Some('y'));
         assert_eq!(mv.get_from(), 0xAB);
         assert_eq!(mv.get_to(), 0xCD);
         assert_eq!(mv.get_target(), 0xEF);
         assert_eq!(mv.get_move_type(), MoveType::PromotionCapture);
         assert!(mv.is_capture());
         assert!(!mv.is_null());
-        assert_eq!(mv.get_promotion_piece(), Some(123));
+        assert_eq!(mv.get_promotion_piece(), Some('y'));
         
         assert!(Move::null().is_null());
         assert!(Move::null().get_promotion_piece().is_none());

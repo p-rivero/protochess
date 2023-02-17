@@ -3,11 +3,6 @@ mod zobrist_test {
     use std::convert::{TryInto, TryFrom};
 
     use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResult};
-    const ID_KING: u32 = 0;
-    const ID_QUEEN: u32 = 1;
-    const ID_ROOK: u32 = 2;
-    const ID_KNIGHT: u32 = 4;
-    const ID_PAWN: u32 = 5;
     
     #[test]
     fn zobrist_pawn_push() {
@@ -83,24 +78,21 @@ mod zobrist_test {
     
     #[test]
     fn zobrist_promotion() {
-        // ID_KNIGHT = 4
-        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7g8=4"];
+        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7g8=N"];
         let expected_fen = "rnbqkbNr/pppppp2/5n2/7p/8/8/PPPPPPP1/RNBQKBNR b KQkq - 0 5";
         test_zobrist_sequence(&mv, expected_fen);
     }
     
     #[test]
     fn zobrist_promotion_capture() {
-        // ID_BISHOP = 3
-        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7f8=3"];
+        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7f8=B"];
         let expected_fen = "rnbqkB1r/pppppp2/5n2/7p/8/8/PPPPPPP1/RNBQKBNR b KQkq - 0 5";
         test_zobrist_sequence(&mv, expected_fen);
     }
     
     #[test]
     fn zobrist_promotion_capture_rook() {
-        // ID_QUEEN = 1
-        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7h8=1"];
+        let mv = vec!["h2h4", "g7g5", "h4g5", "h7h6", "g5g6", "h6h5", "g6g7", "g8f6", "g7h8=Q"];
         let expected_fen = "rnbqkb1Q/pppppp2/5n2/7p/8/8/PPPPPPP1/RNBQKBNR b KQq - 0 5";
         test_zobrist_sequence(&mv, expected_fen);
     }
@@ -136,7 +128,7 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, ID_QUEEN, 3, 0, false).unwrap();
+        engine_start.add_piece(0, 'Q', 3, 0, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -145,9 +137,9 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, ID_QUEEN, 3, 0, false).unwrap();
-        engine_start.add_piece(1, ID_KNIGHT, 6, 7, false).unwrap();
-        engine_start.add_piece(1, ID_PAWN, 2, 6, false).unwrap();
+        engine_start.add_piece(0, 'Q', 3, 0, false).unwrap();
+        engine_start.add_piece(1, 'N', 6, 7, false).unwrap();
+        engine_start.add_piece(1, 'P', 2, 6, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -156,8 +148,8 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, ID_ROOK, 0, 0, false).unwrap();
-        engine_start.add_piece(1, ID_ROOK, 7, 7, false).unwrap();
+        engine_start.add_piece(0, 'R', 0, 0, false).unwrap();
+        engine_start.add_piece(1, 'R', 7, 7, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     #[test]
@@ -165,8 +157,8 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, ID_ROOK, 0, 0, false).unwrap();
-        engine_start.add_piece(1, ID_ROOK, 7, 7, true).unwrap();
+        engine_start.add_piece(0, 'R', 0, 0, false).unwrap();
+        engine_start.add_piece(1, 'R', 7, 7, true).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -175,7 +167,7 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w Kq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, ID_KING, 3, 0, false).unwrap();
+        engine_start.add_piece(0, 'K', 3, 0, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -223,7 +215,7 @@ mod zobrist_test {
         let mut engine1 = Engine::from_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1").unwrap();
         let mut engine2 = Engine::from_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
         
-        engine1.add_piece(0, ID_PAWN, 3, 2, true).unwrap();
+        engine1.add_piece(0, 'P', 3, 2, true).unwrap();
         engine1.remove_piece(3, 1).unwrap();
         
         assert_eq!(engine2.make_move(&"d2d3".try_into().unwrap()), MakeMoveResult::Ok);
@@ -238,7 +230,7 @@ mod zobrist_test {
         
         engine1.remove_piece(3, 1).unwrap();
         engine1.remove_piece(4, 4).unwrap();
-        engine1.add_piece(1, ID_PAWN, 3, 3, true).unwrap();
+        engine1.add_piece(1, 'P', 3, 3, true).unwrap();
         
         assert_eq!(engine2.make_move(&"d2d4".try_into().unwrap()), MakeMoveResult::Ok);
         assert_eq!(engine2.make_move(&"e5d4".try_into().unwrap()), MakeMoveResult::Ok);
@@ -250,7 +242,7 @@ mod zobrist_test {
         let mut engine1 = Engine::from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR b KQkq - 0 1").unwrap();
         let mut engine2 = Engine::from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR w KQkq - 0 1").unwrap();
         
-        engine1.add_piece(0, ID_ROOK, 7, 4, true).unwrap();
+        engine1.add_piece(0, 'R', 7, 4, true).unwrap();
         engine1.remove_piece(7, 0).unwrap();
         
         assert_eq!(engine2.make_move(&"h1h5".try_into().unwrap()), MakeMoveResult::Ok);
@@ -264,7 +256,7 @@ mod zobrist_test {
         
         engine1.remove_piece(7, 0).unwrap();
         engine1.remove_piece(7, 7).unwrap();
-        engine1.add_piece(0, ID_ROOK, 7, 7, true).unwrap();
+        engine1.add_piece(0, 'R', 7, 7, true).unwrap();
         
         assert_eq!(engine2.make_move(&"h1h8".try_into().unwrap()), MakeMoveResult::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());

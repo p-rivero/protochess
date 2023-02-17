@@ -3,17 +3,10 @@ use std::convert::TryInto;
 use regex::Regex;
 use scan_fmt::scan_fmt;
 
-use crate::{PieceId, GameState, GlobalRules, PiecePlacement, wrap_res, err_assert, err};
+use crate::{GameState, GlobalRules, PiecePlacement, wrap_res, err_assert, err};
 use crate::piece::PieceFactory;
-use crate::types::{GameMode, BCoord};
+use crate::types::{GameMode, BCoord, Player};
 
-
-const ID_KING: PieceId = 0;
-const ID_QUEEN: PieceId = 1;
-const ID_ROOK: PieceId = 2;
-const ID_BISHOP: PieceId = 3;
-const ID_KNIGHT: PieceId = 4;
-const ID_PAWN: PieceId = 5;
 
 impl GameState {
     pub fn from_fen(fen: &str) -> wrap_res!(Self) {
@@ -62,18 +55,14 @@ impl GameState {
         
         // Generate piece types
         let factory = PieceFactory::new(mode);
-        let mut pawn_promotions = vec![ID_QUEEN, ID_ROOK, ID_BISHOP, ID_KNIGHT];
-        if mode == GameMode::Antichess {
-            pawn_promotions.push(ID_KING);
-        }
         let piece_types = vec![
-            factory.make_king(ID_KING),
-            factory.make_queen(ID_QUEEN),
-            factory.make_rook(ID_ROOK),
-            factory.make_bishop(ID_BISHOP),
-            factory.make_knight(ID_KNIGHT),
-            factory.make_pawn(ID_PAWN, true, pawn_promotions.clone()),
-            factory.make_pawn(ID_PAWN, false, pawn_promotions),
+            factory.make_king(),
+            factory.make_queen(),
+            factory.make_rook(),
+            factory.make_bishop(),
+            factory.make_knight(),
+            factory.make_pawn(true),
+            factory.make_pawn(false),
         ];
         
         // Times in check
@@ -137,20 +126,12 @@ impl GameState {
 }
 
 // Converts a Vec of tuples of (player, char, x, y) to a Vec of PiecePlacements
-fn tuples_to_pieces(piece_tuples: Vec<(u8, char, u8, u8)>, castling: &str, ranks_with_kings: &[Vec<u8>; 2]) -> wrap_res!(Vec<PiecePlacement>) {
+fn tuples_to_pieces(piece_tuples: Vec<(Player, char, BCoord, BCoord)>, castling: &str, ranks_with_kings: &[Vec<u8>; 2]) -> wrap_res!(Vec<PiecePlacement>) {
     // Convert the tuples to PiecePlacements, set can_castle to false
     let mut pieces = Vec::with_capacity(piece_tuples.len());
     for t in piece_tuples {
-        let piece_id = match t.1.to_ascii_uppercase() {
-            'K' => ID_KING,
-            'Q' => ID_QUEEN,
-            'R' => ID_ROOK,
-            'B' => ID_BISHOP,
-            'N' => ID_KNIGHT,
-            'P' => ID_PAWN,
-            _ => err!("Invalid piece character '{}' in FEN string", t.1),
-        };
-        pieces.push(PiecePlacement::new(t.0, piece_id, t.2, t.3, false));
+        let id = t.1.to_ascii_uppercase();
+        pieces.push(PiecePlacement::new(t.0, id, t.2, t.3, false));
     }
     let mut enable_castle = |is_white: bool, kingside: bool, row_y: BCoord| -> wrap_res!() {
         let num_pieces = pieces.len();
@@ -165,22 +146,22 @@ fn tuples_to_pieces(piece_tuples: Vec<(u8, char, u8, u8)>, castling: &str, ranks
             if p.y != row_y as BCoord { continue; }
             if (p.owner == 0) != is_white { continue; }
             // Find the first rook and enable it
-            if !found_rook && p.piece_id == ID_ROOK {
+            if !found_rook && p.piece_id == 'R' {
                 found_rook = true;
                 err_assert!(p.can_castle == Some(false), "Should not have been able to castle, FEN might be invalid");
                 p.can_castle = Some(true);
                 continue;
             }
-            if !found_rook && p.piece_id == ID_KING {
+            if !found_rook && p.piece_id == 'K' {
                 // Found the king before the rook, so the rook is missing
                 // Don't throw an error here to support multiple kings
                 break;
             }
             // Next search for the king, but stop if we find another rook instead
-            if found_rook && p.piece_id == ID_KING {
+            if found_rook && p.piece_id == 'K' {
                 p.can_castle = Some(true);
             }
-            if found_rook && p.piece_id == ID_ROOK {
+            if found_rook && p.piece_id == 'R' {
                 break;
             }
         }

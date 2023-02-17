@@ -419,10 +419,6 @@ impl Position {
         self.pieces[player as usize].piece_at(index)
     }
     
-    pub fn get_piece_char(&self, player: Player, piece_id: PieceId) -> Option<char> {
-        self.pieces[player as usize].get_piece_char(piece_id)
-    }
-    
     /// Returns if the point is in bounds
     pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {
         self.dimensions.in_bounds(x, y)
@@ -511,7 +507,7 @@ impl fmt::Display for Position {
             write!(f, "{:2} ", y+1)?;
             for x in 0..self.dimensions.width {
                 if let Some(piece) = self.piece_at(to_index(x,y)) {
-                    write!(f, "{} ", piece.char_rep())?;
+                    write!(f, "{} ", piece)?;
                 } else if self.dimensions.in_bounds(x, y) {
                     write!(f, ". ")?;
                 } else {

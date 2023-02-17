@@ -28,7 +28,7 @@ pub enum GameMode {
 impl TryFrom<&str> for GameMode {
     type Error = String;
     fn try_from(value: &str) -> wrap_res!(Self) {
-        match value.to_ascii_lowercase().as_str() {
+        match value.to_lowercase().as_str() {
             "standard" => Ok(GameMode::Standard),
             "atomic" => Ok(GameMode::Atomic),
             "horde" => Ok(GameMode::Horde),

@@ -42,21 +42,21 @@ pub fn perft_divide(position: &mut Position, depth: Depth) -> u64 {
 
         let (x,y) = from_index(mv.get_from());
         let (x2,y2) = from_index(mv.get_to());
-        let promo = mv.get_promotion_piece().map(|p| position.get_piece_char(position.whos_turn, p));
-        let promo_char = {
-            if let Some(Some(p)) = promo { p.to_string() }
+        let promo = mv.get_promotion_piece();
+        let promo_str = {
+            if let Some(p) = promo { p.to_string() }
             else { "".to_string() }
         };
         if depth == 1 {
             nodes += 1;
-            printing.push(format!("{}{}{}: 1", to_rank_file(x,y), to_rank_file(x2,y2), promo_char));
+            printing.push(format!("{}{}{}: 1", to_rank_file(x,y), to_rank_file(x2,y2), promo_str));
         } else {
             position.make_move(mv);
             let plus = perft(position, depth - 1);
             nodes += plus;
             position.unmake_move();
             //Print nodes
-            printing.push(format!("{}{}{}: {}", to_rank_file(x,y), to_rank_file(x2,y2), promo_char, plus));
+            printing.push(format!("{}{}{}: {}", to_rank_file(x,y), to_rank_file(x2,y2), promo_str, plus));
         }
     }
     printing.sort();

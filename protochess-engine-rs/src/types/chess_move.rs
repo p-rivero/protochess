@@ -46,7 +46,7 @@ impl Move {
     pub fn new(from: BIndex, to: BIndex, target: BIndex, move_type: MoveType, promotion: Option<PieceId>) -> Move {
         Move {
             move_fields: (from as u32) | (to as u32) << 8 | (target as u32) << 16 | (move_type as u32) << 24,
-            promotion: promotion.unwrap_or(0)
+            promotion: promotion.unwrap_or('_')
         }
     }
 
@@ -65,17 +65,17 @@ impl Move {
     }
 
     pub fn get_from(&self) -> BIndex{
-        (self.move_fields & (BIndex::MAX as u32)) as BIndex
+        (self.move_fields & 0xFF) as BIndex
     }
 
     pub fn get_to(&self) -> BIndex{
-        ((self.move_fields >> 8) & (BIndex::MAX as u32)) as BIndex
+        ((self.move_fields >> 8) & 0xFF) as BIndex
     }
     
     // Get the index of the victim piece, if any. Usually the same as get_to(), except for en passant
     // In double jump, this is the index of the generated en passant square
     pub fn get_target(&self) -> BIndex {
-        ((self.move_fields >> 16) & (BIndex::MAX as u32)) as BIndex
+        ((self.move_fields >> 16) & 0xFF) as BIndex
     }
 
     pub fn is_capture(&self) -> bool {
@@ -186,18 +186,18 @@ impl From<Move> for MoveInfo {
     }
 }
 
-// Create a MoveInfo from a string like "e2e4" or "e7e8=123" (promotion to piece with id 123)
+// Create a MoveInfo from a string like "e2e4" or "e7e8=Q"
 impl TryFrom<&str> for MoveInfo {
     type Error = String;
     fn try_from(s: &str) -> wrap_res!(Self) {
-        const EXPECTED_REGEX: &str = r"^[a-p][0-9]+[a-p][0-9]+(=[0-9]+)?$";
+        const EXPECTED_REGEX: &str = r"^[a-p][0-9]+[a-p][0-9]+(=.)?$";
         let s = s.trim();
-        err_assert!(Regex::new(EXPECTED_REGEX).unwrap().is_match(s), "Invalid move format: '{s}' (expected 'e2e4', 'e7e8=123')");
+        err_assert!(Regex::new(EXPECTED_REGEX).unwrap().is_match(s), "Invalid move format: '{s}' (expected 'e2e4', 'e7e8=Q')");
         let (from_x, from_y, to_x, to_y) = match scan_fmt!(s, "{[a-p]}{d}{[a-p]}{d}", char, isize, char, isize) {
             Ok(parts) => parts,
             Err(_) => err!("Invalid move format: '{s}'"),
         };
-        let promotion = match scan_fmt!(s, "{*[a-p]}{*d}{*[a-p]}{*d}={d}", PieceId) {
+        let promotion = match scan_fmt!(s, "{*[a-p]}{*d}{*[a-p]}{*d}={}", PieceId) {
             Ok(promo) => Some(promo),
             Err(_) => None,
         };
