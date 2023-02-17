@@ -1,12 +1,15 @@
+
+SOURCE_FILES = $(shell find src -type f) $(shell find ../protochess-engine-rs/src -type f)
+
 all: pkg pkg-parallel
 
-pkg: src/*
+pkg: $(SOURCE_FILES)
 	@echo "-------------------------------------------"
 	@echo " Building single-threaded version to ./pkg "
 	@echo "-------------------------------------------"
 	wasm-pack build --target web --release
 
-pkg-parallel: src/*
+pkg-parallel: $(SOURCE_FILES)
 	@echo "---------------------------------------------------"
 	@echo " Building multi-threaded version to ./pkg-parallel "
 	@echo "---------------------------------------------------"
