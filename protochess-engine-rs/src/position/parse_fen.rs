@@ -81,7 +81,7 @@ impl GameState {
         }
         
         // Player to move
-        let whos_turn = {
+        let player_to_move = {
             if fen_parts[1].to_ascii_lowercase() == "w" { 0 }
             else if fen_parts[1].to_ascii_lowercase() == "b" { 1 } 
             else { err!("The player to move must be 'w' or 'b'") }
@@ -106,7 +106,7 @@ impl GameState {
                 
                 let ep_square = (ep_x, ep_y);
                 let mut ep_victim = ep_square;
-                if whos_turn == 0 { ep_victim.1 += 1 }
+                if player_to_move == 0 { ep_victim.1 += 1 }
                 else { ep_victim.1 -= 1 }
                 Some((ep_square, ep_victim))
             }
@@ -120,7 +120,7 @@ impl GameState {
         let board_height = board_height as BCoord;
         let invalid_squares = Vec::new();
         
-        Ok(GameState { piece_types, board_width, board_height, invalid_squares, pieces, whos_turn, ep_square_and_victim, times_in_check, global_rules })
+        Ok(GameState { piece_types, board_width, board_height, invalid_squares, pieces, player_to_move, ep_square_and_victim, times_in_check, global_rules })
     }
 }
 

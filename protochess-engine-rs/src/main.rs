@@ -137,7 +137,7 @@ pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
     
     if moved_piece != 'P' {
         // If the piece is not a pawn, write the piece letter
-        move_string = format!("{moved_piece}{move_string}")
+        move_string = format!("{moved_piece}{move_string}");
     }
     
     match move_string.as_str() {

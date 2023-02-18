@@ -154,7 +154,7 @@ impl Engine {
         Ok(())
     }
     
-    pub fn whos_turn(&self) -> Player {
+    pub fn player_to_move(&self) -> Player {
         self.position.whos_turn
     }
     

@@ -34,7 +34,7 @@ pub struct GameState {
     pub board_height: BCoord,
     pub invalid_squares: Vec<(BCoord, BCoord)>,
     pub pieces: Vec<PiecePlacement>,
-    pub whos_turn: Player,
+    pub player_to_move: Player,
     pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
     pub times_in_check: Option<[u8; 2]>,
     pub global_rules: GlobalRules,
@@ -47,7 +47,7 @@ impl PartialEq<GameState> for GameState {
         self.board_height == other.board_height &&
         eq_anyorder(&self.invalid_squares, &other.invalid_squares) &&
         eq_anyorder(&self.pieces, &other.pieces) &&
-        self.whos_turn == other.whos_turn &&
+        self.player_to_move == other.player_to_move &&
         self.ep_square_and_victim == other.ep_square_and_victim &&
         self.times_in_check == other.times_in_check &&
         self.global_rules == other.global_rules
@@ -91,7 +91,7 @@ impl From<&Position> for GameState {
             board_height,
             invalid_squares,
             pieces,
-            whos_turn: pos.whos_turn,
+            player_to_move: pos.whos_turn,
             ep_square_and_victim,
             times_in_check: Some(*pos.get_times_checked()),
             global_rules: pos.global_rules.clone(),
@@ -116,7 +116,7 @@ impl TryFrom<GameState> for Position {
             err_assert!(dims.in_bounds(vx, vy), "Invalid EP victim: ({vx}, {vy})");
             props.set_ep_square(to_index(sx, sy), to_index(vx, vy));
         }
-        if state.whos_turn == 1 {
+        if state.player_to_move == 1 {
             // Use the lowest bit as player zobrist key
             props.zobrist_key ^= 1;
         }
@@ -125,7 +125,7 @@ impl TryFrom<GameState> for Position {
         }
 
         // Instantiate position and register piecetypes
-        let mut pos = Position::new(dims, state.whos_turn, props, state.global_rules);
+        let mut pos = Position::new(dims, state.player_to_move, props, state.global_rules);
         for definition in &state.piece_types {
             pos.register_piecetype(definition)?;
         }
