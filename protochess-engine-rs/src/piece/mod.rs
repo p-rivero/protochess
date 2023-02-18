@@ -23,7 +23,7 @@ use precomputed_piece_def::PrecomputedPieceDef;
 use movement::{output_translations, output_captures};
 
 // Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Piece {
     // Info about this piece type
     type_def: PieceDefinition,

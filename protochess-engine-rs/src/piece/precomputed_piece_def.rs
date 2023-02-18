@@ -3,7 +3,7 @@ use crate::PieceDefinition;
 use crate::utils::from_index;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PrecomputedPieceDef {
     // Positions at which this piece can promote
     pub promotion_squares: Bitboard,

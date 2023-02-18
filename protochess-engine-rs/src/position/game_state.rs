@@ -4,6 +4,7 @@ use ahash::AHashSet;
 
 use crate::{PieceDefinition, PieceId, err_assert, wrap_res};
 use crate::utils::{to_index, from_index};
+use crate::utils::debug::eq_anyorder;
 
 use super::Position;
 use super::global_rules::GlobalRules;
@@ -11,6 +12,7 @@ use super::position_properties::PositionProperties;
 use super::{BCoord, Player, BDimensions};
 
 #[must_use]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PiecePlacement {
     pub owner: Player,
     pub piece_id: PieceId,
@@ -25,6 +27,7 @@ impl PiecePlacement {
     }
 }
 #[must_use]
+#[derive(Debug, Clone)]
 pub struct GameState {
     pub piece_types: Vec<PieceDefinition>,
     pub valid_squares: Vec<(BCoord, BCoord)>,
@@ -33,6 +36,18 @@ pub struct GameState {
     pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
     pub times_in_check: Option<[u8; 2]>,
     pub global_rules: GlobalRules,
+}
+
+impl PartialEq<GameState> for GameState {
+    fn eq(&self, other: &GameState) -> bool {
+        eq_anyorder(&self.piece_types, &other.piece_types) &&
+        eq_anyorder(&self.valid_squares, &other.valid_squares) &&
+        eq_anyorder(&self.pieces, &other.pieces) &&
+        self.whos_turn == other.whos_turn &&
+        self.ep_square_and_victim == other.ep_square_and_victim &&
+        self.times_in_check == other.times_in_check &&
+        self.global_rules == other.global_rules
+    }
 }
 
 

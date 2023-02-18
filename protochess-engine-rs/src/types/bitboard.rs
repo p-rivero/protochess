@@ -50,7 +50,7 @@ impl BDimensions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[must_use]
 pub struct Bitboard {
     board_internal: numext_fixed_uint::U256,

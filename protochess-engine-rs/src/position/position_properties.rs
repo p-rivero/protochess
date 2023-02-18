@@ -3,7 +3,7 @@ use crate::types::{BIndex, Move, ZobKey};
 use crate::piece::PieceId;
 
 /// Properties that are hard to recover from a Move
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PositionProperties {
     pub zobrist_key: ZobKey,
     pub move_played: Move,

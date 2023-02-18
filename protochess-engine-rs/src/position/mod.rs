@@ -524,3 +524,16 @@ impl fmt::Display for Position {
         write!(f, "\nPlayer to move: {}", self.whos_turn)
     }
 }
+
+impl PartialEq for Position {
+    fn eq(&self, other: &Position) -> bool {
+        self.dimensions == other.dimensions &&
+        self.whos_turn == other.whos_turn &&
+        self.pieces == other.pieces &&
+        self.occ_or_out_bounds == other.occ_or_out_bounds &&
+        // Only compare the top of the stack, since the history may be different
+        self.get_properties().zobrist_key == other.get_properties().zobrist_key &&
+        // Don't compare captures stack, since the history may be different
+        self.global_rules == other.global_rules
+    }
+}

@@ -57,5 +57,34 @@ mod position_test {
         assert_eq!(zob_0, pos.get_zobrist());
     }
     
+    #[test]
+    fn game_state_eq_position() {
+        let state = GameState::default();
+        let pos = Position::try_from(state.clone()).unwrap();
+        let state2 = GameState::from(&pos);
+        assert_eq!(state, state2);
+        let pos2 = Position::try_from(state2.clone()).unwrap();
+        assert_eq!(pos, pos2);
+    }
+    
+    #[test]
+    fn game_state_eq_position2() {
+        let state = GameState::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ATOMIC").unwrap();
+        let pos = Position::try_from(state.clone()).unwrap();
+        let state2 = GameState::from(&pos);
+        assert_eq!(state, state2);
+        let pos2 = Position::try_from(state2.clone()).unwrap();
+        assert_eq!(pos, pos2);
+    }
+    
+    #[test]
+    fn game_state_eq_position3() {
+        let state = GameState::from_fen("rnbqkbnr/pppppppp/8/1PP2PP1/PPPPPPPP/PPPPPPPP/PPPPPPPP/PPPPPPPP w kq - 0 1 HORDE").unwrap();
+        let pos = Position::try_from(state.clone()).unwrap();
+        let state2 = GameState::from(&pos);
+        assert_eq!(state, state2);
+        let pos2 = Position::try_from(state2.clone()).unwrap();
+        assert_eq!(pos, pos2);
+    }
 }
 

@@ -1,4 +1,5 @@
 use crate::types::{BCoord, Player};
+use crate::utils::debug::eq_anyorder;
 use super::PieceId;
 
 
@@ -108,5 +109,40 @@ impl PieceDefinition {
     }
     pub fn can_castle(&self) -> bool {
         self.castle_files.is_some()
+    }
+    
+    pub fn eq_ignore_order(&self, other: &PieceDefinition) -> bool {
+        self.id == other.id &&
+        eq_anyorder(&self.available_for, &other.available_for) &&
+        self.is_leader == other.is_leader &&
+        self.castle_files == other.castle_files &&
+        self.is_castle_rook == other.is_castle_rook &&
+        self.explodes == other.explodes &&
+        eq_anyorder(&self.explosion_deltas, &other.explosion_deltas) &&
+        self.immune_to_explosion == other.immune_to_explosion &&
+        eq_anyorder(&self.promotion_squares, &other.promotion_squares) &&
+        eq_anyorder(&self.promo_vals, &other.promo_vals) &&
+        eq_anyorder(&self.double_jump_squares, &other.double_jump_squares) &&
+        eq_anyorder(&self.attack_sliding_deltas, &other.attack_sliding_deltas) &&
+        eq_anyorder(&self.attack_jump_deltas, &other.attack_jump_deltas) &&
+        self.attack_north == other.attack_north &&
+        self.attack_south == other.attack_south &&
+        self.attack_east == other.attack_east &&
+        self.attack_west == other.attack_west &&
+        self.attack_northeast == other.attack_northeast &&
+        self.attack_northwest == other.attack_northwest &&
+        self.attack_southeast == other.attack_southeast &&
+        self.attack_southwest == other.attack_southwest &&
+        eq_anyorder(&self.translate_jump_deltas, &other.translate_jump_deltas) &&
+        eq_anyorder(&self.translate_sliding_deltas, &other.translate_sliding_deltas) &&
+        self.translate_north == other.translate_north &&
+        self.translate_south == other.translate_south &&
+        self.translate_east == other.translate_east &&
+        self.translate_west == other.translate_west &&
+        self.translate_northeast == other.translate_northeast &&
+        self.translate_northwest == other.translate_northwest &&
+        self.translate_southeast == other.translate_southeast &&
+        self.translate_southwest == other.translate_southwest &&
+        eq_anyorder(&self.win_squares, &other.win_squares)
     }
 }

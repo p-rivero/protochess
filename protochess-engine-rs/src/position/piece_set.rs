@@ -1,5 +1,6 @@
 use std::slice::{Iter, IterMut};
 
+use crate::utils::debug::eq_anyorder;
 use crate::{PieceDefinition, wrap_res, err_assert};
 //Pieces that a player has
 use crate::types::{Bitboard, BIndex, Player, BDimensions, Centipawns, BCoord};
@@ -200,6 +201,33 @@ impl PieceSet {
                 new_delta.push((-x, -y));
             }
             self.inverse_attack.attack_sliding_deltas.push(new_delta);
+        }
+    }
+}
+
+impl PartialEq for PieceSet {
+    fn eq(&self, other: &Self) -> bool {
+        eq_anyorder(&self.pieces, &other.pieces) &&
+        self.occupied == other.occupied &&
+        self.player_num == other.player_num &&
+        self.inverse_attack.eq_ignore_order(&other.inverse_attack) &&
+        self.inverse_attack_jumps == other.inverse_attack_jumps && {
+            for pos in 0..256 {
+                let i1 = self.piece_at_index[pos];
+                let i2 = other.piece_at_index[pos];
+                if i1 == -1 && i2 == -1 { continue; }
+                if i1 == -1 || i2 == -1 { return false; }
+                if self.pieces[i1 as usize] != other.pieces[i2 as usize] {
+                    return false;
+                }
+            }
+            true
+        } && {
+            let i1 = self.leader_piece_index;
+            let i2 = other.leader_piece_index;
+            if i1 == -1 && i2 == -1 { true }
+            else if i1 == -1 || i2 == -1 { false }
+            else { self.pieces[i1 as usize] == other.pieces[i2 as usize] }
         }
     }
 }
