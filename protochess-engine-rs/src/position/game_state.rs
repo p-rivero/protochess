@@ -30,7 +30,9 @@ impl PiecePlacement {
 #[derive(Debug, Clone)]
 pub struct GameState {
     pub piece_types: Vec<PieceDefinition>,
-    pub valid_squares: Vec<(BCoord, BCoord)>,
+    pub board_width: BCoord,
+    pub board_height: BCoord,
+    pub invalid_squares: Vec<(BCoord, BCoord)>,
     pub pieces: Vec<PiecePlacement>,
     pub whos_turn: Player,
     pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
@@ -41,7 +43,9 @@ pub struct GameState {
 impl PartialEq<GameState> for GameState {
     fn eq(&self, other: &GameState) -> bool {
         eq_anyorder(&self.piece_types, &other.piece_types) &&
-        eq_anyorder(&self.valid_squares, &other.valid_squares) &&
+        self.board_width == other.board_width &&
+        self.board_height == other.board_height &&
+        eq_anyorder(&self.invalid_squares, &other.invalid_squares) &&
         eq_anyorder(&self.pieces, &other.pieces) &&
         self.whos_turn == other.whos_turn &&
         self.ep_square_and_victim == other.ep_square_and_victim &&
@@ -55,16 +59,18 @@ impl From<&Position> for GameState {
     fn from(pos: &Position) -> Self {
         let mut piece_types_set = AHashSet::<&PieceDefinition>::new();
         let mut pieces = Vec::new();
-        let mut valid_squares = Vec::new();
-        for x in 0..pos.dimensions.width {
-            for y in 0..pos.dimensions.height {
+        let board_width = pos.dimensions.width;
+        let board_height = pos.dimensions.height;
+        let mut invalid_squares = Vec::new();
+        for x in 0..board_width {
+            for y in 0..board_height {
                 let index = to_index(x, y);
                 if let Some(piece) = pos.piece_at(index) {
                     piece_types_set.insert(piece.get_movement());
                     pieces.push(PiecePlacement::new(piece.get_player(), piece.get_piece_id(), x, y, piece.has_not_moved(index)));
                 }
-                if pos.dimensions.in_bounds(x, y) {
-                    valid_squares.push((x, y));
+                if !pos.dimensions.in_bounds(x, y) {
+                    invalid_squares.push((x, y));
                 }
             }
         }
@@ -81,7 +87,9 @@ impl From<&Position> for GameState {
         };
         GameState {
             piece_types,
-            valid_squares,
+            board_width,
+            board_height,
+            invalid_squares,
             pieces,
             whos_turn: pos.whos_turn,
             ep_square_and_victim,
@@ -94,7 +102,7 @@ impl From<&Position> for GameState {
 impl TryFrom<GameState> for Position {
     type Error = String;
     fn try_from(state: GameState) -> wrap_res!(Self) {
-        let dims = BDimensions::from_valid_squares(&state.valid_squares)?;
+        let dims = BDimensions::from_invalid_squares(state.board_width, state.board_height, &state.invalid_squares)?;
     
         // Assert that all pieces are placed on valid squares
         for p in &state.pieces {

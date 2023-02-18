@@ -88,12 +88,6 @@ impl GameState {
         };
         
         let pieces = tuples_to_pieces(piece_tuples, fen_parts[2], &ranks_with_kings)?;
-        let mut valid_squares = Vec::new();
-        for x in 0..board_width {
-            for y in 0..board_height {
-                valid_squares.push((x as BCoord, y as BCoord));
-            }
-        }
         
         let ep_square_and_victim = {
             if fen_parts[3] == "-" {
@@ -121,7 +115,12 @@ impl GameState {
         let global_rules = GlobalRules::for_mode(mode);
         let times_in_check = Some(times_in_check);
         
-        Ok(GameState { piece_types, valid_squares, pieces, whos_turn, ep_square_and_victim, times_in_check, global_rules })
+        // In standard FEN strings, there are no walls
+        let board_width = board_width as BCoord;
+        let board_height = board_height as BCoord;
+        let invalid_squares = Vec::new();
+        
+        Ok(GameState { piece_types, board_width, board_height, invalid_squares, pieces, whos_turn, ep_square_and_victim, times_in_check, global_rules })
     }
 }
 

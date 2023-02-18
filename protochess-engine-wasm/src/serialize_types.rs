@@ -201,7 +201,9 @@ generate_wrapper!(GlobalRulesSer, GlobalRules, [
 
 generate_wrapper!(GameStateSer, GameState, [
     piece_types, SerVec<PieceDefinitionSer>,
-    valid_squares, Vec<(u8, u8)>,
+    board_width, u8,
+    board_height, u8,
+    invalid_squares, Vec<(u8, u8)>,
     pieces, SerVec<PiecePlacementSer>,
     whos_turn, u8,
     ep_square_and_victim, Option<((u8, u8), (u8, u8))>,

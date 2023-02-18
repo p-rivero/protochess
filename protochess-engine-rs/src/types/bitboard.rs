@@ -29,15 +29,15 @@ impl BDimensions {
         Ok(BDimensions { width, height, bounds })
     }
     // Given a list of valid squares (coordinates), return a BDimensions object
-    pub fn from_valid_squares(valid_squares: &Vec<(BCoord, BCoord)>) -> wrap_res!(BDimensions) {
-        let mut width = 0;
-        let mut height = 0;
+    pub fn from_invalid_squares(width: BCoord, height: BCoord, invalid_squares: &Vec<(BCoord, BCoord)>) -> wrap_res!(BDimensions) {
+        err_assert!(width < 16 && height < 16, "Board dimensions must be <= 16x16");
         let mut bounds = Bitboard::zero();
-        for sq in valid_squares {
-            err_assert!(sq.0 < 16 && sq.1 < 16, "Board dimensions must be <= 16x16");
-            if sq.0 >= width { width = sq.0 + 1; }
-            if sq.1 >= height { height = sq.1 + 1; }
-            bounds.set_bit_at(sq.0, sq.1);
+        for x in 0..width {
+            for y in 0..height {
+                if !invalid_squares.contains(&(x, y)) {
+                    bounds.set_bit_at(x, y);
+                }
+            }
         }
         Ok(BDimensions{width, height, bounds})
     }
