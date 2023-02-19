@@ -11,15 +11,15 @@ use crate::types::{GameMode, BCoord, Player};
 impl GameState {
     
     /// Creates a FEN string from the piece placement of the game state
-    pub fn create_fen(pieces: &[PiecePlacement], width: BCoord, height: BCoord) -> String {
+    pub fn create_fen(&self) -> String {
         let mut fen = String::new();
         let mut empty_count = 0;
         // For each square in the board
-        for y in (0..height).rev() {
-            for x in 0..width {
+        for y in (0..self.board_height).rev() {
+            for x in 0..self.board_width {
                 let mut found = false;
                 // Find the piece placed on that square
-                for piece in pieces {
+                for piece in &self.pieces {
                     if piece.x == x && piece.y == y {
                         if empty_count > 0 {
                             fen.push_str(&empty_count.to_string());
@@ -167,9 +167,9 @@ impl GameState {
         let board_height = board_height as BCoord;
         let invalid_squares = Vec::new();
         
-        Ok(GameState { piece_types, board_width, board_height, invalid_squares, pieces,
-            player_to_move, ep_square_and_victim, times_in_check, global_rules,
-            gui_fen: fen.to_string()
+        Ok(GameState {
+            piece_types, board_width, board_height, invalid_squares, pieces, player_to_move,
+            ep_square_and_victim, times_in_check, global_rules
         })
     }
 }

@@ -17,7 +17,7 @@ use searcher::{Searcher, eval};
 use utils::{to_index, from_index};
 
 pub use position::Position;
-pub use position::game_state::{PiecePlacement, GameState};
+pub use position::game_state::{PiecePlacement, GameState, GameStateGui};
 pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
 pub use piece::{Piece, PieceId, PieceDefinition};
@@ -57,8 +57,14 @@ impl Engine {
         Ok(())
     }
     
-    pub fn get_state(&self) -> GameState {
-        (&self.position).into()
+    pub fn get_state(&mut self) -> GameStateGui {
+        let state = GameState::from(&self.position);
+        let fen = state.create_fen();
+        GameStateGui {
+            state,
+            fen,
+            in_check: self.to_move_in_check(),
+        }
     }
 
     /// Returns the zobrist hash key for the current position

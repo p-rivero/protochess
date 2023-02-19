@@ -214,7 +214,11 @@ generate_wrapper!(GameStateSer, GameState, [
     player_to_move, u8,
     ep_square_and_victim, Option<((u8, u8), (u8, u8))>,
     times_in_check, Option<[u8; 2]>,
-    global_rules, GlobalRulesSer,
-    gui_fen, String
+    global_rules, GlobalRulesSer
 ]);
 
+generate_wrapper!(GameStateGuiSer, GameStateGui, [
+    state, GameStateSer,
+    fen, String,
+    in_check, bool
+]);

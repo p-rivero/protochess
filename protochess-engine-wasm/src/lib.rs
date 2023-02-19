@@ -90,9 +90,9 @@ impl Protochess {
     }
     
     #[wasm_bindgen(js_name = getState)]
-    pub fn get_state(&self) -> JsValue {
+    pub fn get_state(&mut self) -> JsValue {
         let state = self.engine.get_state();
-        GameStateSer::to_js(state)
+        GameStateGuiSer::to_js(state)
     }
     
     #[wasm_bindgen(js_name = loadFen)]
