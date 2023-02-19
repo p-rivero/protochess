@@ -26,6 +26,7 @@ impl Searcher {
     // alpha is the best score that I can currently guarantee at this level or above.
     // beta is the worst score for me that the opponent can currently guarantee at this level or above.
     #[allow(clippy::too_many_lines)]
+    #[allow(clippy::too_many_arguments)]
     fn alphabeta<const IS_PV: bool, const IS_ROOT: bool>(&mut self,
             mut depth: Depth,
             mut search_depth: Depth,
@@ -349,8 +350,11 @@ impl Searcher {
         // The opponent has moved the leader to a winning position
         let opponent = 1 - self.pos.whos_turn;
         let to = mv.get_to();
-        if self.pos.player_piece_at(opponent, to).unwrap().wins_at(to) {
-            return Some(self.checkmate_score(pv_index));
+        // Piece could have exploded when capturing in the win square, in that case the square is empty
+        if let Some(enemy_piece) = self.pos.player_piece_at(opponent, to) {
+            if enemy_piece.wins_at(to) {
+                return Some(self.checkmate_score(pv_index));
+            }
         }
         None
     }
