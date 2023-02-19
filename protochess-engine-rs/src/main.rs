@@ -33,7 +33,10 @@ pub fn main() {
         if args.len() > 2 && args[2] != "default" {
             let fen = &args[2];
             print_pgn_header(fen, &mut pgn_file);
-            Engine::from_fen(fen).unwrap()
+            Engine::from_fen(fen).unwrap_or_else(|e| {
+                println!("Incorrect FEN: {e}");
+                std::process::exit(1);
+            })
         } else {
             Engine::default()
         }

@@ -5,7 +5,7 @@ use crate::utils::{from_index, to_index};
 use crate::piece::{Piece, PieceId};
 
 mod position_properties;
-mod parse_fen;
+mod fen;
 pub mod global_rules;
 pub mod game_state;
 pub mod piece_set;
@@ -55,10 +55,22 @@ impl Position {
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) -> wrap_res!() {
         err_assert!(definition.promotion_squares.is_empty() == definition.promo_vals.is_empty(), 
             "Promotion squares and pieces must be specified together");
+        // Check that the id is uppercase and has a lowercase version
+        let id = definition.id;
+        let id_lower: Vec<_> = id.to_lowercase().collect();
+        err_assert!(id.is_uppercase(), "Piece id ({id}) must be an uppercase character");
+        err_assert!(id_lower.len() == 1, "Piece id ({id}) has a composite lowercase version and cannot be registered");
+        err_assert!(id_lower[0] != id, "Piece id ({id}) must have a well defined lowercase version");
         // Insert piece for all players specified in the definition
         for player in &definition.available_for {
             err_assert!(*player < self.pieces.len() as Player, "In piece definition, player {player} does not exist");
             self.pieces[*player as usize].register_piecetype(definition.clone(), &self.dimensions)?;
+        }
+        Ok(())
+    }
+    pub fn assert_promotion_consistency(&self) -> wrap_res!() {
+        for player in 0..self.pieces.len() {
+            self.pieces[player].assert_promotion_consistency()?;
         }
         Ok(())
     }

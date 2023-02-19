@@ -47,11 +47,19 @@ impl PieceSet {
             self.leader_piece_index = self.pieces.len() as isize;
         }
         for p in &self.pieces {
-            err_assert!(p.get_piece_id() != definition.id, "There is already a piece the id {}", definition.id);
+            err_assert!(p.get_piece_id() != definition.id, "There is already a piece with the id {}", definition.id);
         }
         
         let piece = Piece::new(definition, self.player_num, dims);
         self.pieces.push(piece);
+        Ok(())
+    }
+    pub fn assert_promotion_consistency(&self) -> wrap_res!() {
+        for piece in &self.pieces {
+            for promotion in &piece.get_movement().promo_vals {
+                err_assert!(self.contains_piece(*promotion), "Piece {piece} promotes to {promotion}, which does not exist");
+            }
+        }
         Ok(())
     }
     

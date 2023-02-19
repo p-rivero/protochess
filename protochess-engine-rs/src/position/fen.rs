@@ -9,6 +9,53 @@ use crate::types::{GameMode, BCoord, Player};
 
 
 impl GameState {
+    
+    /// Creates a FEN string from the piece placement of the game state
+    pub fn create_fen(pieces: &[PiecePlacement], width: BCoord, height: BCoord) -> String {
+        let mut fen = String::new();
+        let mut empty_count = 0;
+        // For each square in the board
+        for y in (0..height).rev() {
+            for x in 0..width {
+                let mut found = false;
+                // Find the piece placed on that square
+                for piece in pieces {
+                    if piece.x == x && piece.y == y {
+                        if empty_count > 0 {
+                            fen.push_str(&empty_count.to_string());
+                            empty_count = 0;
+                        }
+                        let piece_char = {
+                            if piece.owner == 0 {
+                                piece.piece_id.to_uppercase().next().unwrap()
+                            } else {
+                                piece.piece_id.to_lowercase().next().unwrap()
+                            }
+                        };
+                        fen.push(piece_char);
+                        found = true;
+                        break;
+                    }
+                }
+                // No piece in this square
+                if !found {
+                    empty_count += 1;
+                }
+            }
+            if empty_count > 0 {
+                fen.push_str(&empty_count.to_string());
+                empty_count = 0;
+            }
+            // Don't add a slash at the end of the last row
+            if y > 0 {
+                fen.push('/');
+            }
+        }
+        fen
+    }
+    
+    
+    /// Parses a FEN string into a game state
     pub fn from_fen(fen: &str) -> wrap_res!(Self) {
         // Split FEN string into parts, there must be at least 6 parts
         let fen_parts: Vec<&str> = fen.split_whitespace().collect();
@@ -41,10 +88,10 @@ impl GameState {
             x += skip_x;
             skip_x = 0;
             let player = {
-                if c.is_ascii_uppercase() { 0 } // White piece
+                if c.is_uppercase() { 0 } // White piece
                 else { 1 } // Black piece
             };
-            if c.to_ascii_uppercase() == 'K' && !ranks_with_kings[player as usize].contains(&y) {
+            if (c == 'K' || c == 'k') && !ranks_with_kings[player as usize].contains(&y) {
                 ranks_with_kings[player as usize].push(y);
             }
             piece_tuples.push((player, c, x as BCoord, y));
@@ -82,8 +129,8 @@ impl GameState {
         
         // Player to move
         let player_to_move = {
-            if fen_parts[1].to_ascii_lowercase() == "w" { 0 }
-            else if fen_parts[1].to_ascii_lowercase() == "b" { 1 } 
+            if fen_parts[1] == "w" || fen_parts[1] == "W" { 0 }
+            else if fen_parts[1] == "b" || fen_parts[1] == "B" { 1 }
             else { err!("The player to move must be 'w' or 'b'") }
         };
         
@@ -120,16 +167,20 @@ impl GameState {
         let board_height = board_height as BCoord;
         let invalid_squares = Vec::new();
         
-        Ok(GameState { piece_types, board_width, board_height, invalid_squares, pieces, player_to_move, ep_square_and_victim, times_in_check, global_rules })
+        Ok(GameState { piece_types, board_width, board_height, invalid_squares, pieces,
+            player_to_move, ep_square_and_victim, times_in_check, global_rules,
+            gui_fen: fen.to_string()
+        })
     }
 }
+
 
 // Converts a Vec of tuples of (player, char, x, y) to a Vec of PiecePlacements
 fn tuples_to_pieces(piece_tuples: Vec<(Player, char, BCoord, BCoord)>, castling: &str, ranks_with_kings: &[Vec<u8>; 2]) -> wrap_res!(Vec<PiecePlacement>) {
     // Convert the tuples to PiecePlacements, set can_castle to false
     let mut pieces = Vec::with_capacity(piece_tuples.len());
     for t in piece_tuples {
-        let id = t.1.to_ascii_uppercase();
+        let id = t.1.to_uppercase().next().unwrap();
         pieces.push(PiecePlacement::new(t.0, id, t.2, t.3, false));
     }
     let mut enable_castle = |is_white: bool, kingside: bool, row_y: BCoord| -> wrap_res!() {

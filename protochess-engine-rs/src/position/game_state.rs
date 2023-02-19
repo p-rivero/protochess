@@ -38,6 +38,8 @@ pub struct GameState {
     pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
     pub times_in_check: Option<[u8; 2]>,
     pub global_rules: GlobalRules,
+    // Only used for displaying the board in the UI
+    pub gui_fen: String,
 }
 
 impl PartialEq<GameState> for GameState {
@@ -50,7 +52,9 @@ impl PartialEq<GameState> for GameState {
         self.player_to_move == other.player_to_move &&
         self.ep_square_and_victim == other.ep_square_and_victim &&
         self.times_in_check == other.times_in_check &&
-        self.global_rules == other.global_rules
+        self.global_rules == other.global_rules &&
+        // Only compare the first part of the FEN, which is the board
+        self.gui_fen.split_whitespace().next() == other.gui_fen.split_whitespace().next()
     }
 }
 
@@ -85,6 +89,7 @@ impl From<&Position> for GameState {
                 None
             }
         };
+        let gui_fen = GameState::create_fen(&pieces, board_width, board_height);
         GameState {
             piece_types,
             board_width,
@@ -95,6 +100,7 @@ impl From<&Position> for GameState {
             ep_square_and_victim,
             times_in_check: Some(*pos.get_times_checked()),
             global_rules: pos.global_rules.clone(),
+            gui_fen
         }
     }
 }
@@ -129,6 +135,7 @@ impl TryFrom<GameState> for Position {
         for definition in &state.piece_types {
             pos.register_piecetype(definition)?;
         }
+        pos.assert_promotion_consistency()?;
         
         // Add pieces
         for p in state.pieces {
