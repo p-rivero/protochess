@@ -218,6 +218,19 @@ impl Engine {
         }
         output
     }
+    
+    /// Returns a list of all possible promotions for the given move
+    pub fn possible_promotions(&mut self, from: (BCoord, BCoord), to: (BCoord, BCoord)) -> Vec<PieceId> {
+        MoveGen::get_legal_moves(&mut self.position)
+            .into_iter()
+            .filter(|mv| {
+                let mv_from = from_index(mv.get_from());
+                let mv_to = from_index(mv.get_to());
+                mv_from == from && mv_to == to && mv.is_promotion()
+            })
+            .map(|mv| mv.get_promotion_piece().unwrap())
+            .collect()
+    }
 
     /// Returns true if the player to move is in check
     pub fn to_move_in_check(&mut self) -> bool {

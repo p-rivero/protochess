@@ -111,6 +111,13 @@ impl Protochess {
         let moves: SerVec<MoveListSer> = self.engine.legal_moves().into();
         Ok(to_value(&moves).unwrap())
     }
+    #[wasm_bindgen(js_name = possiblePromotions)]
+    pub fn possible_promotions(&mut self, from_x: u8, from_y: u8, to_x: u8, to_y: u8) -> Result<JsValue, String> {
+        let from = (from_x, from_y);
+        let to = (to_x, to_y);
+        let promotions: SerVec<char> = self.engine.possible_promotions(from, to).into();
+        Ok(to_value(&promotions).unwrap())
+    }
     
     #[wasm_bindgen(js_name = getMaxThreads)]
     pub fn get_max_threads(&self) -> u32 {
