@@ -47,6 +47,12 @@ generate_wrapper!(MoveInfoSer, MoveInfo, [
     promotion, Option<char>
 ]);
 
+generate_wrapper!(MoveListSer, MoveList, [
+    x, u8,
+    y, u8,
+    moves, SerVec<MoveInfoSer>
+]);
+
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

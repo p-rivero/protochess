@@ -9,18 +9,19 @@ pub mod position;
 pub mod searcher;
 pub mod utils;
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use types::{BCoord, Centipawns, Depth, Player, ZobKey};
 use searcher::{Searcher, eval};
-use utils::to_index;
+use utils::{to_index, from_index};
 
 pub use position::Position;
 pub use position::game_state::{PiecePlacement, GameState};
 pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
 pub use piece::{Piece, PieceId, PieceDefinition};
-pub use types::MoveInfo;
+pub use types::{MoveInfo, MoveList};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[must_use]
@@ -199,6 +200,23 @@ impl Engine {
             .map(MoveInfo::from)
             .collect();
         Ok(moves)
+    }
+    
+    /// Returns a list of all squares (x,y) from which the given piece can move, along with the moves themselves
+    pub fn legal_moves(&mut self) -> Vec<MoveList> {
+        let all_moves = MoveGen::get_legal_moves(&mut self.position);
+        let mut moves_from_map = HashMap::new();
+        for mv in all_moves {
+            let from = mv.get_from();
+            let coords = from_index(from);
+            let from_moves = moves_from_map.entry(coords).or_insert_with(Vec::new);
+            from_moves.push(MoveInfo::from(mv));
+        }
+        let mut output = Vec::new();
+        for ((x,y), moves) in moves_from_map {
+            output.push(MoveList{x, y, moves});
+        }
+        output
     }
 
     /// Returns true if the player to move is in check
