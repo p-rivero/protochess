@@ -21,20 +21,7 @@ pub use position::game_state::{PiecePlacement, GameState, GameStateGui};
 pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
 pub use piece::{Piece, PieceId, PieceDefinition};
-pub use types::{MoveInfo, MoveList};
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[must_use]
-pub enum MakeMoveResult {
-    Ok,
-    IllegalMove,
-    Checkmate{winner: Player},
-    LeaderCaptured{winner: Player},
-    PieceInWinSquare{winner: Player},
-    CheckLimit{winner: Player},
-    Stalemate{winner: Option<Player>},
-    Repetition,
-}
+pub use types::{MoveInfo, MoveList, MakeMoveResult, MakeMoveResultFlag, MakeMoveResultWinner};
 
 /// Starting point for the engine
 #[derive(Debug, Clone)]
@@ -103,6 +90,7 @@ impl Engine {
                 continue;
             }
             // Found the move, try to play it
+            let exploded = mv.get_potential_explosion(&self.position);
             if !MoveGen::make_move_if_legal(mv, &mut self.position) {
                 continue;
             }
@@ -117,34 +105,34 @@ impl Engine {
             };
             // Leader captured (atomic chess)
             if self.position.leader_is_captured() {
-                return MakeMoveResult::LeaderCaptured{winner};
+                return MakeMoveResult::leader_captured(winner, exploded);
             }
             // Piece moved to winning square (king of the hill, racing kings)
             if self.position.piece_is_on_winning_square() {
-                return MakeMoveResult::PieceInWinSquare{winner};
+                return MakeMoveResult::piece_in_win_square(winner, exploded);
             }
             let in_check = MoveGen::in_check(&mut self.position);
             // No legal moves, check if it's checkmate or stalemate
             if MoveGen::count_legal_moves(&mut self.position) == 0 {
                 if in_check {
-                    return MakeMoveResult::Checkmate{winner};
+                    return MakeMoveResult::checkmate(winner, exploded);
                 }
                 if self.position.global_rules.stalemated_player_loses {
-                    return MakeMoveResult::Stalemate{winner: Some(winner)};
+                    return MakeMoveResult::stalemate(Some(winner), exploded);
                 }
-                return MakeMoveResult::Stalemate{winner: None};
+                return MakeMoveResult::stalemate(None, exploded);
             }
             if in_check && self.position.increment_num_checks() {
                 // Checked N times (N=3 in 3-check)
-                return MakeMoveResult::CheckLimit { winner };
+                return MakeMoveResult::check_limit(winner, exploded);
             }
             if self.position.draw_by_repetition() {
                 // Threefold Repetition
-                return MakeMoveResult::Repetition;
+                return MakeMoveResult::repetition();
             }
-            return MakeMoveResult::Ok;
+            return MakeMoveResult::ok(exploded);
         }
-        MakeMoveResult::IllegalMove
+        MakeMoveResult::illegal_move()
     }
     
     pub fn make_move_str(&mut self, target_move: &str) -> wrap_res!(MakeMoveResult) {

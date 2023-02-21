@@ -49,22 +49,29 @@ async function initUI() {
   fenButton.onclick = fenButtonClick
 }
 
-async function updateBoard(result, winner) {
+async function updateBoard(resultFlag, winner, exploded) {
   boardDisplay.innerHTML = await protochess.toString()
-  if (result !== 'Ok') {
+  if (resultFlag !== 'Ok') {
     let winnerString
-    if (winner === 0) {
+    if (winner === 'White') {
       winnerString = 'White wins'
-    } else if (winner === 1) {
+    } else if (winner === 'Black') {
       winnerString = 'Black wins'
     } else {
       winnerString = 'Draw'
     }
-    boardStatus.innerHTML = result + ', ' + winnerString
+    boardStatus.innerHTML = resultFlag + ', ' + winnerString
   } else if (await protochess.toMoveInCheck()) {
     boardStatus.innerHTML = 'Check!'
   } else {
     boardStatus.innerHTML = ' '
+  }
+  if (exploded && exploded.length > 0) {
+    boardStatus.innerHTML += ' (exploded: ['
+    for (let i = 0; i < exploded.length; i++) {
+      boardStatus.innerHTML += `(${exploded[i]}), `
+    }
+    boardStatus.innerHTML += '])'
   }
 }
 function clearErrors() {
@@ -80,11 +87,11 @@ async function manualMoveButtonClick() {
   clearErrors()
   try {
     // Attempt to make the move
-    const {result, winnerPlayer} = await protochess.makeMoveStr(manualMoveInput.value)
-    if (result === 'IllegalMove') {
+    const {flag, winner, exploded} = await protochess.makeMoveStr(manualMoveInput.value)
+    if (flag === 'IllegalMove') {
       throw 'This move is illegal'
     }
-    updateBoard(result, winnerPlayer)
+    updateBoard(flag, winner, exploded)
   } catch (e) {
     manualMoveError.innerHTML = e
   }
@@ -104,8 +111,8 @@ async function engineMoveButtonClick() {
     }
     // Get the engine to make a move
     const {makeMoveResult, depth} = await protochess.playBestMoveTimeout(timeout)
-    const {result, winnerPlayer} = makeMoveResult
-    await updateBoard(result, winnerPlayer)
+    const {flag, winner, exploded} = makeMoveResult
+    await updateBoard(flag, winner, exploded)
     engineDepth.innerHTML = 'Done! Search depth: ' + depth
   } catch (e) {
     engineMoveError.innerHTML = e

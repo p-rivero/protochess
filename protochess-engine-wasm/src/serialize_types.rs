@@ -54,50 +54,11 @@ generate_wrapper!(MoveListSer, MoveList, [
 ]);
 
 
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MakeMoveResultSer {
-    result: String,
-    winner_player: Option<u8>,
-}
-impl MakeMoveResultSer {
-    pub fn to_js(mmr: MakeMoveResult) -> JsValue {
-        to_value(&MakeMoveResultSer::from(mmr)).unwrap()
-    }
-}
-impl From<MakeMoveResult> for MakeMoveResultSer {
-    fn from(mmr: MakeMoveResult) -> MakeMoveResultSer {
-        let result;
-        let winner_player;
-        match mmr {
-            MakeMoveResult::Checkmate{winner} => {
-                result = "Checkmate".to_string();
-                winner_player = Some(winner);
-            },
-            MakeMoveResult::LeaderCaptured{winner} => {
-                result = "LeaderCaptured".to_string();
-                winner_player = Some(winner);
-            },
-            MakeMoveResult::PieceInWinSquare{winner} => {
-                result = "PieceInWinSquare".to_string();
-                winner_player = Some(winner);
-            },
-            MakeMoveResult::CheckLimit{winner} => {
-                result = "CheckLimit".to_string();
-                winner_player = Some(winner);
-            },
-            MakeMoveResult::Stalemate{winner} => {
-                result = "Stalemate".to_string();
-                winner_player = winner;
-            },
-            _ => {
-                result = format!("{:?}", mmr);
-                winner_player = None;
-            }
-        }
-        MakeMoveResultSer { result, winner_player }
-    }
-}
+generate_wrapper!(MakeMoveResultSer, MakeMoveResult, [
+    flag, String,
+    winner, String,
+    exploded, SerVec<(u8, u8)>
+]);
 
 
 #[derive(serde::Serialize, serde::Deserialize)]

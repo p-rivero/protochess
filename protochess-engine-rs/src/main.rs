@@ -2,7 +2,7 @@
 
 use std::io::Write;
 
-use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResult};
+use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResultFlag, MakeMoveResultWinner};
 
 pub fn main() {
     
@@ -68,38 +68,38 @@ pub fn main() {
         print_pgn(&mut pgn_file, ply, &to_long_algebraic_notation(&mv, &engine));
         let result = engine.make_move(&mv);
         println!("{engine}\n");
-        match result {
-            MakeMoveResult::Ok => {
+        match result.flag {
+            MakeMoveResultFlag::Ok => {
                 println!("----------------------------------------\n");
             },
-            MakeMoveResult::IllegalMove => {
+            MakeMoveResultFlag::IllegalMove => {
                 panic!("An illegal move was made");
             },
-            MakeMoveResult::Checkmate{winner} => {
-                println!("CHECKMATE! {} wins!", if winner == 0 { "White" } else { "Black" });
+            MakeMoveResultFlag::Checkmate => {
+                println!("CHECKMATE! {:?} wins!", result.winner);
                 break;
             },
-            MakeMoveResult::LeaderCaptured{winner} => {
-                println!("KING HAS BEEN CAPTURED! {} wins!", if winner == 0 { "White" } else { "Black" });
+            MakeMoveResultFlag::LeaderCaptured => {
+                println!("KING HAS BEEN CAPTURED! {:?} wins!", result.winner);
                 break;
             },
-            MakeMoveResult::PieceInWinSquare{winner} => {
-                println!("KING IN WINNING SQUARE! {} wins!", if winner == 0 { "White" } else { "Black" });
+            MakeMoveResultFlag::PieceInWinSquare => {
+                println!("KING IN WINNING SQUARE! {:?} wins!", result.winner);
                 break;
             },
-            MakeMoveResult::CheckLimit{winner} => {
-                println!("CHECK LIMIT REACHED! {} wins!", if winner == 0 { "White" } else { "Black" });
+            MakeMoveResultFlag::CheckLimit => {
+                println!("CHECK LIMIT REACHED! {:?} wins!", result.winner);
                 break;
             },
-            MakeMoveResult::Stalemate{winner: Some(winner)} => {
-                println!("STALEMATE! {} wins!", if winner == 0 { "White" } else { "Black" });
+            MakeMoveResultFlag::Stalemate => {
+                if result.winner == MakeMoveResultWinner::None {
+                    println!("DRAW BY STALEMATE!");
+                } else {
+                    println!("STALEMATE! {:?} wins!", result.winner);
+                }
                 break;
             },
-            MakeMoveResult::Stalemate{winner: None} => {
-                println!("DRAW BY STALEMATE!");
-                break;
-            },
-            MakeMoveResult::Repetition => {
+            MakeMoveResultFlag::Repetition => {
                 println!("DRAW BY REPETITION!");
                 break;
             },

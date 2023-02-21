@@ -2,7 +2,7 @@
 mod zobrist_test {
     use std::convert::{TryInto, TryFrom};
 
-    use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResult};
+    use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResultFlag};
     
     #[test]
     fn zobrist_pawn_push() {
@@ -218,7 +218,7 @@ mod zobrist_test {
         engine1.add_piece(0, 'P', 3, 2, true).unwrap();
         engine1.remove_piece(3, 1).unwrap();
         
-        assert_eq!(engine2.make_move(&"d2d3".try_into().unwrap()), MakeMoveResult::Ok);
+        assert_eq!(engine2.make_move(&"d2d3".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -232,8 +232,8 @@ mod zobrist_test {
         engine1.remove_piece(4, 4).unwrap();
         engine1.add_piece(1, 'P', 3, 3, true).unwrap();
         
-        assert_eq!(engine2.make_move(&"d2d4".try_into().unwrap()), MakeMoveResult::Ok);
-        assert_eq!(engine2.make_move(&"e5d4".try_into().unwrap()), MakeMoveResult::Ok);
+        assert_eq!(engine2.make_move(&"d2d4".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
+        assert_eq!(engine2.make_move(&"e5d4".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -245,7 +245,7 @@ mod zobrist_test {
         engine1.add_piece(0, 'R', 7, 4, true).unwrap();
         engine1.remove_piece(7, 0).unwrap();
         
-        assert_eq!(engine2.make_move(&"h1h5".try_into().unwrap()), MakeMoveResult::Ok);
+        assert_eq!(engine2.make_move(&"h1h5".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -258,7 +258,7 @@ mod zobrist_test {
         engine1.remove_piece(7, 7).unwrap();
         engine1.add_piece(0, 'R', 7, 7, true).unwrap();
         
-        assert_eq!(engine2.make_move(&"h1h8".try_into().unwrap()), MakeMoveResult::Ok);
+        assert_eq!(engine2.make_move(&"h1h8".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
     }
     
@@ -332,8 +332,8 @@ mod zobrist_test {
         assert_eq!(zob_start_1, zob_start_2);
         
         for m in moves {
-            assert_eq!(engine1.make_move(&MoveInfo::try_from(*m).unwrap()), MakeMoveResult::Ok);
-            assert_eq!(engine2.make_move(&MoveInfo::try_from(*m).unwrap()), MakeMoveResult::Ok);
+            assert_eq!(engine1.make_move(&MoveInfo::try_from(*m).unwrap()).flag, MakeMoveResultFlag::Ok);
+            assert_eq!(engine2.make_move(&MoveInfo::try_from(*m).unwrap()).flag, MakeMoveResultFlag::Ok);
             let zob_1 = engine1.get_zobrist();
             let zob_2 = engine2.get_zobrist();
             assert_eq!(zob_1, zob_2);
