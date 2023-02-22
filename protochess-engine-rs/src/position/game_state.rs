@@ -14,7 +14,7 @@ use super::{BCoord, Player, BDimensions};
 #[must_use]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PiecePlacement {
-    pub owner: Player,
+    // Id of the piece (can be upper or lower case)
     pub piece_id: PieceId,
     pub x: BCoord,
     pub y: BCoord,
@@ -22,8 +22,8 @@ pub struct PiecePlacement {
     pub can_castle: Option<bool>,
 }
 impl PiecePlacement {
-    pub fn new(owner: Player, piece_id: PieceId, x: BCoord, y: BCoord, can_castle: bool) -> Self {
-        PiecePlacement { owner, piece_id, x, y, can_castle: Some(can_castle), }
+    pub fn new(piece_id: PieceId, x: BCoord, y: BCoord, can_castle: bool) -> Self {
+        PiecePlacement { piece_id, x, y, can_castle: Some(can_castle), }
     }
 }
 #[must_use]
@@ -73,7 +73,7 @@ impl From<&Position> for GameState {
                 let index = to_index(x, y);
                 if let Some(piece) = pos.piece_at(index) {
                     piece_types_set.insert(piece.get_movement());
-                    pieces.push(PiecePlacement::new(piece.get_player(), piece.get_piece_id(), x, y, piece.has_not_moved(index)));
+                    pieces.push(PiecePlacement::new(piece.get_piece_id(), x, y, piece.has_not_moved(index)));
                 }
                 if !pos.dimensions.in_bounds(x, y) {
                     invalid_squares.push((x, y));
@@ -141,7 +141,7 @@ impl TryFrom<GameState> for Position {
         for p in state.pieces {
             // By default, assume pieces have not moved
             let can_castle = p.can_castle.unwrap_or(true);
-            pos.public_add_piece(p.owner, p.piece_id, to_index(p.x, p.y), can_castle)?;
+            pos.public_add_piece(p.piece_id, to_index(p.x, p.y), can_castle)?;
         }
         Ok(pos)
     }

@@ -1,4 +1,4 @@
-use crate::types::{BCoord, Player};
+use crate::types::BCoord;
 use crate::utils::debug::eq_anyorder;
 use super::PieceId;
 
@@ -8,8 +8,8 @@ use super::PieceId;
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Default)]
 #[must_use]
 pub struct PieceDefinition {
-    pub id: PieceId,
-    pub available_for: Vec<Player>,
+    // The id of this piece for white and black. None if this piece is not available for that color.
+    pub ids: [Option<PieceId>; 2],
     
     pub is_leader: bool,
     // Either None (no castle) or (queenside, kingside) (files where this piece moves when castling)
@@ -20,9 +20,9 @@ pub struct PieceDefinition {
     pub explosion_deltas: Vec<(i8, i8)>,
     pub immune_to_explosion: bool,
     
-    // Places where this piece can promote, as well as PieceId for the promotion pieces
+    // Places where this piece can promote, as well as PieceId for the promotion pieces on each side
     pub promotion_squares: Vec<(BCoord, BCoord)>,
-    pub promo_vals: Vec<PieceId>,
+    pub promo_vals: [Vec<PieceId>; 2],
     
     // Places where this piece can double move
     pub double_jump_squares: Vec<(BCoord, BCoord)>,
@@ -112,8 +112,7 @@ impl PieceDefinition {
     }
     
     pub fn eq_ignore_order(&self, other: &PieceDefinition) -> bool {
-        self.id == other.id &&
-        eq_anyorder(&self.available_for, &other.available_for) &&
+        self.ids == other.ids &&
         self.is_leader == other.is_leader &&
         self.castle_files == other.castle_files &&
         self.is_castle_rook == other.is_castle_rook &&

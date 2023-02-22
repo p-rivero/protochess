@@ -25,6 +25,7 @@ use movement::{output_translations, output_captures};
 // Represents a piece type. Specific instances of this type are represented by a 1 in the bitboard
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Piece {
+    id: PieceId,
     // Info about this piece type
     type_def: PieceDefinition,
     // Derived from type_def
@@ -53,11 +54,13 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
+        let id = definition.ids[player_num as usize].unwrap();
         let material_score = compute_material_score(&definition, dims);
-        let zobrist_hashes = Piece::random_zobrist(definition.id, player_num);
+        let zobrist_hashes = Piece::random_zobrist(id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims, false);
         let piece_square_table_endgame = compute_piece_square_table(&definition, dims, true);
         Piece {
+            id,
             precomp: PrecomputedPieceDef::from((&definition, dims)),
             type_def: definition,
             player_num,
@@ -72,9 +75,9 @@ impl Piece {
         }
     }
     
-    // Get the id (char) of this piece type
+    // Get the id (char) of this piece type for this player
     pub fn get_piece_id(&self) -> PieceId {
-        self.type_def.id
+        self.id
     }
     
     // Get the player number of this piece
@@ -242,6 +245,7 @@ impl Piece {
                 can_castle,
                 &self.precomp.double_jump_squares,
                 &self.precomp.jump_bitboards_translate,
+                &self.type_def.promo_vals[self.player_num as usize],
                 out_moves
             );
             bb_copy.clear_bit(index);
@@ -261,6 +265,7 @@ impl Piece {
                 &self.precomp.promotion_squares,
                 occ_or_not_in_bounds,
                 &self.precomp.jump_bitboards_capture[index as usize],
+                &self.type_def.promo_vals[self.player_num as usize],
                 out_moves
             );
             bb_copy.clear_bit(index);
@@ -293,10 +298,6 @@ impl Piece {
 // Print as a string
 impl std::fmt::Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if self.player_num == 0 {
-            write!(f, "{}", self.type_def.id.to_uppercase())
-        } else {
-            write!(f, "{}", self.type_def.id.to_lowercase())
-        }
+        write!(f, "{}", self.id)
     }
 }

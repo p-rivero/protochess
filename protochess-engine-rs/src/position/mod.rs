@@ -53,18 +53,20 @@ impl Position {
 
     /// Registers a new piece type for a given player in this position
     pub fn register_piecetype(&mut self, definition: &PieceDefinition) -> wrap_res!() {
-        err_assert!(definition.promotion_squares.is_empty() == definition.promo_vals.is_empty(), 
-            "Promotion squares and pieces must be specified together");
-        // Check that the id is uppercase and has a lowercase version
-        let id = definition.id;
-        let id_lower: Vec<_> = id.to_lowercase().collect();
-        err_assert!(id.is_uppercase(), "Piece id ({id}) must be an uppercase character");
-        err_assert!(id_lower.len() == 1, "Piece id ({id}) has a composite lowercase version and cannot be registered");
-        err_assert!(id_lower[0] != id, "Piece id ({id}) must have a well defined lowercase version");
         // Insert piece for all players specified in the definition
-        for player in &definition.available_for {
-            err_assert!(*player < self.pieces.len() as Player, "In piece definition, player {player} does not exist");
-            self.pieces[*player as usize].register_piecetype(definition.clone(), &self.dimensions)?;
+        for (player, id) in definition.ids.iter().enumerate() {
+            if id.is_none() { continue; }
+            let id = id.unwrap();
+            
+            // Make sure that the promotion squares and pieces are specified together
+            err_assert!(definition.promotion_squares.is_empty() == definition.promo_vals[player].is_empty(), 
+                "Promotion squares and pieces must be specified together");
+                
+            // Make sure that the piece is uniquely identifiable for this player
+            for set in &self.pieces {
+                err_assert!(!set.contains_piece(id), "Piece id {id} already exists");
+            }
+            self.pieces[player].register_piecetype(definition.clone(), &self.dimensions)?;
         }
         Ok(())
     }
@@ -438,15 +440,20 @@ impl Position {
 
     
     /// Public interface for modifying the position
-    pub fn public_add_piece(&mut self, owner: Player, piece_type: PieceId, index: BIndex, can_castle: bool) -> wrap_res!() {
-        err_assert!((owner as usize) < self.pieces.len(), 
-            "Attempted to add piece {piece_type} to invalid player {owner}");
-        err_assert!(self.pieces[owner as usize].contains_piece(piece_type), 
-            "Attempted to add piece with ID={piece_type}, which doesn't exist for player {owner}");
-        err_assert!(!self.pieces[owner as usize].index_has_piece(index), 
-            "Attempted to add piece {piece_type} to square that was already occupied: {index}");
+    pub fn public_add_piece(&mut self, piece_id: PieceId, index: BIndex, can_castle: bool) -> wrap_res!() {
+        // Search piece with this id in both players
+        let mut owner = None;
+        for ps in &mut self.pieces {
+            if ps.contains_piece(piece_id) {
+                err_assert!(!ps.index_has_piece(index), "Attempted to add piece {piece_id} to square that was already occupied: {index}");
+                owner = Some(ps.get_player_num());
+            }
+        }
+        err_assert!(owner.is_some(), "Attempted to add piece with ID={piece_id}, which doesn't exist");
+        let owner = owner.unwrap();
+        
         let mut zob = self.get_zobrist();
-        self.pieces[owner as usize].add_piece(piece_type, index, can_castle);
+        self.pieces[owner as usize].add_piece(piece_id, index, can_castle);
         let piece = self.player_piece_at(owner, index).unwrap();
         // Update the zobrist key
         zob ^= piece.get_zobrist(index);

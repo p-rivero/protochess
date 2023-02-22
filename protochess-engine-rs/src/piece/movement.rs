@@ -15,6 +15,7 @@ pub fn output_translations(
     can_castle: bool,
     double_jump_squares: &Bitboard,
     jumps_bitboard: &[Bitboard],
+    promotions: &[PieceId],
     out_moves: &mut Vec<Move>
 ) {
     let attack_tables = MoveGen::attack_tables();
@@ -35,7 +36,7 @@ pub fn output_translations(
     );
     // Non-attacks (and in bounds) only
     slide_moves &= !&position.occ_or_out_bounds;
-    self::flatten_bb_moves(enemies, slide_moves, index, promotion_squares, &movement.promo_vals, out_moves);
+    self::flatten_bb_moves(enemies, slide_moves, index, promotion_squares, promotions, out_moves);
 
 
     // JUMP MOVES
@@ -46,12 +47,12 @@ pub fn output_translations(
         let mut jump_moves_copy = jump_moves.clone();
         while let Some(new_index) = jump_moves_copy.lowest_one() {
             let double_jump_moves = &jumps_bitboard[new_index as usize] & !&position.occ_or_out_bounds;
-            self::flatten_bb_moves_doublejump(double_jump_moves, index, new_index, promotion_squares, double_jump_squares, &movement.promo_vals, out_moves);
+            self::flatten_bb_moves_doublejump(double_jump_moves, index, new_index, promotion_squares, double_jump_squares, promotions, out_moves);
             jump_moves_copy.clear_bit(new_index);
         }
     }
     // Flatten regular jump moves
-    self::flatten_bb_moves(enemies, jump_moves, index, promotion_squares, &movement.promo_vals, out_moves);
+    self::flatten_bb_moves(enemies, jump_moves, index, promotion_squares, promotions, out_moves);
     
     
     // SLIDING DELTAS
@@ -70,7 +71,7 @@ pub fn output_translations(
             }
             if promotion_squares.get_bit(to) {
                 //Add all the promotion moves
-                for c in &movement.promo_vals {
+                for c in promotions {
                     out_moves.push(Move::new(index, to, 0, MoveType::Quiet, Some(*c)));
                 }
             } else {
@@ -156,6 +157,7 @@ pub fn output_captures(
     promotion_squares: &Bitboard,
     occ_or_not_in_bounds: &Bitboard,
     jumps_bitboard: &Bitboard,
+    promotions: &[PieceId],
     out_moves: &mut Vec<Move>
 ) {
     let attack_tables = MoveGen::attack_tables();
@@ -178,13 +180,13 @@ pub fn output_captures(
     slide_moves &= enemies;
     // Keep only in bounds
     slide_moves &= &position.dimensions.bounds;
-    self::flatten_bb_moves(enemies, slide_moves, index, promotion_squares, &movement.promo_vals, out_moves);
+    self::flatten_bb_moves(enemies, slide_moves, index, promotion_squares, promotions, out_moves);
 
     
     // JUMP MOVES
     
     let jump_moves = jumps_bitboard & enemies;
-    self::flatten_bb_moves(enemies, jump_moves, index, promotion_squares, &movement.promo_vals, out_moves);
+    self::flatten_bb_moves(enemies, jump_moves, index, promotion_squares, promotions, out_moves);
     // En passant capture
     if let Some(ep_square) = position.get_ep_square() {
         if movement.can_double_jump() && jumps_bitboard.get_bit(ep_square) {
@@ -213,7 +215,7 @@ pub fn output_captures(
             if enemies.get_bit(to) {
                 if promotion_squares.get_bit(to) {
                     //Add all the promotion moves
-                    for c in &movement.promo_vals {
+                    for c in promotions {
                         out_moves.push(Move::new(index, to, to, MoveType::PromotionCapture, Some(*c)));
                     }
                 } else {
@@ -234,7 +236,7 @@ pub fn flatten_bb_moves(
     mut moves: Bitboard,
     from_index: BIndex,
     promotion_squares: &Bitboard,
-    promo_vals: &Vec<PieceId>,
+    promotions: &[PieceId],
     out_moves: &mut Vec<Move>
 ) {
     while let Some(to) = moves.lowest_one() {
@@ -251,7 +253,7 @@ pub fn flatten_bb_moves(
             }
         };
         if promo_here {
-            for promo_val in promo_vals {
+            for promo_val in promotions {
                 out_moves.push(Move::new(from_index, to, to, move_type, Some(*promo_val)));
             }
         } else {
@@ -267,12 +269,12 @@ pub fn flatten_bb_moves_doublejump(
     ep_square: BIndex,
     promotion_squares: &Bitboard,
     double_jump_squares: &Bitboard,
-    promo_vals: &Vec<PieceId>,
+    promotions: &[PieceId],
     out_moves: &mut Vec<Move>
 ) {
     while let Some(to) = moves.lowest_one() {
         if promotion_squares.get_bit(to) {
-            for promo_val in promo_vals {
+            for promo_val in promotions {
                 out_moves.push(Move::new(from_index, to, 0, MoveType::Promotion, Some(*promo_val)));
             }
         } else if double_jump_squares.get_bit(ep_square) {

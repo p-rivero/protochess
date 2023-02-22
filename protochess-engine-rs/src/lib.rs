@@ -64,14 +64,16 @@ impl Engine {
         eval::evaluate(&self.position)
     }
     
-    /// Returns the id of the piece at the given coordinates
-    pub fn get_piece_at(&self, position: (BCoord, BCoord)) -> Option<PieceId> {
-        self.position.piece_at(to_index(position.0, position.1)).map(Piece::get_piece_id)
+    /// Returns the id (can be uppercase or lowercase) of the piece at the given coordinates
+    pub fn get_piece_at(&self, position: (BCoord, BCoord)) -> wrap_res!(PieceId) {
+        let piece = self.position.piece_at(to_index(position.0, position.1));
+        err_assert!(piece.is_some(), "No piece at the given coordinates");
+        Ok(piece.unwrap().get_piece_id())
     }
 
     /// Adds a new piece on the board. If the piece is not used for castling, `has_moved` is ignored.
-    pub fn add_piece(&mut self, owner: Player, piece_type: PieceId, x: BCoord, y: BCoord, has_moved: bool) -> wrap_res!() {
-        self.position.public_add_piece(owner, piece_type, to_index(x,y), !has_moved)?;
+    pub fn add_piece(&mut self, piece_id: PieceId, x: BCoord, y: BCoord, has_moved: bool) -> wrap_res!() {
+        self.position.public_add_piece(piece_id, to_index(x,y), !has_moved)?;
         Ok(())
     }
 

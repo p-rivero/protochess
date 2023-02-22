@@ -39,6 +39,9 @@ impl PieceSet {
         }
     }
     
+    /// Add a new piece definition to the set. The following conditions must have been checked before calling this function:
+    /// - Both ids (white and black) are unique among all pieces in all sets (so that it is possible to uniquely identify a piece)
+    /// - This piece is available for the player (i.e. `ids[player_num]` is not `None`)
     pub fn register_piecetype(&mut self, definition: PieceDefinition, dims: &BDimensions) -> wrap_res!() {
         // Update the inverse movement pattern
         self.update_inverse_attack(&definition, dims);
@@ -46,17 +49,13 @@ impl PieceSet {
             err_assert!(self.leader_piece_index == -1, "Cannot have more than one leader piece per player");
             self.leader_piece_index = self.pieces.len() as isize;
         }
-        for p in &self.pieces {
-            err_assert!(p.get_piece_id() != definition.id, "There is already a piece with the id {}", definition.id);
-        }
-        
         let piece = Piece::new(definition, self.player_num, dims);
         self.pieces.push(piece);
         Ok(())
     }
     pub fn assert_promotion_consistency(&self) -> wrap_res!() {
         for piece in &self.pieces {
-            for promotion in &piece.get_movement().promo_vals {
+            for promotion in &piece.get_movement().promo_vals[self.player_num as usize] {
                 err_assert!(self.contains_piece(*promotion), "Piece {piece} promotes to {promotion}, which does not exist");
             }
         }

@@ -22,23 +22,23 @@ impl PieceFactory {
             double_jump_squares.push((i, double_move_rank2));
         }
         let move_dir = { if is_white { 1 } else { -1 } };
-        let available_for = {
+        let ids = {
             if self.mode == GameMode::RacingKings {
-                vec![]
+                [None, None]
             } else if is_white {
-                vec![0]
+                [Some('P'), None]
             } else {
-                vec![1]
+                [None, Some('p')]
             }
         };
-        let mut promo_vals = vec!['Q', 'R', 'B', 'N'];
+        let mut promo_vals = [vec!['Q', 'R', 'B', 'N'], vec!['q', 'r', 'b', 'n']];
         if self.mode == GameMode::Antichess {
-            promo_vals.push('K');
+            promo_vals[0].push('K');
+            promo_vals[1].push('k');
         }
         
         PieceDefinition {
-            id: 'P',
-            available_for,
+            ids,
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -74,8 +74,7 @@ impl PieceFactory {
     
     pub fn make_knight(&self) -> PieceDefinition {
         PieceDefinition {
-            id: 'N',
-            available_for: vec![0, 1],
+            ids: [Some('N'), Some('n')],
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -84,7 +83,7 @@ impl PieceFactory {
             immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
-            promo_vals: vec![],
+            promo_vals: [vec![], vec![]],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(1, 2), (1, -2), (-1, 2), (-1, -2), (2, 1), (2, -1), (-2, 1), (-2, -1)],
             attack_north: false,
@@ -111,8 +110,7 @@ impl PieceFactory {
     
     pub fn make_bishop(&self) -> PieceDefinition {
         PieceDefinition {
-            id: 'B',
-            available_for: vec![0, 1],
+            ids: [Some('B'), Some('b')],
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -121,7 +119,7 @@ impl PieceFactory {
             immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
-            promo_vals: vec![],
+            promo_vals: [vec![], vec![]],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
             attack_north: false,
@@ -148,8 +146,7 @@ impl PieceFactory {
     
     pub fn make_rook(&self) -> PieceDefinition {
         PieceDefinition {
-            id: 'R',
-            available_for: vec![0, 1],
+            ids: [Some('R'), Some('r')],
             is_leader: false,
             castle_files: None,
             is_castle_rook: true,
@@ -158,7 +155,7 @@ impl PieceFactory {
             immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
-            promo_vals: vec![],
+            promo_vals: [vec![], vec![]],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
             attack_north: true,
@@ -194,9 +191,12 @@ impl PieceFactory {
             }
         };
         let can_castle = self.mode != GameMode::Antichess && self.mode != GameMode::RacingKings;
+        let ids = {
+            if self.mode == GameMode::Horde { [None, Some('k')] }
+            else { [Some('K'), Some('k')] }
+        };
         PieceDefinition {
-            id: 'K',
-            available_for: if self.mode == GameMode::Horde { vec![1] } else { vec![0, 1] },
+            ids,
             is_leader: self.mode != GameMode::Antichess,
             castle_files: if can_castle { Some((2, 6)) } else { None },
             is_castle_rook: false,
@@ -205,7 +205,7 @@ impl PieceFactory {
             immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
-            promo_vals: vec![],
+            promo_vals: [vec![], vec![]],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)],
             attack_north: false,
@@ -232,8 +232,7 @@ impl PieceFactory {
     
     pub fn make_queen(&self) -> PieceDefinition {
         PieceDefinition {
-            id: 'Q',
-            available_for: vec![0, 1],
+            ids: [Some('Q'), Some('q')],
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -242,7 +241,7 @@ impl PieceFactory {
             immune_to_explosion: false,
             promotion_squares: vec![],
             double_jump_squares: vec![],
-            promo_vals: vec![],
+            promo_vals: [vec![], vec![]],
             attack_sliding_deltas: vec![],
             attack_jump_deltas: vec![],
             attack_north: true,

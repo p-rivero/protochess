@@ -3,9 +3,9 @@ use std::convert::TryInto;
 use regex::Regex;
 use scan_fmt::scan_fmt;
 
-use crate::{GameState, GlobalRules, PiecePlacement, wrap_res, err_assert, err};
+use crate::{GameState, GlobalRules, PiecePlacement, wrap_res, err_assert, err, PieceId};
 use crate::piece::PieceFactory;
-use crate::types::{GameMode, BCoord, Player};
+use crate::types::{GameMode, BCoord};
 
 
 impl GameState {
@@ -25,14 +25,7 @@ impl GameState {
                             fen.push_str(&empty_count.to_string());
                             empty_count = 0;
                         }
-                        let piece_char = {
-                            if piece.owner == 0 {
-                                piece.piece_id.to_uppercase().next().unwrap()
-                            } else {
-                                piece.piece_id.to_lowercase().next().unwrap()
-                            }
-                        };
-                        fen.push(piece_char);
+                        fen.push(piece.piece_id);
                         found = true;
                         break;
                     }
@@ -69,7 +62,6 @@ impl GameState {
         
         // Piece placement
         let mut piece_tuples = Vec::new();
-        let mut ranks_with_kings = [vec![], vec![]];
         let mut x = 0;
         let mut y = board_height as BCoord - 1;
         let mut skip_x = 0;
@@ -87,14 +79,7 @@ impl GameState {
             }
             x += skip_x;
             skip_x = 0;
-            let player = {
-                if c.is_uppercase() { 0 } // White piece
-                else { 1 } // Black piece
-            };
-            if (c == 'K' || c == 'k') && !ranks_with_kings[player as usize].contains(&y) {
-                ranks_with_kings[player as usize].push(y);
-            }
-            piece_tuples.push((player, c, x as BCoord, y));
+            piece_tuples.push((c, x as BCoord, y));
             x += 1;
         }
         board_width = std::cmp::max(board_width, x + skip_x);
@@ -129,12 +114,12 @@ impl GameState {
         
         // Player to move
         let player_to_move = {
-            if fen_parts[1] == "w" || fen_parts[1] == "W" { 0 }
-            else if fen_parts[1] == "b" || fen_parts[1] == "B" { 1 }
+            if fen_parts[1].to_ascii_lowercase() == "w" { 0 }
+            else if fen_parts[1].to_ascii_lowercase() == "b" { 1 }
             else { err!("The player to move must be 'w' or 'b'") }
         };
         
-        let pieces = tuples_to_pieces(piece_tuples, fen_parts[2], &ranks_with_kings)?;
+        let pieces = tuples_to_pieces(piece_tuples, fen_parts[2])?;
         
         let ep_square_and_victim = {
             if fen_parts[3] == "-" {
@@ -175,15 +160,10 @@ impl GameState {
 }
 
 
-// Converts a Vec of tuples of (player, char, x, y) to a Vec of PiecePlacements
-fn tuples_to_pieces(piece_tuples: Vec<(Player, char, BCoord, BCoord)>, castling: &str, ranks_with_kings: &[Vec<u8>; 2]) -> wrap_res!(Vec<PiecePlacement>) {
-    // Convert the tuples to PiecePlacements, set can_castle to false
-    let mut pieces = Vec::with_capacity(piece_tuples.len());
-    for t in piece_tuples {
-        let id = t.1.to_uppercase().next().unwrap();
-        pieces.push(PiecePlacement::new(t.0, id, t.2, t.3, false));
-    }
-    let mut enable_castle = |is_white: bool, kingside: bool, row_y: BCoord| -> wrap_res!() {
+// Converts a Vec of tuples of (id, x, y) to a Vec of PiecePlacements
+fn tuples_to_pieces(piece_tuples: Vec<(PieceId, BCoord, BCoord)>, castling: &str) -> wrap_res!(Vec<PiecePlacement>) {
+    // Function for enabling castling for the rooks and king
+    let enable_castle = |pieces: &mut [PiecePlacement], rook: PieceId, king: PieceId, kingside: bool, row_y: BCoord| -> wrap_res!() {
         let num_pieces = pieces.len();
         let mut found_rook = false;
         for i in 0..num_pieces {
@@ -194,49 +174,66 @@ fn tuples_to_pieces(piece_tuples: Vec<(Player, char, BCoord, BCoord)>, castling:
             };
             // Visit only pieces on the correct row and of the correct color
             if p.y != row_y as BCoord { continue; }
-            if (p.owner == 0) != is_white { continue; }
             // Find the first rook and enable it
-            if !found_rook && p.piece_id == 'R' {
+            if !found_rook && p.piece_id == rook {
                 found_rook = true;
                 err_assert!(p.can_castle == Some(false), "Should not have been able to castle, FEN might be invalid");
                 p.can_castle = Some(true);
                 continue;
             }
-            if !found_rook && p.piece_id == 'K' {
+            if !found_rook && p.piece_id == king {
                 // Found the king before the rook, so the rook is missing
                 // Don't throw an error here to support multiple kings
                 break;
             }
             // Next search for the king, but stop if we find another rook instead
-            if found_rook && p.piece_id == 'K' {
+            if found_rook && p.piece_id == king {
                 p.can_castle = Some(true);
             }
-            if found_rook && p.piece_id == 'R' {
+            if found_rook && p.piece_id == rook {
                 break;
             }
         }
         Ok(())
     };
+    // Function for finding the ranks of a piece
+    let find_ranks_with_char = |pieces: &[PiecePlacement], c: PieceId| -> Vec<BCoord> {
+        let mut ranks = Vec::new();
+        for p in pieces {
+            if p.piece_id == c {
+                ranks.push(p.y);
+            }
+        }
+        ranks.sort();
+        ranks.dedup();
+        ranks
+    };
+    
+    // Convert the tuples to PiecePlacements, set can_castle to false
+    let mut pieces = Vec::with_capacity(piece_tuples.len());
+    for t in piece_tuples {
+        pieces.push(PiecePlacement::new(t.0, t.1, t.2, false));
+    }
     err_assert!(castling == "-" || castling.chars().all(|c| c=='K'||c=='Q'||c=='k'||c=='q'),
         "Invalid castling rights in FEN string: '{castling}'");
     if castling.contains('K') {
-        for row_y in &ranks_with_kings[0] {
-            enable_castle(true, true, *row_y)?;
+        for row_y in find_ranks_with_char(&pieces, 'K') {
+            enable_castle(&mut pieces, 'R', 'K', true, row_y)?;
         }
     }
     if castling.contains('Q') {
-        for row_y in &ranks_with_kings[0] {
-            enable_castle(true, false, *row_y)?;
+        for row_y in find_ranks_with_char(&pieces, 'K') {
+            enable_castle(&mut pieces, 'R', 'K', false, row_y)?;
         }
     }
     if castling.contains('k') {
-        for row_y in &ranks_with_kings[1] {
-            enable_castle(false, true, *row_y)?;
+        for row_y in find_ranks_with_char(&pieces, 'k') {
+            enable_castle(&mut pieces, 'r', 'k', true, row_y)?;
         }
     }
     if castling.contains('q') {
-        for row_y in &ranks_with_kings[1] {
-            enable_castle(false, false, *row_y)?;
+        for row_y in find_ranks_with_char(&pieces, 'k') {
+            enable_castle(&mut pieces, 'r', 'k', false, row_y)?;
         }
     }
     Ok(pieces)

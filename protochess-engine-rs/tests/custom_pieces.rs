@@ -29,7 +29,7 @@ mod custom_pieces {
         
         let black_pawn = Piece::new(factory.make_pawn(false), 1, &dims);
         
-        assert_eq!(black_pawn.get_piece_id(), 'P');
+        assert_eq!(black_pawn.get_piece_id(), 'p');
         assert_eq!(black_pawn.get_player(), 1);
         assert_eq!(black_pawn.get_material_score(), 100);
         assert_eq!(black_pawn.get_material_score_all(), 0); // No pieces on the board

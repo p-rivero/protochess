@@ -137,6 +137,8 @@ pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
     }
     
     let moved_piece = engine.get_piece_at(mv.from).unwrap();
+    // Algebraic notation uses uppercase piece letters
+    let moved_piece = moved_piece.to_uppercase().next().unwrap();
     
     if moved_piece != 'P' {
         // If the piece is not a pawn, write the piece letter

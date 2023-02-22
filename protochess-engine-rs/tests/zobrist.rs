@@ -128,7 +128,7 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, 'Q', 3, 0, false).unwrap();
+        engine_start.add_piece('Q', 3, 0, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -137,9 +137,9 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, 'Q', 3, 0, false).unwrap();
-        engine_start.add_piece(1, 'N', 6, 7, false).unwrap();
-        engine_start.add_piece(1, 'P', 2, 6, false).unwrap();
+        engine_start.add_piece('Q', 3, 0, false).unwrap();
+        engine_start.add_piece('n', 6, 7, false).unwrap();
+        engine_start.add_piece('p', 2, 6, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -148,8 +148,8 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, 'R', 0, 0, false).unwrap();
-        engine_start.add_piece(1, 'R', 7, 7, false).unwrap();
+        engine_start.add_piece('R', 0, 0, false).unwrap();
+        engine_start.add_piece('r', 7, 7, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     #[test]
@@ -157,8 +157,8 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, 'R', 0, 0, false).unwrap();
-        engine_start.add_piece(1, 'R', 7, 7, true).unwrap();
+        engine_start.add_piece('R', 0, 0, false).unwrap();
+        engine_start.add_piece('r', 7, 7, true).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -167,7 +167,7 @@ mod zobrist_test {
         let mut engine_start = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1").unwrap();
         let engine_end = Engine::from_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w Kq - 0 1").unwrap();
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
-        engine_start.add_piece(0, 'K', 3, 0, false).unwrap();
+        engine_start.add_piece('K', 3, 0, false).unwrap();
         assert!(engine_start.get_zobrist() == engine_end.get_zobrist());
     }
     
@@ -215,7 +215,7 @@ mod zobrist_test {
         let mut engine1 = Engine::from_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1").unwrap();
         let mut engine2 = Engine::from_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
         
-        engine1.add_piece(0, 'P', 3, 2, true).unwrap();
+        engine1.add_piece('P', 3, 2, true).unwrap();
         engine1.remove_piece(3, 1).unwrap();
         
         assert_eq!(engine2.make_move(&"d2d3".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
@@ -230,7 +230,7 @@ mod zobrist_test {
         
         engine1.remove_piece(3, 1).unwrap();
         engine1.remove_piece(4, 4).unwrap();
-        engine1.add_piece(1, 'P', 3, 3, true).unwrap();
+        engine1.add_piece('p', 3, 3, true).unwrap();
         
         assert_eq!(engine2.make_move(&"d2d4".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
         assert_eq!(engine2.make_move(&"e5d4".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
@@ -242,7 +242,7 @@ mod zobrist_test {
         let mut engine1 = Engine::from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR b KQkq - 0 1").unwrap();
         let mut engine2 = Engine::from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR w KQkq - 0 1").unwrap();
         
-        engine1.add_piece(0, 'R', 7, 4, true).unwrap();
+        engine1.add_piece('R', 7, 4, true).unwrap();
         engine1.remove_piece(7, 0).unwrap();
         
         assert_eq!(engine2.make_move(&"h1h5".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
@@ -256,7 +256,7 @@ mod zobrist_test {
         
         engine1.remove_piece(7, 0).unwrap();
         engine1.remove_piece(7, 7).unwrap();
-        engine1.add_piece(0, 'R', 7, 7, true).unwrap();
+        engine1.add_piece('R', 7, 7, true).unwrap();
         
         assert_eq!(engine2.make_move(&"h1h8".try_into().unwrap()).flag, MakeMoveResultFlag::Ok);
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
