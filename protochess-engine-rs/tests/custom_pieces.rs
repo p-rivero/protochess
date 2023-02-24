@@ -10,7 +10,7 @@ mod custom_pieces {
     fn piece_factory_pawn() {
         let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
-        let white_pawn = Piece::new(factory.make_pawn(true), 0, &dims);
+        let white_pawn = Piece::new(factory.make_pawn(true, 8, 8), 0, &dims);
         
         assert_eq!(white_pawn.get_piece_id(), 'P');
         assert_eq!(white_pawn.get_player(), 0);
@@ -27,7 +27,7 @@ mod custom_pieces {
         }
         println!();
         
-        let black_pawn = Piece::new(factory.make_pawn(false), 1, &dims);
+        let black_pawn = Piece::new(factory.make_pawn(false, 8, 8), 1, &dims);
         
         assert_eq!(black_pawn.get_piece_id(), 'p');
         assert_eq!(black_pawn.get_player(), 1);
@@ -132,7 +132,7 @@ mod custom_pieces {
     fn piece_factory_king() {
         let dims = BDimensions::new_without_walls(8, 8).unwrap();
         let factory = PieceFactory::default();
-        let king = Piece::new(factory.make_king(), 0, &dims);
+        let king = Piece::new(factory.make_king(8, 8), 0, &dims);
         
         assert_eq!(king.get_piece_id(), 'K');
         assert_eq!(king.get_player(), 0);

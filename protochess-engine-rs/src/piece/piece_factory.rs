@@ -1,5 +1,5 @@
 use super::PieceDefinition;
-use crate::types::GameMode;
+use crate::types::{GameMode, BCoord};
 
 pub struct PieceFactory {
     mode: GameMode
@@ -10,13 +10,25 @@ impl PieceFactory {
         PieceFactory { mode }
     }
     
-    pub fn make_pawn(&self, is_white: bool) -> PieceDefinition {
-        let promotion_rank = { if is_white { 7 } else { 0 } };
-        let double_move_rank1 = { if is_white { 1 } else { 6 } };
-        let double_move_rank2 = { if is_white { 0 } else { 7 } }; // Needed for horde
+    pub fn make_piece_set(&self,  width: BCoord, height: BCoord) -> Vec<PieceDefinition> {
+        vec![
+            self.make_king(width, height),
+            self.make_queen(),
+            self.make_rook(),
+            self.make_bishop(),
+            self.make_knight(),
+            self.make_pawn(true, width, height),
+            self.make_pawn(false, width, height),
+        ]
+    } 
+    
+    pub fn make_pawn(&self, is_white: bool, width: BCoord, height: BCoord) -> PieceDefinition {
+        let promotion_rank = { if is_white { height-1 } else { 0 } };
+        let double_move_rank1 = { if is_white { 1 } else { height-2 } };
+        let double_move_rank2 = { if is_white { 0 } else { height-1 } }; // Needed for horde
         let mut promotion_squares = vec![];
         let mut double_jump_squares = vec![];
-        for i in 0..8 {
+        for i in 0..width {
             promotion_squares.push((i, promotion_rank));
             double_jump_squares.push((i, double_move_rank1));
             double_jump_squares.push((i, double_move_rank2));
@@ -180,12 +192,16 @@ impl PieceFactory {
         }
     }
     
-    pub fn make_king(&self) -> PieceDefinition {
+    pub fn make_king(&self, width: BCoord, height: BCoord) -> PieceDefinition {
         let win_squares = {
             if self.mode == GameMode::KingOfTheHill {
                 vec![(3,3), (3,4), (4,3), (4,4)]
             } else if self.mode == GameMode::RacingKings {
-                vec![(0,7), (1,7), (2,7), (3,7), (4,7), (5,7), (6,7), (7,7)]
+                let mut squares = Vec::new();
+                for i in 0..width {
+                    squares.push((i, height-1));
+                }
+                squares
             } else {
                 vec![]
             }

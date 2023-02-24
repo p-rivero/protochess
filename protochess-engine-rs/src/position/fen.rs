@@ -86,16 +86,9 @@ impl GameState {
         err_assert!(board_width <= 16, "The FEN string has too many files ({board_width} > 16)");
         
         // Generate piece types
-        let factory = PieceFactory::new(mode);
-        let piece_types = vec![
-            factory.make_king(),
-            factory.make_queen(),
-            factory.make_rook(),
-            factory.make_bishop(),
-            factory.make_knight(),
-            factory.make_pawn(true),
-            factory.make_pawn(false),
-        ];
+        let board_width = board_width as BCoord;
+        let board_height = board_height as BCoord;
+        let piece_types = PieceFactory::new(mode).make_piece_set(board_width, board_height);
         
         // Times in check
         let mut times_in_check = [0, 0];
@@ -131,7 +124,7 @@ impl GameState {
                     Ok(parts) => parts,
                     Err(_) => err!("Invalid en passant square in FEN string")
                 };
-                err_assert!(ep_y != 0 && ep_y <= board_height as BCoord, "Invalid en passant square in FEN string");
+                err_assert!(ep_y != 0 && ep_y <= board_height, "Invalid en passant square in FEN string");
                 // ep_x is guaranteed to be a valid character between 'a' and 'p'
                 let ep_x = ep_x.to_digit(36).unwrap() as BCoord - 10;
                 let ep_y = ep_y - 1;
@@ -148,8 +141,6 @@ impl GameState {
         let times_in_check = Some(times_in_check);
         
         // In standard FEN strings, there are no walls
-        let board_width = board_width as BCoord;
-        let board_height = board_height as BCoord;
         let invalid_squares = Vec::new();
         
         Ok(GameState {
