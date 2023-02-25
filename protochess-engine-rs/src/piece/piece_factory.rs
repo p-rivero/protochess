@@ -306,8 +306,8 @@ impl PieceFactory {
             'p' => ("4/45", "c/c7"),
             _ => return [None, None],
         };
-        let light = format!("https://upload.wikimedia.org/wikipedia/commons/{dir_w}/Chess_{piece}l.svg");
-        let dark = format!("https://upload.wikimedia.org/wikipedia/commons/{dir_b}/Chess_{piece}d.svg");
+        let light = format!("https://upload.wikimedia.org/wikipedia/commons/{dir_w}/Chess_{piece}lt45.svg");
+        let dark = format!("https://upload.wikimedia.org/wikipedia/commons/{dir_b}/Chess_{piece}dt45.svg");
         [Some(light), Some(dark)]
     }
 }
