@@ -17,6 +17,15 @@ impl GameState {
         // For each square in the board
         for y in (0..self.board_height).rev() {
             for x in 0..self.board_width {
+                // Add walls as '*' to the FEN string
+                if self.invalid_squares.contains(&(x, y)) {
+                    if empty_count > 0 {
+                        fen.push_str(&empty_count.to_string());
+                        empty_count = 0;
+                    }
+                    fen.push('*');
+                    continue;
+                }
                 let mut found = false;
                 // Find the piece placed on that square
                 for piece in &self.pieces {

@@ -81,6 +81,8 @@ impl PieceFactory {
             translate_southeast: false,
             translate_southwest: false,
             win_squares: vec![],
+            display_name: "Pawn".to_string(),
+            image_urls: Self::wikimedia_urls('p'),
         }
     }
     
@@ -117,6 +119,8 @@ impl PieceFactory {
             translate_southeast: false,
             translate_southwest: false,
             win_squares: vec![],
+            display_name: "Knight".to_string(),
+            image_urls: Self::wikimedia_urls('n'),
         }
     }
     
@@ -153,6 +157,8 @@ impl PieceFactory {
             translate_southeast: true,
             translate_southwest: true,
             win_squares: vec![],
+            display_name: "Bishop".to_string(),
+            image_urls: Self::wikimedia_urls('b'),
         }
     }
     
@@ -189,6 +195,8 @@ impl PieceFactory {
             translate_southeast: false,
             translate_southwest: false,
             win_squares: vec![],
+            display_name: "Rook".to_string(),
+            image_urls: Self::wikimedia_urls('r'),
         }
     }
     
@@ -242,7 +250,9 @@ impl PieceFactory {
             translate_northwest: false,
             translate_southeast: false,
             translate_southwest: false,
-            win_squares
+            win_squares,
+            display_name: "King".to_string(),
+            image_urls: Self::wikimedia_urls('k'),
         }
     }
     
@@ -279,7 +289,26 @@ impl PieceFactory {
             translate_southeast: true,
             translate_southwest: true,
             win_squares: vec![],
+            display_name: "Queen".to_string(),
+            image_urls: Self::wikimedia_urls('q'),
         }
+    }
+    
+    
+    fn wikimedia_urls(piece: char) -> [Option<String>; 2] {
+        // Map from piece character to wikimedia directory names
+        let (dir_w, dir_b) = match piece {
+            'k' => ("4/42", "f/f0"),
+            'q' => ("1/15", "4/47"),
+            'r' => ("7/72", "f/ff"),
+            'b' => ("b/b1", "9/98"),
+            'n' => ("7/70", "e/ef"),
+            'p' => ("4/45", "c/c7"),
+            _ => return [None, None],
+        };
+        let light = format!("https://upload.wikimedia.org/wikipedia/commons/{dir_w}/Chess_{piece}l.svg");
+        let dark = format!("https://upload.wikimedia.org/wikipedia/commons/{dir_b}/Chess_{piece}d.svg");
+        [Some(light), Some(dark)]
     }
 }
 

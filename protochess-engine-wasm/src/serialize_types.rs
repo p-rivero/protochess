@@ -143,7 +143,9 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     translate_northwest, bool,
     translate_southeast, bool,
     translate_southwest, bool,
-    win_squares, Vec<(u8, u8)>
+    win_squares, Vec<(u8, u8)>,
+    display_name, String,
+    image_urls, [Option<String>; 2]
 ]);
 
 
