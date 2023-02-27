@@ -40,6 +40,11 @@ impl Protochess {
     pub fn to_string(&self) -> String {
         self.engine.to_string()
     }
+    
+    #[wasm_bindgen(js_name = playerToMove)]
+    pub fn player_to_move(&self) -> u8 {
+        self.engine.player_to_move()
+    }
 
     #[wasm_bindgen(js_name = playBestMove)]
     pub fn play_best_move(&mut self, depth: u8) -> Result<JsValue, String> {
