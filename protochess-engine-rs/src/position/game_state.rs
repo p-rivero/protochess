@@ -34,10 +34,13 @@ pub struct GameState {
     pub board_height: BCoord,
     pub invalid_squares: Vec<(BCoord, BCoord)>,
     pub pieces: Vec<PiecePlacement>,
+    // pub fen: String,
     pub player_to_move: Player,
     pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
     pub times_in_check: Option<[u8; 2]>,
     pub global_rules: GlobalRules,
+    // pub in_check: Option<bool>,
+    pub variant_display_name: Option<String>,
 }
 #[derive(Debug, Clone)]
 pub struct GameStateGui {
@@ -101,6 +104,7 @@ impl From<&Position> for GameState {
             ep_square_and_victim,
             times_in_check: Some(*pos.get_times_checked()),
             global_rules: pos.global_rules.clone(),
+            variant_display_name: None,
         }
     }
 }

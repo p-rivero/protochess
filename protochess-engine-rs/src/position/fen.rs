@@ -154,7 +154,7 @@ impl GameState {
         
         Ok(GameState {
             piece_types, board_width, board_height, invalid_squares, pieces, player_to_move,
-            ep_square_and_victim, times_in_check, global_rules
+            ep_square_and_victim, times_in_check, global_rules, variant_display_name: None
         })
     }
 }
