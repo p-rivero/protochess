@@ -197,6 +197,9 @@ impl Position {
         if !moved_piece.explodes() {
             return;
         }
+        // Clone explosion radius bitboard
+        let mut explosion = moved_piece.get_explosion(mv.get_to()).clone();
+        // Update zobrist key
         new_props.zobrist_key ^= moved_piece.get_zobrist(from);
         let moved_piece_castle_zob = moved_piece.get_castle_zobrist(from);
         let moved_piece_id = moved_piece.get_piece_id();
@@ -208,33 +211,22 @@ impl Position {
         self.captures_stack.push((moved_piece_id, my_player_num, capturing_could_castle, from));
         new_props.num_captures += 1;
         // Remove all pieces in the explosion radius
-        let (x, y) = from_index(mv.get_to());
-        
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                if dx == 0 && dy == 0 {
+        while let Some(nindex) = explosion.lowest_one() {
+            explosion.clear_bit(nindex);
+            if let Some(exploded_piece) = self.piece_at_mut(nindex) {
+                if exploded_piece.immune_to_explosion() {
                     continue;
                 }
-                let (nx, ny) = (x as i8 + dx, y as i8 + dy);
-                if nx < 0 || ny < 0 || !self.dimensions.in_bounds(nx as BCoord, ny as BCoord) {
-                    continue;
+                new_props.zobrist_key ^= exploded_piece.get_zobrist(nindex);
+                let exploded_id = exploded_piece.get_piece_id();
+                let exploded_player = exploded_piece.get_player();
+                let exploded_castle_zob = exploded_piece.get_castle_zobrist(nindex);
+                let could_castle = self.pieces[exploded_player as usize].remove_piece(nindex);
+                if could_castle {
+                    new_props.zobrist_key ^= exploded_castle_zob;
                 }
-                let nindex = to_index(nx as BCoord, ny as BCoord);
-                if let Some(exploded_piece) = self.piece_at_mut(nindex) {
-                    if exploded_piece.immune_to_explosion() {
-                        continue;
-                    }
-                    new_props.zobrist_key ^= exploded_piece.get_zobrist(nindex);
-                    let exploded_id = exploded_piece.get_piece_id();
-                    let exploded_player = exploded_piece.get_player();
-                    let exploded_castle_zob = exploded_piece.get_castle_zobrist(nindex);
-                    let could_castle = self.pieces[exploded_player as usize].remove_piece(nindex);
-                    if could_castle {
-                        new_props.zobrist_key ^= exploded_castle_zob;
-                    }
-                    self.captures_stack.push((exploded_id, exploded_player, could_castle, nindex));
-                    new_props.num_captures += 1;
-                }
+                self.captures_stack.push((exploded_id, exploded_player, could_castle, nindex));
+                new_props.num_captures += 1;
             }
         }
     }

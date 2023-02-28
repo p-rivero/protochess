@@ -66,7 +66,6 @@ impl PartialEq<GameState> for GameState {
 
 impl From<&Position> for GameState {
     fn from(pos: &Position) -> Self {
-        let mut piece_types_set = AHashSet::<&PieceDefinition>::new();
         let mut pieces = Vec::new();
         let board_width = pos.dimensions.width;
         let board_height = pos.dimensions.height;
@@ -75,7 +74,6 @@ impl From<&Position> for GameState {
             for y in 0..board_height {
                 let index = to_index(x, y);
                 if let Some(piece) = pos.piece_at(index) {
-                    piece_types_set.insert(piece.get_movement());
                     pieces.push(PiecePlacement::new(piece.get_piece_id(), x, y, piece.has_not_moved(index)));
                 }
                 if !pos.dimensions.in_bounds(x, y) {
@@ -83,8 +81,15 @@ impl From<&Position> for GameState {
                 }
             }
         }
-        // Convert set of &PieceDefinition to Vec of PieceDefinition
-        let piece_types = piece_types_set.into_iter().cloned().collect::<Vec<_>>(); 
+        
+        let mut piece_types_set = AHashSet::<&PieceDefinition>::new();
+        for piece_set in &pos.pieces {
+            for p in piece_set.iter() {
+                piece_types_set.insert(p.get_movement());
+            }
+        }
+        let piece_types = piece_types_set.into_iter().cloned().collect::<Vec<_>>();
+        
         // Extract EP square
         let ep_square_and_victim = {
             if let Some(ep_square) = pos.get_ep_square() {

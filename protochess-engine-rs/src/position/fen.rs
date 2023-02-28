@@ -204,7 +204,7 @@ fn tuples_to_pieces(piece_tuples: Vec<(PieceId, BCoord, BCoord)>, castling: &str
                 ranks.push(p.y);
             }
         }
-        ranks.sort();
+        ranks.sort_unstable();
         ranks.dedup();
         ranks
     };
