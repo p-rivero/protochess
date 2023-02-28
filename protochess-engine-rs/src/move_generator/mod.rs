@@ -97,8 +97,9 @@ impl MoveGen {
         
         // Try the move and skip a turn, then see if we are in check
         // Also, if after making the move the enemy is in check, the move is illegal if check_is_forbidden
+        // If the move captures the last enemy leader, it's still legal (technically, the enemy is not in check)
         position.make_move(mv);
-        if position.global_rules.check_is_forbidden && MoveGen::in_check(position) {
+        if position.global_rules.check_is_forbidden && !position.leader_is_captured() && MoveGen::in_check(position) {
             position.unmake_move();
             return false;
         }
