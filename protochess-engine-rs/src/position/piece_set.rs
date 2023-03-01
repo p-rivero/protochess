@@ -46,7 +46,8 @@ impl PieceSet {
         // Update the inverse movement pattern
         self.update_inverse_attack(&definition, dims);
         if definition.is_leader {
-            err_assert!(self.leader_piece_index == -1, "Each player can have at most 1 leader piece");
+            let player = if self.player_num == 0 { "White" } else { "Black" };
+            err_assert!(self.leader_piece_index == -1, "{player} has more than 1 leader piece");
             self.leader_piece_index = self.pieces.len() as isize;
         }
         let piece = Piece::new(definition, self.player_num, dims);
@@ -57,7 +58,8 @@ impl PieceSet {
         for piece in &self.pieces {
             for promotion in &piece.get_movement().promo_vals[self.player_num as usize] {
                 let name = piece.get_display_name();
-                err_assert!(self.contains_piece(*promotion), "Piece '{name}' promotes to '{promotion}', which does not exist");
+                let player = if self.player_num == 0 { "White" } else { "Black" };
+                err_assert!(self.contains_piece(*promotion), "Piece \"{name}\" ({player}) promotes to '{promotion}', which does not exist for {player} player");
             }
         }
         Ok(())

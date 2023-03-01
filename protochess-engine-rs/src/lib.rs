@@ -181,8 +181,14 @@ impl Engine {
         Ok((pv[0].into(), score, search_depth))
     }
     fn assert_position_is_valid(&mut self) -> wrap_res!() {
-        err_assert!(!self.position.leader_is_captured(), "All leaders of the player to move have been captured");
-        err_assert!(MoveGen::count_legal_moves(&mut self.position) != 0, "The player to move has no legal moves");
+        let player = self.position.whos_turn;
+        let player_str = if player == 0 { "White" } else { "Black" };
+        if self.position.leader_is_captured() {
+            let has_leader = self.position.pieces[player as usize].get_leader().is_some();
+            let piece_str = if has_leader { "leaders" } else { "pieces" };
+            err!("All the {piece_str} of the player to move ({player_str}) have already been captured");
+        }
+        err_assert!(MoveGen::count_legal_moves(&mut self.position) != 0, "The player to move ({player_str}) has no legal moves");
         Ok(())
     }
 
