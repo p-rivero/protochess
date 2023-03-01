@@ -181,8 +181,8 @@ impl Engine {
         Ok((pv[0].into(), score, search_depth))
     }
     fn assert_position_is_valid(&mut self) -> wrap_res!() {
-        err_assert!(!self.position.leader_is_captured(), "Attempting to get best move but leader is captured");
-        err_assert!(MoveGen::count_legal_moves(&mut self.position) != 0, "Attempting to get best move but there are no legal moves");
+        err_assert!(!self.position.leader_is_captured(), "All leaders of the player to move have been captured");
+        err_assert!(MoveGen::count_legal_moves(&mut self.position) != 0, "The player to move has no legal moves");
         Ok(())
     }
 

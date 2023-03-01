@@ -80,6 +80,11 @@ impl Piece {
         self.id
     }
     
+    // Get the display name of this piece type for this player
+    pub fn get_display_name(&self) -> String {
+        self.type_def.display_name.clone()
+    }
+    
     // Get the player number of this piece
     pub fn get_player(&self) -> Player {
         self.player_num
