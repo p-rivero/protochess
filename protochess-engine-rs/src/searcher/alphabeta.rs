@@ -326,7 +326,8 @@ impl Searcher {
             if self.stop_flag.load(Ordering::Relaxed) {
                 return Err(SearchTimeout);
             }
-            if Instant::now() >= self.end_time {
+            // If this is the first search (depth 1, max_searching_depth 2), don't time out
+            if Instant::now() >= self.end_time && self.max_searching_depth > 2 {
                 // Signal other threads to stop
                 #[cfg(feature = "parallel")]
                 self.stop_flag.store(true, Ordering::Relaxed);
