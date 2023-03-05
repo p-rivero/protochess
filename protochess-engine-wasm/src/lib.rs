@@ -46,6 +46,10 @@ impl Protochess {
         self.engine.player_to_move()
     }
 
+    #[wasm_bindgen(js_name = validatePosition)]
+    pub fn validate_position(&mut self) -> Result<(), String> {
+        self.engine.validate_position()
+    }
     #[wasm_bindgen(js_name = playBestMove)]
     pub fn play_best_move(&mut self, depth: u8) -> Result<JsValue, String> {
         let (best_move, _) = self.engine.get_best_move(depth)?;
