@@ -83,6 +83,10 @@ pub fn main() {
                 println!("KING HAS BEEN CAPTURED! {:?} wins!", result.winner);
                 break;
             },
+            MakeMoveResultFlag::AllPiecesCaptured => {
+                println!("ALL PIECES HAVE BEEN CAPTURED! {:?} wins!", result.winner);
+                break;
+            },
             MakeMoveResultFlag::PieceInWinSquare => {
                 println!("KING IN WINNING SQUARE! {:?} wins!", result.winner);
                 break;

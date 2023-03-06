@@ -105,9 +105,13 @@ impl Engine {
                     1 - self.position.whos_turn
                 }
             };
-            // Leader captured (atomic chess)
+            // Leader captured (atomic chess, or playing without a king)
             if self.position.leader_is_captured() {
-                return MakeMoveResult::leader_captured(winner, exploded);
+                if self.position.pieces[self.position.whos_turn as usize].get_leader().is_none() {
+                    return MakeMoveResult::all_pieces_captured(winner, exploded);
+                } else {
+                    return MakeMoveResult::leader_captured(winner, exploded);
+                }
             }
             // Piece moved to winning square (king of the hill, racing kings)
             if self.position.piece_is_on_winning_square() {

@@ -7,6 +7,7 @@ pub enum MakeMoveResultFlag {
     IllegalMove,
     Checkmate,
     LeaderCaptured,
+    AllPiecesCaptured,
     PieceInWinSquare,
     CheckLimit,
     Stalemate,
@@ -42,6 +43,7 @@ impl From<String> for MakeMoveResultFlag {
             "IllegalMove" => Self::IllegalMove,
             "Checkmate" => Self::Checkmate,
             "LeaderCaptured" => Self::LeaderCaptured,
+            "AllPiecesCaptured" => Self::AllPiecesCaptured,
             "PieceInWinSquare" => Self::PieceInWinSquare,
             "CheckLimit" => Self::CheckLimit,
             "Stalemate" => Self::Stalemate,
@@ -104,6 +106,13 @@ impl MakeMoveResult {
     pub fn leader_captured(winner: Player, exploded: Vec<(BCoord, BCoord)>) -> Self {
         Self {
             flag: MakeMoveResultFlag::LeaderCaptured,
+            winner: Some(winner).into(),
+            exploded,
+        }
+    }
+    pub fn all_pieces_captured(winner: Player, exploded: Vec<(BCoord, BCoord)>) -> Self {
+        Self {
+            flag: MakeMoveResultFlag::AllPiecesCaptured,
             winner: Some(winner).into(),
             exploded,
         }
