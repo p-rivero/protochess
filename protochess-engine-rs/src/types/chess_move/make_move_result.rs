@@ -66,15 +66,19 @@ impl From<Option<Player>> for MakeMoveResultWinner {
 }
 impl From<MakeMoveResultWinner> for String {
     fn from(w: MakeMoveResultWinner) -> Self {
-        format!("{:?}", w)
+        match w {
+            MakeMoveResultWinner::White => "white",
+            MakeMoveResultWinner::Black => "black",
+            MakeMoveResultWinner::None => "none",
+        }.to_string()
     }
 }
 impl From<String> for MakeMoveResultWinner {
     fn from(s: String) -> Self {
         match s.as_str() {
-            "White" => Self::White,
-            "Black" => Self::Black,
-            "None" => Self::None,
+            "white" => Self::White,
+            "black" => Self::Black,
+            "none" => Self::None,
             _ => panic!("Invalid winner"),
         }
     }
