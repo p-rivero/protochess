@@ -344,8 +344,10 @@ impl Position {
         }
         let mut num_reps = 1;
         let my_zob = self.get_zobrist();
-        // Iterate from the top of the stack to the beginning
-        for p in self.properties_stack.iter().rev() {
+        // Skip the last element, since it's the current position
+        let mut i = self.properties_stack.len() - 1;
+        while i > 0 {
+            let p = &self.properties_stack[i - 1];
             if p.zobrist_key == my_zob {
                 num_reps += 1;
             }
@@ -354,6 +356,7 @@ impl Position {
             if p.num_captures > 0 {
                 break;
             }
+            i -= 1;
         }
         num_reps >= self.global_rules.repetitions_draw
     }
