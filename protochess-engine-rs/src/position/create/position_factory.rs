@@ -1,5 +1,5 @@
 use crate::position::position_properties::PositionProperties;
-use crate::{InitialState, Position, wrap_res, err_assert, MakeMoveResultFlag};
+use crate::{InitialState, Position, wrap_res, err_assert, MakeMoveResultFlag, MoveInfo};
 use crate::utils::to_index;
 use crate::types::BDimensions;
 
@@ -25,7 +25,7 @@ impl PositionFactory {
     }
     
     /// Creates a Position from a fen string, using the previous GameState's variant
-    pub fn set_fen(&mut self, fen: &str) -> wrap_res!(Position) {
+    pub fn load_fen(&mut self, fen: &str) -> wrap_res!(Position) {
         if self.current_state.is_none() {
             panic!("No current state, call make_position() first");
         }
@@ -37,11 +37,11 @@ impl PositionFactory {
     
     fn set_state_impl(state: &GameState) -> wrap_res!(Position) {
         // Parse the variant's default starting position
-        let mut fen_data = FenData::from_fen(&state.initial_state.fen)?;
+        let mut fen_data = FenData::parse_fen(&state.initial_state.fen)?;
         // Apply the user-proveded initial fen, if any
         if let Some(initial_fen) = &state.initial_fen {
             let old_fen = fen_data;
-            fen_data = FenData::from_fen(initial_fen)?;
+            fen_data = FenData::parse_fen(initial_fen)?;
             // Don't allow the user to override the walls
             fen_data.walls = old_fen.walls;
         }
@@ -63,6 +63,25 @@ impl PositionFactory {
         }
     }
     
+    /// Adds a new move to the move history of the current GameState
+    /// Call this whenever a move is made to keep the stored GameState in sync
+    pub fn add_move(&mut self, m: &MoveInfo) {
+        if let Some(state) = &mut self.current_state {
+            state.move_history.push(*m);
+        } else {
+            panic!("No current state, call make_position() first");
+        }
+    }
+    
+    /// Removes the last move from the move history of the current GameState
+    /// Call this whenever a move is undone to keep the stored GameState in sync
+    pub fn remove_last_move(&mut self) {
+        if let Some(state) = &mut self.current_state {
+            state.move_history.pop();
+        } else {
+            panic!("No current state, call make_position() first");
+        }
+    }
     
     /// Creates a new position from scratch, using the following data:
     /// - **Board height and width:** From `InitialState`
@@ -93,7 +112,7 @@ impl PositionFactory {
             // Use the lowest bit as player zobrist key
             props.zobrist_key ^= 1;
         }
-        props.times_in_check = fen.times_in_check;
+        props.times_in_check = fen.times_in_check.unwrap_or([0,0]);
 
         // Instantiate position and register piecetypes
         let mut pos = Position::new(dims, fen.player_to_move, props, state.global_rules.clone());

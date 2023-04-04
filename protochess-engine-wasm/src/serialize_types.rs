@@ -96,21 +96,21 @@ impl MoveInfoWithEvalDepthSer {
 }
 
 
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MakeMoveResultWithDepthSer {
-    make_move_result: MakeMoveResultSer,
-    depth: u8
-}
-impl MakeMoveResultWithDepthSer {
-    pub fn to_js(mmr: MakeMoveResult, depth: u8) -> JsValue {
-        let val = MakeMoveResultWithDepthSer {
-            make_move_result: mmr.into(),
-            depth
-        };
-        to_value(&val).unwrap()
-    }
-}
+// #[derive(serde::Serialize, serde::Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct MakeMoveResultWithDepthSer {
+//     make_move_result: MakeMoveResultSer,
+//     depth: u8
+// }
+// impl MakeMoveResultWithDepthSer {
+//     pub fn to_js(mmr: MakeMoveResult, depth: u8) -> JsValue {
+//         let val = MakeMoveResultWithDepthSer {
+//             make_move_result: mmr.into(),
+//             depth
+//         };
+//         to_value(&val).unwrap()
+//     }
+// }
 
 generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     ids, [Option<char>; 2],
@@ -143,9 +143,7 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     translate_northwest, bool,
     translate_southeast, bool,
     translate_southwest, bool,
-    win_squares, Vec<(u8, u8)>,
-    display_name, String,
-    image_urls, [Option<String>; 2]
+    win_squares, Vec<(u8, u8)>
 ]);
 
 
@@ -166,21 +164,23 @@ generate_wrapper!(GlobalRulesSer, GlobalRules, [
     checks_to_lose, u8
 ]);
 
-generate_wrapper!(GameStateSer, InitialState, [
+generate_wrapper!(InitialStateSer, InitialState, [
+    fen, String,
+    player_to_move, u8,
     piece_types, SerVec<PieceDefinitionSer>,
     board_width, u8,
     board_height, u8,
-    invalid_squares, Vec<(u8, u8)>,
-    pieces, SerVec<PiecePlacementSer>,
-    player_to_move, u8,
-    ep_square_and_victim, Option<((u8, u8), (u8, u8))>,
-    times_in_check, Option<[u8; 2]>,
-    global_rules, GlobalRulesSer,
-    variant_display_name, Option<String>
+    global_rules, GlobalRulesSer
 ]);
 
-generate_wrapper!(GameStateGuiSer, GameStateGui, [
-    state, GameStateSer,
+generate_wrapper!(GameStateSer, GameState, [
+    initial_state, InitialStateSer,
+    initial_fen, String,
+    move_history, SerVec<MoveInfoSer>
+]);
+
+generate_wrapper!(StateDiffSer, StateDiff, [
     fen, String,
-    in_check, bool
+    in_check, bool,
+    player_to_move, u8
 ]);

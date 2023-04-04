@@ -29,7 +29,6 @@ impl VariantFactory {
         let global_rules = GlobalRules::for_mode(self.mode);
         
         // Same for all variants
-        let in_check = false;
         let player_to_move = 0;
         let piece_types = self.get_piece_set();
         let board_width = 8;
@@ -37,7 +36,6 @@ impl VariantFactory {
         
         InitialState {
             fen,
-            in_check,
             player_to_move,
             piece_types,
             board_width,

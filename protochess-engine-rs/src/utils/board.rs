@@ -46,4 +46,7 @@ pub fn distance_to_one<F>(x_start: BCoord, y_start: BCoord, board: &Bitboard, ge
 pub fn to_rank_file(x: BCoord, y: BCoord) -> String {
     format!("{}{}", (b'a' + x) as char, (y + 1))
 }
+pub fn tuple_to_rank_file((x, y): (BCoord, BCoord)) -> String {
+    to_rank_file(x, y)
+}
 

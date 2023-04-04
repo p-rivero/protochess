@@ -116,9 +116,14 @@ impl Position {
     }
     
     #[inline]
-    pub fn get_times_checked(&self) -> &[u8; 2] {
-        &self.get_properties().times_in_check
+    pub fn get_times_checked(&self) -> Option<&[u8; 2]> {
+        if self.global_rules.checks_to_lose == 0 {
+            None
+        } else {
+            Some(&self.get_properties().times_in_check)
+        }
     }
+    
     #[inline]
     pub fn increment_num_checks(&mut self) -> bool {
         if self.global_rules.checks_to_lose == 0 {

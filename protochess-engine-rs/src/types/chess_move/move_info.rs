@@ -5,7 +5,7 @@ use scan_fmt::scan_fmt;
 
 use crate::{PieceId, err_assert, wrap_res, err};
 use crate::types::BCoord;
-use crate::utils::from_index;
+use crate::utils::{from_index, tuple_to_rank_file};
 
 use super::Move;
 
@@ -67,20 +67,14 @@ impl PartialEq<Move> for MoveInfo {
     }
 }
 
+/// Outputs the long algebraic notation for the move (without the piece letter in front, 
+/// or check/checkmate indicators).
 impl std::fmt::Display for MoveInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x: u32 = self.from.0.into();
-        let from_x = char::from_digit(x + 10, 36).unwrap();
-        let from_y = self.from.1 + 1;
-        
-        let x: u32 = self.to.0.into();
-        let to_x = char::from_digit(x + 10, 36).unwrap();
-        let to_y = self.to.1 + 1;
-        
-        let promotion = match self.promotion {
-            Some(p) => format!("={}", p),
-            None => String::new(),
-        };
-        write!(f, "{from_x}{from_y}{to_x}{to_y}{promotion}")
+        write!(f, "{}{}", tuple_to_rank_file(self.from), tuple_to_rank_file(self.to))?;
+        if let Some(prom) = self.promotion {
+            write!(f, "={prom}")?;
+        }
+        Ok(())
     }
 }

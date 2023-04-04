@@ -14,11 +14,11 @@ use std::convert::TryFrom;
 
 use position::create::position_factory::PositionFactory;
 use types::{BCoord, Centipawns, Depth, Player, ZobKey};
-use searcher::{Searcher, eval};
+use searcher::Searcher;
 use utils::{to_index, from_index};
 
 pub use position::Position;
-pub use position::create::game_state::{InitialState, GameState};
+pub use position::create::game_state::*;
 pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
 pub use piece::{Piece, PieceId, PieceDefinition};
@@ -39,24 +39,17 @@ impl Engine {
         Ok(())
     }
     /// Updates the engine by loading a fen string. The variant is unchanged.
-    pub fn set_fen(&mut self, fen: &str) -> wrap_res!() {
-        self.position = self.factory.set_fen(fen)?;
+    pub fn load_fen(&mut self, fen: &str) -> wrap_res!() {
+        self.position = self.factory.load_fen(fen)?;
         Ok(())
     }
-    
     /// Returns the current GameState, which can later be used in `set_state()`
     pub fn get_state(&mut self) -> &GameState {
         self.factory.get_state()
     }
-
-    /// Returns the zobrist hash key for the current position
-    pub fn get_zobrist(&self) -> ZobKey {
-        self.position.get_zobrist()
-    }
-
-    /// Returns the score of the current position for the side to move
-    pub fn get_score(&self) -> Centipawns {
-        eval::evaluate(&self.position)
+    /// Returns the current state, but only the fields that can change during a game
+    pub fn get_state_diff(&mut self) -> StateDiff {
+        StateDiff::from(&mut self.position)
     }
     
     /// Returns the id (can be uppercase or lowercase) of the piece at the given coordinates
@@ -81,9 +74,11 @@ impl Engine {
 
     /// Attempts a move on the current board position
     pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
+        self.factory.add_move(target_move);
         self.position.pub_make_move(target_move)
     }
     
+    /// Attempts a move on the current board position, given a string in the format "e2e4"
     pub fn make_move_str(&mut self, target_move: &str) -> wrap_res!(MakeMoveResult) {
         let mv = MoveInfo::try_from(target_move)?;
         Ok(self.make_move(&mv))
@@ -94,20 +89,14 @@ impl Engine {
         if !self.position.can_unmake_move() {
             return Err("There is no move to undo".to_string());
         }
+        self.factory.remove_last_move();
         self.position.unmake_move();
         Ok(())
     }
     
+    /// Returns `0` if it's white's turn, `1` if it's black's turn
     pub fn player_to_move(&self) -> Player {
         self.position.whos_turn
-    }
-    
-    pub fn get_width(&self) -> BCoord {
-        self.position.dimensions.width
-    }
-    
-    pub fn get_height(&self) -> BCoord {
-        self.position.dimensions.height
     }
     
     /// Returns the best move for the current position, along with the evaluation score
@@ -140,18 +129,6 @@ impl Engine {
         err_assert!(MoveGen::count_legal_moves(&mut self.position) != 0, "The player to move ({player_str}) has no legal moves");
         Ok(())
     }
-
-    /// Returns a list of all legal moves from the given square
-    pub fn moves_from(&mut self, x: BCoord, y: BCoord) -> wrap_res!(Vec<MoveInfo>) {
-        err_assert!(self.position.in_bounds(x, y), "Coordinates ({x}, {y}) are out of bounds");
-        let from = to_index(x,y);
-        let moves = MoveGen::get_legal_moves(&mut self.position)
-            .into_iter()
-            .filter(|mv| mv.get_from() == from)
-            .map(MoveInfo::from)
-            .collect();
-        Ok(moves)
-    }
     
     /// Returns a list of all squares (x,y) from which the given piece can move, along with the moves themselves
     pub fn legal_moves(&mut self) -> Vec<MoveList> {
@@ -182,21 +159,6 @@ impl Engine {
             .map(|mv| mv.get_promotion_piece().unwrap())
             .collect()
     }
-
-    /// Returns true if the player to move is in check
-    pub fn to_move_in_check(&mut self) -> bool {
-        if self.position.leader_is_captured() {
-            return false;
-        }
-        MoveGen::in_check(&mut self.position)
-    }
-    
-    pub fn perft(&mut self, depth: Depth) -> u64 {
-        utils::perft::perft(&mut self.position, depth)
-    }
-    pub fn perft_divide(&mut self, depth: Depth) -> u64 {
-        utils::perft::perft_divide(&mut self.position, depth)
-    }
     
     
     /// Returns the number of threads that can be used for multithreaded operations.
@@ -223,6 +185,19 @@ impl Engine {
         }
         self.num_threads = num_threads;
         Ok(())
+    }
+    
+    
+    
+    // Debugging functions
+    pub fn get_zobrist(&self) -> ZobKey {
+        self.position.get_zobrist()
+    }
+    pub fn perft(&mut self, depth: Depth) -> u64 {
+        utils::perft::perft(&mut self.position, depth)
+    }
+    pub fn perft_divide(&mut self, depth: Depth) -> u64 {
+        utils::perft::perft_divide(&mut self.position, depth)
     }
 }
 

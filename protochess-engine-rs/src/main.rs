@@ -132,16 +132,13 @@ fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: &str) {
 }
 
 pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
-    // Long algebraic notation for mv
-    let mut move_string = format!("{}{}{}{}", (b'a' + mv.from.0) as char, mv.from.1 + 1, (b'a' + mv.to.0) as char, mv.to.1 + 1);
-    
-    if let Some(prom) = mv.promotion {
-        move_string = format!("{move_string}={prom}");
-    }
-    
-    let moved_piece = engine.get_piece_at(mv.from).unwrap();
-    // Algebraic notation uses uppercase piece letters
-    let moved_piece = moved_piece.to_uppercase().next().unwrap();
+    // Long algebraic notation for mv ("e2e4")
+    let mut move_string = mv.to_string();
+    // Append the moved piece letter (uppercase) at the beginning
+    let moved_piece = engine
+        .get_piece_at(mv.from).expect("No piece at the from square")
+        .to_uppercase()
+        .next().expect("Uppercase char is empty");
     
     if moved_piece != 'P' {
         // If the piece is not a pawn, write the piece letter

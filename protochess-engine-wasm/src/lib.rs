@@ -50,18 +50,6 @@ impl Protochess {
     pub fn validate_position(&mut self) -> Result<(), String> {
         self.engine.validate_position()
     }
-    #[wasm_bindgen(js_name = playBestMove)]
-    pub fn play_best_move(&mut self, depth: u8) -> Result<JsValue, String> {
-        let (best_move, _) = self.engine.get_best_move(depth)?;
-        let move_result = self.engine.make_move(&best_move);
-        Ok(MakeMoveResultSer::to_js(move_result))
-    }
-    #[wasm_bindgen(js_name = playBestMoveTimeout)]
-    pub fn play_best_move_timeout(&mut self, time: usize) -> Result<JsValue, String> {
-        let (best_move, _, search_depth) = self.engine.get_best_move_timeout(time as u64)?;
-        let move_result = self.engine.make_move(&best_move);
-        Ok(MakeMoveResultWithDepthSer::to_js(move_result, search_depth))
-    }
 
     #[wasm_bindgen(js_name = makeMove)]
     pub fn make_move(&mut self, mv: JsValue) -> Result<JsValue, String> {
@@ -85,11 +73,6 @@ impl Protochess {
         let (best_move, eval, depth) = self.engine.get_best_move_timeout(time as u64)?;
         Ok(MoveInfoWithEvalDepthSer::to_js(best_move, eval, depth))
     }
-
-    #[wasm_bindgen(js_name = toMoveInCheck)]
-    pub fn to_move_in_check(&mut self) -> bool {
-        self.engine.to_move_in_check()
-    }
     
     #[wasm_bindgen(js_name = setState)]
     pub fn set_state(&mut self, state: JsValue) -> Result<(), String> {
@@ -98,28 +81,30 @@ impl Protochess {
         Ok(())
     }
     
-    #[wasm_bindgen(js_name = getState)]
-    pub fn get_state(&mut self) -> JsValue {
-        let state = self.engine.get_state();
-        GameStateGuiSer::to_js(state)
-    }
-    
-    #[wasm_bindgen(js_name = loadFen)]
+    #[wasm_bindgen(js_name = setState)]
     pub fn load_fen(&mut self, fen: &str) -> Result<(), String> {
-        self.engine = Engine::from_fen(fen)?;
+        self.engine.load_fen(fen)?;
         Ok(())
     }
     
-    #[wasm_bindgen(js_name = movesFrom)]
-    pub fn moves_from(&mut self, x: u8, y: u8) -> Result<JsValue, String> {
-        let moves: SerVec<MoveInfoSer> = self.engine.moves_from(x, y)?.into();
-        Ok(to_value(&moves).unwrap())
+    #[wasm_bindgen(js_name = getState)]
+    pub fn get_state(&mut self) -> JsValue {
+        let state = self.engine.get_state();
+        GameStateSer::to_js(state)
     }
+    
+    #[wasm_bindgen(js_name = getState)]
+    pub fn get_state_diff(&mut self) -> JsValue {
+        let state = self.engine.get_state_diff();
+        GameStateSer::to_js(state)
+    }
+    
     #[wasm_bindgen(js_name = legalMoves)]
     pub fn legal_moves(&mut self) -> Result<JsValue, String> {
         let moves: SerVec<MoveListSer> = self.engine.legal_moves().into();
         Ok(to_value(&moves).unwrap())
     }
+    
     #[wasm_bindgen(js_name = possiblePromotions)]
     pub fn possible_promotions(&mut self, from_x: u8, from_y: u8, to_x: u8, to_y: u8) -> Result<JsValue, String> {
         let from = (from_x, from_y);
