@@ -81,7 +81,7 @@ impl Protochess {
         Ok(())
     }
     
-    #[wasm_bindgen(js_name = setState)]
+    #[wasm_bindgen(js_name = loadFen)]
     pub fn load_fen(&mut self, fen: &str) -> Result<(), String> {
         self.engine.load_fen(fen)?;
         Ok(())
@@ -90,13 +90,13 @@ impl Protochess {
     #[wasm_bindgen(js_name = getState)]
     pub fn get_state(&mut self) -> JsValue {
         let state = self.engine.get_state();
-        GameStateSer::to_js(state)
+        GameStateSer::to_js(state.clone())
     }
     
-    #[wasm_bindgen(js_name = getState)]
+    #[wasm_bindgen(js_name = getStateDiff)]
     pub fn get_state_diff(&mut self) -> JsValue {
         let state = self.engine.get_state_diff();
-        GameStateSer::to_js(state)
+        StateDiffSer::to_js(state.clone())
     }
     
     #[wasm_bindgen(js_name = legalMoves)]

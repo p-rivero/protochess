@@ -95,23 +95,6 @@ impl MoveInfoWithEvalDepthSer {
     }
 }
 
-
-// #[derive(serde::Serialize, serde::Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct MakeMoveResultWithDepthSer {
-//     make_move_result: MakeMoveResultSer,
-//     depth: u8
-// }
-// impl MakeMoveResultWithDepthSer {
-//     pub fn to_js(mmr: MakeMoveResult, depth: u8) -> JsValue {
-//         let val = MakeMoveResultWithDepthSer {
-//             make_move_result: mmr.into(),
-//             depth
-//         };
-//         to_value(&val).unwrap()
-//     }
-// }
-
 generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     ids, [Option<char>; 2],
     is_leader, bool,
@@ -146,15 +129,6 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     win_squares, Vec<(u8, u8)>
 ]);
 
-
-generate_wrapper!(PiecePlacementSer, PiecePlacement, [
-    piece_id, char,
-    x, u8,
-    y, u8,
-    // True if it has not moved. This is an option so that JS can leave it as undefined
-    can_castle, Option<bool>
-]);
-
 generate_wrapper!(GlobalRulesSer, GlobalRules, [
     capturing_is_forced, bool,
     check_is_forbidden, bool,
@@ -175,7 +149,7 @@ generate_wrapper!(InitialStateSer, InitialState, [
 
 generate_wrapper!(GameStateSer, GameState, [
     initial_state, InitialStateSer,
-    initial_fen, String,
+    initial_fen, Option<String>,
     move_history, SerVec<MoveInfoSer>
 ]);
 
