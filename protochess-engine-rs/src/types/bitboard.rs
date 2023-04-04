@@ -28,13 +28,13 @@ impl BDimensions {
         }
         Ok(BDimensions { width, height, bounds })
     }
-    // Given a list of valid squares (coordinates), return a BDimensions object
-    pub fn from_invalid_squares(width: BCoord, height: BCoord, invalid_squares: &[(BCoord, BCoord)]) -> wrap_res!(BDimensions) {
+    // Given a list of invalid squares (coordinates of walls), return a BDimensions object
+    pub fn from_walls(width: BCoord, height: BCoord, walls: &[(BCoord, BCoord)]) -> wrap_res!(BDimensions) {
         err_assert!(width <= 16 && height <= 16, "Board dimensions must be <= 16x16");
         let mut bounds = Bitboard::zero();
         for x in 0..width {
             for y in 0..height {
-                if !invalid_squares.contains(&(x, y)) {
+                if !walls.contains(&(x, y)) {
                     bounds.set_bit_at(x, y);
                 }
             }

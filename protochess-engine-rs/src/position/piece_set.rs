@@ -42,24 +42,31 @@ impl PieceSet {
     /// Add a new piece definition to the set. The following conditions must have been checked before calling this function:
     /// - Both ids (white and black) are unique among all pieces in all sets (so that it is possible to uniquely identify a piece)
     /// - This piece is available for the player (i.e. `ids[player_num]` is not `None`)
-    pub fn register_piecetype(&mut self, definition: PieceDefinition, dims: &BDimensions) -> wrap_res!() {
-        // Update the inverse movement pattern
-        self.update_inverse_attack(&definition, dims);
+    pub fn register_piecetype(&mut self, definition: &PieceDefinition, dims: &BDimensions) -> wrap_res!() {
         if definition.is_leader {
             let player = if self.player_num == 0 { "White" } else { "Black" };
             err_assert!(self.leader_piece_index == -1, "{player} has more than 1 leader piece");
             self.leader_piece_index = self.pieces.len() as isize;
         }
-        let piece = Piece::new(definition, self.player_num, dims);
+        
+        let piece = Piece::new(definition.clone(), self.player_num, dims);
+        
+        let reserved_id_regex = regex::Regex::new(r"[\s/0-9*]").unwrap();
+        err_assert!(!reserved_id_regex.is_match(&piece.get_piece_id().to_string()),
+            "A piece cannot have a space, slash, number, or asterisk as its id");
+        
         self.pieces.push(piece);
+        // Update the inverse movement pattern
+        self.update_inverse_attack(&definition, dims);
+        
         Ok(())
     }
     pub fn assert_promotion_consistency(&self) -> wrap_res!() {
         for piece in &self.pieces {
             for promotion in &piece.get_movement().promo_vals[self.player_num as usize] {
-                let name = piece.get_display_name();
                 let player = if self.player_num == 0 { "White" } else { "Black" };
-                err_assert!(self.contains_piece(*promotion), "Piece \"{name}\" ({player}) promotes to '{promotion}', which does not exist for {player} player");
+                let id = piece.get_piece_id();
+                err_assert!(self.contains_piece(*promotion), "Piece '{id}' promotes to '{promotion}', which does not exist for {player} player");
             }
         }
         Ok(())

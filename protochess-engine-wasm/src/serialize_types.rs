@@ -166,7 +166,7 @@ generate_wrapper!(GlobalRulesSer, GlobalRules, [
     checks_to_lose, u8
 ]);
 
-generate_wrapper!(GameStateSer, GameState, [
+generate_wrapper!(GameStateSer, InitialState, [
     piece_types, SerVec<PieceDefinitionSer>,
     board_width, u8,
     board_height, u8,

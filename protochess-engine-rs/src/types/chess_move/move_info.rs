@@ -66,3 +66,21 @@ impl PartialEq<Move> for MoveInfo {
         self == &MoveInfo::from(*other)
     }
 }
+
+impl std::fmt::Display for MoveInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x: u32 = self.from.0.into();
+        let from_x = char::from_digit(x + 10, 36).unwrap();
+        let from_y = self.from.1 + 1;
+        
+        let x: u32 = self.to.0.into();
+        let to_x = char::from_digit(x + 10, 36).unwrap();
+        let to_y = self.to.1 + 1;
+        
+        let promotion = match self.promotion {
+            Some(p) => format!("={}", p),
+            None => String::new(),
+        };
+        write!(f, "{from_x}{from_y}{to_x}{to_y}{promotion}")
+    }
+}

@@ -12,12 +12,13 @@ pub mod utils;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+use position::create::position_factory::PositionFactory;
 use types::{BCoord, Centipawns, Depth, Player, ZobKey};
 use searcher::{Searcher, eval};
 use utils::{to_index, from_index};
 
 pub use position::Position;
-pub use position::game_state::{PiecePlacement, GameState, GameStateGui};
+pub use position::create::game_state::{InitialState, GameState};
 pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
 pub use piece::{Piece, PieceId, PieceDefinition};
@@ -27,31 +28,25 @@ pub use types::{MoveInfo, MoveList, MakeMoveResult, MakeMoveResultFlag, MakeMove
 #[derive(Debug, Clone)]
 pub struct Engine{
     position: Position,
+    factory: PositionFactory,
     num_threads: u32,
 }
 
 impl Engine {
-    /// Initializes a new engine from a given fen string
-    pub fn from_fen(fen: &str) -> wrap_res!(Engine) {
-        let state = GameState::from_fen(fen)?;
-        let position = Position::try_from(state)?;
-        let num_threads = Self::get_max_threads();
-        Ok(Engine{ position, num_threads })
-    }
-
+    /// Sets up the engine with a given game state
     pub fn set_state(&mut self, state: GameState) -> wrap_res!() {
-        self.position = Position::try_from(state)?;
+        self.position = self.factory.set_state(state)?;
+        Ok(())
+    }
+    /// Updates the engine by loading a fen string. The variant is unchanged.
+    pub fn set_fen(&mut self, fen: &str) -> wrap_res!() {
+        self.position = self.factory.set_fen(fen)?;
         Ok(())
     }
     
-    pub fn get_state(&mut self) -> GameStateGui {
-        let state = GameState::from(&self.position);
-        let fen = state.create_fen();
-        GameStateGui {
-            state,
-            fen,
-            in_check: self.to_move_in_check(),
-        }
+    /// Returns the current GameState, which can later be used in `set_state()`
+    pub fn get_state(&mut self) -> &GameState {
+        self.factory.get_state()
     }
 
     /// Returns the zobrist hash key for the current position
@@ -86,59 +81,7 @@ impl Engine {
 
     /// Attempts a move on the current board position
     pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
-        let moves = MoveGen::get_pseudo_moves(&mut self.position, true);
-        for mv in moves {
-            if target_move != &mv {
-                continue;
-            }
-            // Found the move, try to play it
-            let exploded = mv.get_potential_explosion(&self.position);
-            if !MoveGen::make_move_if_legal(mv, &mut self.position) {
-                continue;
-            }
-            
-            // Check if the game is over
-            let winner = {
-                if self.position.global_rules.invert_win_conditions {
-                    self.position.whos_turn
-                } else {
-                    1 - self.position.whos_turn
-                }
-            };
-            // Leader captured (atomic chess, or playing without a king)
-            if self.position.leader_is_captured() {
-                if self.position.pieces[self.position.whos_turn as usize].get_leader().is_none() {
-                    return MakeMoveResult::all_pieces_captured(winner, exploded);
-                } else {
-                    return MakeMoveResult::leader_captured(winner, exploded);
-                }
-            }
-            // Piece moved to winning square (king of the hill, racing kings)
-            if self.position.piece_is_on_winning_square() {
-                return MakeMoveResult::piece_in_win_square(winner, exploded);
-            }
-            let in_check = MoveGen::in_check(&mut self.position);
-            // No legal moves, check if it's checkmate or stalemate
-            if MoveGen::count_legal_moves(&mut self.position) == 0 {
-                if in_check {
-                    return MakeMoveResult::checkmate(winner, exploded);
-                }
-                if self.position.global_rules.stalemated_player_loses {
-                    return MakeMoveResult::stalemate(Some(winner), exploded);
-                }
-                return MakeMoveResult::stalemate(None, exploded);
-            }
-            if in_check && self.position.increment_num_checks() {
-                // Checked N times (N=3 in 3-check)
-                return MakeMoveResult::check_limit(winner, exploded);
-            }
-            if self.position.draw_by_repetition() {
-                // Threefold Repetition
-                return MakeMoveResult::repetition();
-            }
-            return MakeMoveResult::ok(exploded);
-        }
-        MakeMoveResult::illegal_move()
+        self.position.pub_make_move(target_move)
     }
     
     pub fn make_move_str(&mut self, target_move: &str) -> wrap_res!(MakeMoveResult) {
@@ -291,8 +234,12 @@ impl std::fmt::Display for Engine {
 
 impl Default for Engine {
     fn default() -> Self {
-        let position = Position::try_from(GameState::default()).unwrap();
+        // Set up position using default GameState
+        let state = GameState::default();
+        let mut factory = PositionFactory::default();
+        let position = factory.set_state(state).unwrap();
+        // Use maximum number of threads (usually this is too many, the user should change this later)
         let num_threads = Self::get_max_threads();
-        Engine{ position, num_threads }
+        Engine { position, factory, num_threads }
     }
 }

@@ -41,3 +41,18 @@ impl TryFrom<&str> for GameMode {
         }
     }
 }
+
+impl std::fmt::Display for GameMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GameMode::Standard => write!(f, "Standard"),
+            GameMode::Atomic => write!(f, "Atomic"),
+            GameMode::Horde => write!(f, "Horde"),
+            GameMode::Antichess => write!(f, "Antichess"),
+            GameMode::KingOfTheHill => write!(f, "King of the Hill"),
+            GameMode::RacingKings => write!(f, "Racing Kings"),
+            GameMode::ThreeCheck => write!(f, "Three-check"),
+            GameMode::FiveCheck => write!(f, "Five-check"),
+        }
+    }
+}

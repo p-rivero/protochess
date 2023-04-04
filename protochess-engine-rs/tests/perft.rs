@@ -4,7 +4,7 @@ extern crate protochess_engine_rs;
 
 #[cfg(test)]
 mod perft {
-    use protochess_engine_rs::Engine;
+    use protochess_engine_rs::{Engine, GameState};
     // https://www.chessprogramming.org/Perft_Results
     
     #[test]
@@ -86,7 +86,7 @@ mod perft {
     
     #[test]
     fn xfen960_0() {
-        let fen = "r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0 1";
+        let fen = "r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w ACEace - 0 1";
         test_perft(fen, vec![
             23,
             522,
@@ -98,7 +98,7 @@ mod perft {
     
     #[test]
     fn xfen960_1() {
-        let fen = "r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0 1";
+        let fen = "r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w ACFacf - 0 1";
         test_perft(fen, vec![
             28,
             738,
@@ -110,7 +110,7 @@ mod perft {
     
     #[test]
     fn xfen960_2() {
-        let fen = "8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0 1";
+        let fen = "8/8/8/4B2b/6nN/8/5P2/2R1K2k w CE - 0 1";
         test_perft(fen, vec![
             34,
             318,
@@ -122,7 +122,7 @@ mod perft {
     
     #[test]
     fn xfen960_3() {
-        let fen = "2r5/8/8/8/8/8/6PP/k2KR3 w K - 0 1";
+        let fen = "2r5/8/8/8/8/8/6PP/k2KR3 w DE - 0 1";
         test_perft(fen, vec![
             17,
             242,
@@ -135,7 +135,7 @@ mod perft {
     
     #[test]
     fn xfen960_4() {
-        let fen = "4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0 1";
+        let fen = "4r3/3k4/8/8/8/8/6PP/qR1K1R2 w BDF - 0 1";
         test_perft(fen, vec![
             19,
             628,
@@ -172,7 +172,7 @@ mod perft {
     
     #[test]
     fn chess960_swap_castling() {
-        let fen = "2rkr3/8/8/8/8/1PP5/P4PP1/5KR1 b Kkq - 0 2";
+        let fen = "2rkr3/8/8/8/8/1PP5/P4PP1/5KR1 b FGcde - 0 2";
         test_perft(fen, vec![
             22,
             222,
@@ -248,7 +248,7 @@ mod perft {
     
     #[test]
     fn atomic960_castle_1() {
-        let fen = "8/8/8/8/8/8/2k5/rR4KR w KQ - 0 1 ATOMIC";
+        let fen = "8/8/8/8/8/8/2k5/rR4KR w BGH - 0 1 ATOMIC";
         test_perft(fen, vec![
             18,
             180,
@@ -261,7 +261,7 @@ mod perft {
     
     #[test]
     fn atomic960_castle_2() {
-        let fen = "r3k1rR/5K2/8/8/8/8/8/8 b kq - 0 1 ATOMIC";
+        let fen = "r3k1rR/5K2/8/8/8/8/8/8 b aeg - 0 1 ATOMIC";
         test_perft(fen, vec![
             25,
             282,
@@ -273,7 +273,7 @@ mod perft {
     
     #[test]
     fn atomic960_castle_3() {
-        let fen = "Rr2k1rR/3K4/3p4/8/8/8/7P/8 w kq - 0 1 ATOMIC";
+        let fen = "Rr2k1rR/3K4/3p4/8/8/8/7P/8 w beg - 0 1 ATOMIC";
         test_perft(fen, vec![
             21,
             465,
@@ -458,7 +458,9 @@ mod perft {
     }
     
     fn test_perft(fen: &str, results: Vec<u64>) {
-        let mut engine = Engine::from_fen(fen).unwrap();
+        let gs = GameState::from_debug_fen(fen);        
+        let mut engine = Engine::default();
+        engine.set_state(gs).expect("Invalid test FEN");
         for (i, result) in results.iter().enumerate() {
             let depth = i as u8 + 1;
             assert_eq!(engine.perft(depth), *result);

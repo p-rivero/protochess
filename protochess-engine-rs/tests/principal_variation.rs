@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod principal_variation {
-    use std::convert::TryFrom;
-
-    use protochess_engine_rs::{Position, GameState, MoveGen};
+    use protochess_engine_rs::position::create::position_factory::PositionFactory;
+    use protochess_engine_rs::{GameState, MoveGen};
     use protochess_engine_rs::searcher::Searcher;
     #[test]
     fn starting_position_1() {
@@ -96,8 +95,8 @@ mod principal_variation {
     
     
     fn test_pv(fen: &str, depth: u8) {
-        let gs = GameState::from_fen(fen).unwrap();
-        let mut pos = Position::try_from(gs).unwrap();
+        let gs = GameState::from_debug_fen(fen);
+        let mut pos = PositionFactory::default().set_state(gs).unwrap();
         let (pv, _score, search_depth) = Searcher::get_best_move(&pos, depth, 1);
         assert!(search_depth == depth);
         // Make sure that the moves in the PV legal

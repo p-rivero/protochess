@@ -2,7 +2,9 @@
 
 use std::io::Write;
 
-use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResultFlag, MakeMoveResultWinner};
+use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResultFlag, MakeMoveResultWinner, GameState};
+use protochess_engine_rs::types::GameMode;
+use protochess_engine_rs::utils::debug::split_debug_fen;
 
 pub fn main() {
     
@@ -29,18 +31,18 @@ pub fn main() {
     if args.len() > 3 {
         max_ply = args[3].parse::<u32>().unwrap();
     }
-    let mut engine = {
-        if args.len() > 2 && args[2] != "default" {
-            let fen = &args[2];
-            print_pgn_header(fen, &mut pgn_file);
-            Engine::from_fen(fen).unwrap_or_else(|e| {
-                println!("Incorrect FEN: {e}");
-                std::process::exit(1);
-            })
-        } else {
-            Engine::default()
-        }
-    };
+    
+    
+    let mut engine = Engine::default();
+    
+    if args.len() > 2 && args[2] != "default" {
+        let state = GameState::from_debug_fen(&args[2]);
+        print_pgn_header(&args[2], &mut pgn_file);
+        engine.set_state(state).unwrap_or_else(|e| {
+            println!("Incorrect FEN: {e}");
+            std::process::exit(1);
+        });
+    }
     if args.len() > 1 {
         if args[1].contains('t') {
             fixed_depth = false;
@@ -111,16 +113,13 @@ pub fn main() {
     }
 }
 
+
 fn print_pgn_header(fen: &str, pgn_file: &mut std::fs::File) {
-    const STD_FEN_SIZE: usize = 6;
-    let fen_vec: Vec<_> = fen.split_whitespace().collect();
-    assert!(fen_vec.len() >= STD_FEN_SIZE);
-    if fen_vec.len() > STD_FEN_SIZE {
-        let variant = fen_vec.last().unwrap();
-        pgn_file.write_all(format!("[Variant \"{}\"]\n", variant).as_bytes()).unwrap();
+    let (fen, variant) = split_debug_fen(fen);
+    if variant != GameMode::Standard {
+        pgn_file.write_all(format!("[Variant \"{variant}\"]\n").as_bytes()).unwrap();
     }
-    let std_fen = fen_vec[0..STD_FEN_SIZE].join(" ");
-    pgn_file.write_all(format!("[FEN \"{}\"]\n\n", std_fen).as_bytes()).unwrap();
+    pgn_file.write_all(format!("[FEN \"{fen}\"]\n\n").as_bytes()).unwrap();
 }
 
 fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: &str) {

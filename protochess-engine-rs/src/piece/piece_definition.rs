@@ -53,10 +53,6 @@ pub struct PieceDefinition {
     
     // Successfully moving the piece to a win square is an instant win
     pub win_squares: Vec<(BCoord, BCoord)>,
-    
-    // Used for displaying the piece in the UI
-    pub display_name: String,
-    pub image_urls: [Option<String>; 2],
 }
 
 impl PieceDefinition {

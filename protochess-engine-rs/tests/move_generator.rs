@@ -1,15 +1,14 @@
 #[cfg(test)]
 mod move_generator_test {
-    use std::convert::TryFrom;
-
-    use protochess_engine_rs::{Position, GameState};
+    use protochess_engine_rs::position::create::position_factory::PositionFactory;
+    use protochess_engine_rs::GameState;
     use protochess_engine_rs::move_generator::MoveGen;
     use protochess_engine_rs::types::{Move, MoveType};
 
     #[test]
     fn capture_moves() {
-        let gs = GameState::from_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1").unwrap();
-        let mut pos = Position::try_from(gs).unwrap();
+        let gs = GameState::from_debug_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+        let mut pos = PositionFactory::default().set_state(gs).unwrap();
         let z1 = pos.get_zobrist();
         assert!(MoveGen::in_check(&mut pos));
         let z2 = pos.get_zobrist();

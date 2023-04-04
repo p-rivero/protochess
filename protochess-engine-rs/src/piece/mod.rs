@@ -54,7 +54,8 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(definition: PieceDefinition, player_num: Player, dims: &BDimensions) -> Piece {
-        let id = definition.ids[player_num as usize].unwrap();
+        let id = definition.ids[player_num as usize]
+            .expect("Attempted to create piece for a player that does not have access to this piece");
         let material_score = compute_material_score(&definition, dims);
         let zobrist_hashes = Piece::random_zobrist(id, player_num);
         let piece_square_table = compute_piece_square_table(&definition, dims, false);
@@ -78,11 +79,6 @@ impl Piece {
     // Get the id (char) of this piece type for this player
     pub fn get_piece_id(&self) -> PieceId {
         self.id
-    }
-    
-    // Get the display name of this piece type for this player
-    pub fn get_display_name(&self) -> String {
-        self.type_def.display_name.clone()
     }
     
     // Get the player number of this piece
