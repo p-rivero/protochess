@@ -6,7 +6,7 @@ use crate::types::BDimensions;
 use super::fen::FenData;
 use super::game_state::GameState;
 
-/// This struct is responsible for creating Position objects from GameState objects.
+/// This struct is responsible for creating Position objects from `GameState` objects.
 /// Do not create Position objects directly, use this factory instead.
 /// When calling `make_position()`, it checks if the current Position can be reused, and if so, it
 /// performs an incremental update instead of creating a new Position object.
@@ -17,14 +17,14 @@ pub struct PositionFactory {
 
 impl PositionFactory {    
     
-    /// Creates a Position from a GameState
+    /// Creates a `Position` from a `GameState`
     pub fn set_state(&mut self, state: GameState) -> wrap_res!(Position) {
         let pos = Self::set_state_impl(&state)?;
         self.current_state = Some(state);
         Ok(pos)
     }
     
-    /// Creates a Position from a fen string, using the previous GameState's variant
+    /// Creates a `Position` from a fen string, using the previous `GameState`'s variant
     pub fn load_fen(&mut self, fen: &str) -> wrap_res!(Position) {
         if self.current_state.is_none() {
             panic!("No current state, call make_position() first");
@@ -32,7 +32,7 @@ impl PositionFactory {
         // Update the initial fen of the stored GameState
         let state = self.current_state.as_mut().unwrap();
         state.initial_fen = Some(fen.to_string());
-        Self::set_state_impl(&state)
+        Self::set_state_impl(state)
     }
     
     fn set_state_impl(state: &GameState) -> wrap_res!(Position) {
@@ -54,7 +54,7 @@ impl PositionFactory {
         Ok(pos)
     }
     
-    /// Returns the current GameState
+    /// Returns the current `GameState`
     pub fn get_state(&self) -> &GameState {
         if let Some(state) = &self.current_state {
             state
@@ -63,8 +63,8 @@ impl PositionFactory {
         }
     }
     
-    /// Adds a new move to the move history of the current GameState
-    /// Call this whenever a move is made to keep the stored GameState in sync
+    /// Adds a new move to the move history of the current `GameState`
+    /// Call this whenever a move is made to keep the stored `GameState` in sync
     pub fn add_move(&mut self, m: &MoveInfo) {
         if let Some(state) = &mut self.current_state {
             state.move_history.push(*m);
@@ -73,8 +73,8 @@ impl PositionFactory {
         }
     }
     
-    /// Removes the last move from the move history of the current GameState
-    /// Call this whenever a move is undone to keep the stored GameState in sync
+    /// Removes the last move from the move history of the current `GameState`
+    /// Call this whenever a move is undone to keep the stored `GameState` in sync
     pub fn remove_last_move(&mut self) {
         if let Some(state) = &mut self.current_state {
             state.move_history.pop();

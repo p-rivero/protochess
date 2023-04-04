@@ -30,9 +30,8 @@ impl Position {
             if self.leader_is_captured() {
                 if self.pieces[self.whos_turn as usize].get_leader().is_none() {
                     return MakeMoveResult::all_pieces_captured(winner, exploded);
-                } else {
-                    return MakeMoveResult::leader_captured(winner, exploded);
                 }
+                return MakeMoveResult::leader_captured(winner, exploded);
             }
             // Piece moved to winning square (king of the hill, racing kings)
             if self.piece_is_on_winning_square() {

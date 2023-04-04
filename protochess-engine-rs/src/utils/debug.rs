@@ -6,7 +6,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use crate::types::GameMode;
 
 /// Check if two vectors are equal in any order
-/// https://users.rust-lang.org/t/assert-vectors-equal-in-any-order/38716/10
+/// <https://users.rust-lang.org/t/assert-vectors-equal-in-any-order/38716/10>
 pub fn eq_anyorder<T: Eq + Hash>(a: &[T], b: &[T]) -> bool {
     fn get_lookup<T: Eq + Hash>(iter:impl Iterator<Item = T>) -> HashMap<T, usize> {
         let mut lookup = HashMap::<T, usize>::new();

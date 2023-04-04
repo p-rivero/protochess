@@ -57,7 +57,7 @@ impl PieceSet {
         
         self.pieces.push(piece);
         // Update the inverse movement pattern
-        self.update_inverse_attack(&definition, dims);
+        self.update_inverse_attack(definition, dims);
         
         Ok(())
     }

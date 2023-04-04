@@ -3,7 +3,7 @@ use crate::types::GameMode;
 use crate::piece::PieceFactory;
 
 
-/// This is a factory for creating InitialState objects for different hardcoded variants.
+/// This is a factory for creating `InitialState` objects for different hardcoded variants.
 /// It's mainly used for testing, but could be used for other purposes as well.
 pub struct VariantFactory {
     mode: GameMode,

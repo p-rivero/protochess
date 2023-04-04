@@ -47,7 +47,7 @@ impl FenData {
     pub fn parse_fen(fen: &str) -> wrap_res!(Self) {
         // Split FEN string into parts
         let fen_parts: Vec<&str> = fen.split_whitespace().collect();
-        if fen_parts.len() < 1 {
+        if fen_parts.is_empty() {
             err!("Invalid FEN string, it must have at least 1 part");
         }
         
@@ -90,8 +90,8 @@ impl FenData {
         
         // Player to move
         let player_to_move = {
-            if fen_parts.len() <= 1 { 0 } // By default, white moves first
-            else if fen_parts[1].to_ascii_lowercase() == "w" { 0 }
+            // By default, white moves first
+            if fen_parts.len() <= 1 || fen_parts[1].to_ascii_lowercase() == "w" { 0 }
             else if fen_parts[1].to_ascii_lowercase() == "b" { 1 }
             else { err!("The player to move must be 'w' or 'b'") }
         };
@@ -117,7 +117,7 @@ impl FenData {
                     Ok(parts) => parts,
                     Err(_) => err!("Invalid en passant square in FEN string")
                 };
-                let (ev_x, ev_y) = match scan_fmt!(fen_parts[3], "{*[a-p]}{*d}({[a-p]}{d})", char, isize) {
+                let (vic_x, vic_y) = match scan_fmt!(fen_parts[3], "{*[a-p]}{*d}({[a-p]}{d})", char, isize) {
                     Ok(parts) => parts,
                     Err(_) => {
                         if player_to_move == 0 { (ep_x, ep_y + 1) }
@@ -127,13 +127,13 @@ impl FenData {
                 // ep_x and ev_x are guaranteed to be a valid character between 'a' and 'p'
                 let ep_x = ep_x.to_digit(36).unwrap() as BCoord - 10;
                 let ep_y = ep_y - 1;
-                let ev_x = ev_x.to_digit(36).unwrap() as BCoord - 10;
-                let ev_y = ev_y - 1;
+                let vic_x = vic_x.to_digit(36).unwrap() as BCoord - 10;
+                let vic_y = vic_y - 1;
                 // Only need to check the y coordinates, since the x coordinates are already guaranteed to be valid
                 err_assert!(ep_y >= 0 && ep_y < board_height as isize, "Invalid en passant square in FEN string");
-                err_assert!(ev_y >= 0 && ev_y < board_height as isize, "Invalid en passant victim in FEN string");
+                err_assert!(vic_y >= 0 && vic_y < board_height as isize, "Invalid en passant victim in FEN string");
                 
-                Some(((ep_x, ep_y as BCoord), (ev_x, ev_y as BCoord)))
+                Some(((ep_x, ep_y as BCoord), (vic_x, vic_y as BCoord)))
             }
         };
         
@@ -174,11 +174,10 @@ impl FenData {
 
 /// Returns a list of the squares that have not moved
 fn parse_castling(castling: &str, board_height: BCoord, board_width: BCoord) -> wrap_res!(Vec<(BCoord, BCoord)>) {
-    // Check if the first character is '('
-    if castling.chars().next().unwrap() == '(' {
-        return parse_custom_castling(castling);
+    if castling.starts_with('(') {
+        parse_custom_castling(castling)
     } else {
-        return parse_traditional_castling(castling, board_height, board_width);
+        parse_traditional_castling(castling, board_height, board_width)
     }
 }
 
@@ -206,7 +205,7 @@ fn parse_custom_castling(castling: &str) -> wrap_res!(Vec<(BCoord, BCoord)>) {
 /// It is assumed that the pieces are on the traditional starting squares (king in the middle, rooks on the corners)
 fn parse_traditional_castling(castling: &str, height: BCoord, width: BCoord) -> wrap_res!(Vec<(BCoord, BCoord)>) {
     let mut result = vec![];
-    err_assert!(castling.to_ascii_lowercase().chars().all(|c| c == 'k' || c == 'q' || (c >= 'a' && c <= 'p')),
+    err_assert!(castling.to_ascii_lowercase().chars().all(|c| c == 'k' || c == 'q' || ('a'..='p').contains(&c)),
         "Invalid castling rights in FEN string: '{castling}'");
     for c in castling.chars() {
         if c == 'K' {
@@ -272,7 +271,7 @@ impl From<&Position> for FenData {
             height,
             piece_placements,
             walls,
-            times_in_check: pos.get_times_checked().map(|v| *v),
+            times_in_check: pos.get_times_checked().copied(),
             player_to_move: pos.whos_turn,
             castling_availability: Some(castling),
             ep_square_and_victim,

@@ -43,7 +43,7 @@ impl Engine {
         self.position = self.factory.load_fen(fen)?;
         Ok(())
     }
-    /// Returns the current GameState, which can later be used in `set_state()`
+    /// Returns the current `GameState`, which can later be used in `set_state()`
     pub fn get_state(&mut self) -> &GameState {
         self.factory.get_state()
     }
