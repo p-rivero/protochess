@@ -21,7 +21,8 @@ pub struct FenData {
     pub piece_placements: Vec<PiecePlacement>,
     pub walls: Vec<(BCoord, BCoord)>,
     pub player_to_move: Player,
-    pub castling_availability: Vec<(BCoord, BCoord)>, // List of squares that have not been moved
+    /// List of squares that have not been moved. If `None`, no pieces have moved yet (same as adding all squares).
+    pub castling_availability: Option<Vec<(BCoord, BCoord)>>, 
     pub ep_square_and_victim: Option<((BCoord, BCoord), (BCoord, BCoord))>,
     pub times_in_check: [u8; 2],
     // Fullmove and halfmove clocks are not used
@@ -130,9 +131,11 @@ impl FenData {
             else { err!("The player to move must be 'w' or 'b'") }
         };
         
+        // If the castling availability is not specified, it is assumed that no pieces have moved yet
+        // (can always castle)
         let castling_availability = {
-            if fen_parts.len() <= 2 { vec![] }
-            else { parse_castling(fen_parts[2], board_height, board_width)? }
+            if fen_parts.len() <= 2 { None }
+            else { Some(parse_castling(fen_parts[2], board_height, board_width)?) }
         };
         
         let ep_square_and_victim = {

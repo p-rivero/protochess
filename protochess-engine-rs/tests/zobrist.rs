@@ -188,7 +188,7 @@ mod zobrist_test {
         let state_start = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
         engine_start.set_state(state_start).expect("Failed to set state");
         let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w Kq - 0 1");
+        let state_end = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w DKq - 0 1");
         engine_end.set_state(state_end).expect("Failed to set state");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());

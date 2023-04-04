@@ -104,7 +104,10 @@ impl PositionFactory {
         
         // Add pieces
         for p in fen.piece_placements {
-            let can_castle = fen.castling_availability.contains(&(p.x, p.y));
+            let can_castle = {
+                if fen.castling_availability.is_none() { true }
+                else { fen.castling_availability.as_ref().unwrap().contains(&(p.x, p.y)) }
+            };
             pos.public_add_piece(p.piece_id, to_index(p.x, p.y), can_castle)?;
         }
         Ok(pos)
