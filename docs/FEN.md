@@ -46,6 +46,8 @@ The FEN format used by the engine has the following space-separated fields:
   5. **Halfmove and fullmove clocks:** Ignored. Can be omitted.
   
   6. **Check count:** `+W+B`, where `W` is the number of times White put Black in check. 
+  
+      Optional, defaults to `+0+0`.
  
 
 **IMPORTANT:** Some fields are optional, but if you want to include a field that comes after them, you must include all the previous fields, even if they are optional. The only exception is the *Check count* field, which can be specified without including the halfmove and fullmove clocks.
