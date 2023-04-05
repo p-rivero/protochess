@@ -15,6 +15,8 @@ pub struct PiecePlacement {
 
 /// Summary of the data encoded in a FEN string. Used as an intermediate step when converting between FEN and Position.
 /// 
+/// See [this document](https://github.com/p-rivero/protochess-engine/tree/master/docs/FEN.md) for the custom FEN format.
+/// 
 /// **FEN -> Position**: Don't use this class directly, use `PositionFactory::set_state()` or `PositionFactory::load_fen()`,
 /// both of which call `FenData::parse_fen()` internally.
 /// 
@@ -102,7 +104,7 @@ impl FenData {
         let castling_availability = {
             if fen_parts.len() <= 2 { None }
             else if fen_parts[2] == "-" { Some(vec![]) }
-            else if fen_parts[2] == "(ALL)" { None }
+            else if fen_parts[2].to_lowercase() == "(all)" { None }
             else { Some(parse_castling(fen_parts[2], board_height, board_width)?) }
         };
         
@@ -137,7 +139,7 @@ impl FenData {
             }
         };
         
-        // Times in check
+        // Times in check: search all remaining parts for a +W+B format
         let mut times_in_check = None;
         for part in fen_parts.iter().skip(4) {
             const TIMES_IN_CHECK_REGEX: &str = r"^\+([0-9]+)\+([0-9]+)$";
@@ -150,6 +152,7 @@ impl FenData {
                 }
                 continue;
             }
+            // Some of the parts match the check count format
             let (white_checks, black_checks) = match scan_fmt!(fen_parts[6], "+{d}+{d}", u8, u8) {
                 Ok(parts) => parts,
                 Err(_) => err!("Invalid check format, make sure it's between +0+0 and +255+255"),
