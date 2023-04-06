@@ -62,7 +62,7 @@ mod position_test {
         let mut factory = PositionFactory::default();
         
         let mut state1 = GameState::default();
-        state1.initial_fen = Some("r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQ1RK1 b Qkq - 5 4".to_string());
+        state1.initial_fen = Some("r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQ1RK1 b Akq - 5 4".to_string());
         let mut state2 = GameState::default();
         state2.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1"]);
         
@@ -74,10 +74,7 @@ mod position_test {
             .expect("Cannot load GameState")
             .expect("set_state() returned None");
         
-        println!("{:?}", pos1.get_properties());
-        println!("{:?}", pos2.get_properties());
-        
-        assert_eq!(pos1.get_zobrist(), pos2.get_zobrist());
+        assert_eq!(pos1, pos2);
     }
     
     #[test]
@@ -85,7 +82,7 @@ mod position_test {
         let mut factory = PositionFactory::default();
         
         let mut state1 = GameState::default();
-        state1.initial_fen = Some("r1bqr1k1/pppp1ppp/8/2bP4/8/8/PPP2PPP/RNBQ1BK1 w Qq - 0 12".to_string());
+        state1.initial_fen = Some("r1bqr1k1/pppp1ppp/8/2bP4/8/8/PPP2PPP/RNBQ1BK1 w Aa - 0 12".to_string());
         let mut state2 = GameState::default();
         state2.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e8", "f8e8"]);
         
@@ -97,10 +94,7 @@ mod position_test {
             .expect("Cannot load GameState")
             .expect("set_state() returned None");
         
-        println!("{}", pos1);
-        println!("{}", pos2);
-        
-        // assert_eq!(pos1, pos2);
+        assert_eq!(pos1, pos2);
     }
     
     

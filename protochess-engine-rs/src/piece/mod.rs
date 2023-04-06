@@ -209,6 +209,7 @@ impl Piece {
     #[inline]
     pub fn remove_piece_(&mut self, index: BIndex) -> bool {
         let could_castle = self.castle_squares.get_bit(index);
+        self.castle_squares.clear_bit(index);
         self.bitboard.clear_bit(index);
         
         self.num_pieces -= 1;
