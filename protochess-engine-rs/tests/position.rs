@@ -97,6 +97,117 @@ mod position_test {
         assert_eq!(pos1, pos2);
     }
     
+    #[test]
+    fn non_incremental_updates() {
+        // Sanity check for incremental_updates test below.
+        // Test that the fen and move history versions of the same position are equal.
+        let mut factory = PositionFactory::default();
+        
+        let mut state1_fen = GameState::default();
+        state1_fen.initial_fen = Some("r1bqr1k1/pppp1ppp/8/2bP4/8/8/PPP2PPP/RNBQ1BK1 w Aa - 0 12".to_string());
+        let mut state1_moves = GameState::default();
+        state1_moves.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e8", "f8e8"]);
+        
+        let mut state2_fen = GameState::default();
+        state2_fen.initial_fen = Some("r1bqnrk1/pppp1ppp/8/3P4/8/4P3/PPP3PP/RNBQ1BK1 b Aa - 0 12".to_string());
+        let mut state2_moves = GameState::default();
+        state2_moves.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e3", "c5e3", "f2e3"]);
+        
+        let pos1_fen = factory.set_state(state1_fen, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        let pos1_moves = factory.set_state(state1_moves, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        let pos2_fen = factory.set_state(state2_fen, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        let pos2_moves = factory.set_state(state2_moves, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        assert_eq!(pos1_fen, pos1_moves);
+        assert_eq!(pos2_fen, pos2_moves);
+    }
+    
+    #[test]
+    fn incremental_updates() {
+        let mut factory = PositionFactory::default();
+        
+        let mut state1_moves = GameState::default();
+        state1_moves.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e8", "f8e8"]);
+        
+        let mut state2_fen = GameState::default();
+        state2_fen.initial_fen = Some("r1bqnrk1/pppp1ppp/8/3P4/8/4P3/PPP3PP/RNBQ1BK1 b Aa - 0 12".to_string());
+        let mut state2_moves = GameState::default();
+        // Mostly the same, but the last moves are different
+        state2_moves.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e3", "c5e3", "f2e3"]);
+        
+        let mut pos = factory.set_state(state1_moves, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        // Reuse pos1_moves as position and only update the last moves
+        let ret = factory.set_state(state2_moves, Some(&mut pos));
+        assert_eq!(ret, Ok(None));
+        
+        let pos_target = factory.set_state(state2_fen, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        assert_eq!(pos, pos_target);
+    }
+    
+    #[test]
+    fn incremental_updates_undo() {
+        let mut factory = PositionFactory::default();
+        
+        let mut state1_moves = GameState::default();
+        state1_moves.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e8", "f8e8"]);
+        
+        // Return to the starting position
+        let state2_fen = GameState::default();
+        let mut state2_moves = GameState::default();
+        state2_moves.move_history = build_move_history(vec![]);
+        
+        let mut pos = factory.set_state(state1_moves, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        let ret = factory.set_state(state2_moves, Some(&mut pos));
+        assert_eq!(ret, Ok(None));
+        
+        let pos_target = factory.set_state(state2_fen, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        assert_eq!(pos, pos_target);
+    }
+    
+    #[test]
+    fn incremental_updates_fail() {
+        let mut factory = PositionFactory::default();
+        
+        let mut state1_moves = GameState::default();
+        state1_moves.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e8", "f8e8"]);
+        
+        let mut state2_moves = GameState::default();
+        state2_moves.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "g8f6", "e1h1", "f6e4", "f1e1", "e4d6", "f3e5", "f8e7", "b5f1", "c6e5", "e1e5", "e8h8", "d2d4", "d6e8", "d4d5", "e7c5", "e5e3", "c5e3", "f2e3", "a8a7", "d1e1"]);
+        
+        let mut pos = factory.set_state(state1_moves, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        let pos_before = pos.clone();
+        assert_eq!(pos, pos_before);
+        
+        // If set_state() fails, the position should not be modified
+        let ret = factory.set_state(state2_moves, Some(&mut pos));
+        assert_eq!(ret, Err("Invalid move: a8a7".to_string()));
+        assert_eq!(pos, pos_before);
+    }
+    
     
     fn build_move_history(moves: Vec<&str>) -> Vec<MoveInfo> {
         moves.iter().map(|mv| MoveInfo::try_from(*mv).unwrap()).collect()
