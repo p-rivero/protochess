@@ -122,8 +122,10 @@ impl FenData {
                 let (vic_x, vic_y) = match scan_fmt!(fen_parts[3], "{*[a-p]}{*d}({[a-p]}{d})", char, isize) {
                     Ok(parts) => parts,
                     Err(_) => {
-                        if player_to_move == 0 { (ep_x, ep_y + 1) }
-                        else { (ep_x, ep_y - 1) }
+                        // If it's white's turn, the victim is the black pawn that just did a double move
+                        // (victim is 1 square below the EP square).
+                        if player_to_move == 0 { (ep_x, ep_y - 1) }
+                        else { (ep_x, ep_y + 1) }
                     }
                 };
                 // ep_x and ev_x are guaranteed to be a valid character between 'a' and 'p'

@@ -18,10 +18,61 @@ pub struct PositionFactory {
 impl PositionFactory {    
     
     /// Creates a `Position` from a `GameState`
-    pub fn set_state(&mut self, state: GameState) -> wrap_res!(Position) {
-        let pos = Self::set_state_impl(&state)?;
-        self.current_state = Some(state);
-        Ok(pos)
+    /// Returns:
+    /// - `Err` If the state is invalid
+    /// - `Ok(None)` If the current position can be reused. In this case, `reused_position` parameter
+    /// will be updated.
+    /// - `Ok(Some(position))` If a new position was created.
+    pub fn set_state(&mut self, new_state: GameState, reused_position: Option<&mut Position>) -> wrap_res!(Option<Position>) {
+        // No current state, just create a new position
+        if self.current_state.is_none() || reused_position.is_none() {
+            let position = self.set_state_impl(new_state)?;
+            return Ok(Some(position));
+        }
+        
+        // Reuse the current position only if the variant and initial FEN are the same
+        let current_state = self.current_state.as_ref().unwrap();
+        let reused_position = reused_position.unwrap();
+        if current_state.initial_state != new_state.initial_state
+        || current_state.initial_fen != new_state.initial_fen {
+            let position = self.set_state_impl(new_state)?;
+            return Ok(Some(position));
+        }
+        
+        // See for how many moves we can reuse the current position
+        let mut reuse_count = 0;
+        for (m1, m2) in current_state.move_history.iter().zip(new_state.move_history.iter()) {
+            if m1 == m2 { reuse_count += 1; }
+            else { break; }
+        }
+        // Undo the moves that can't be reused
+        let undo_count = current_state.move_history.len() - reuse_count;
+        for _ in 0..undo_count {
+            reused_position.unmake_move();
+        }
+        
+        // Apply the new moves
+        for (i, mv) in new_state.move_history[reuse_count..].iter().enumerate() {
+            let result = reused_position.pub_make_move(mv);
+            
+            // If an illegal move is encountered, roll back and return error
+            // In order to roll back, we need to make the moves that were undone earlier
+            if result.flag == MakeMoveResultFlag::IllegalMove {
+                // Undo i new moves
+                for _ in 0..i {
+                    reused_position.unmake_move();
+                }
+                // Redo the moves that were undone earlier
+                for mv2 in &current_state.move_history[reuse_count..] {
+                    let result2 = reused_position.pub_make_move(mv2);
+                    if result2.flag == MakeMoveResultFlag::IllegalMove {
+                        panic!("Invalid move when attempting to rollback: {}", mv2);
+                    }
+                }
+                return Err(format!("Invalid move: {}", mv));
+            }
+        }
+        Ok(None)
     }
     
     /// Creates a `Position` from a fen string, using the previous `GameState`'s variant
@@ -29,13 +80,15 @@ impl PositionFactory {
         if self.current_state.is_none() {
             panic!("No current state, call make_position() first");
         }
-        // Update the initial fen of the stored GameState
-        let state = self.current_state.as_mut().unwrap();
-        state.initial_fen = Some(fen.to_string());
-        Self::set_state_impl(state)
+        // Make a copy of the current state, so that we can roll back if the FEN is invalid
+        let mut new_state = self.current_state.as_ref().unwrap().clone();
+        new_state.initial_fen = Some(fen.to_string());
+        new_state.move_history.clear();
+        // When loading a FEN, always create a new position instead of reusing the current one
+        self.set_state_impl(new_state)
     }
     
-    fn set_state_impl(state: &GameState) -> wrap_res!(Position) {
+    fn set_state_impl(&mut self, state: GameState) -> wrap_res!(Position) {
         // Parse the variant's default starting position
         let mut fen_data = FenData::parse_fen(&state.initial_state.fen)?;
         // Apply the user-proveded initial fen, if any
@@ -51,6 +104,8 @@ impl PositionFactory {
             let result = pos.pub_make_move(m);
             err_assert!(result.flag != MakeMoveResultFlag::IllegalMove, "Invalid move: {}", m);
         }
+        // Everything went well, store the new state
+        self.current_state = Some(state);
         Ok(pos)
     }
     

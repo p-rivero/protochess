@@ -250,7 +250,7 @@ impl Position {
     
     /// Get the top of the properties stack
     #[inline]
-    fn get_properties(&self) -> &PositionProperties {
+    pub fn get_properties(&self) -> &PositionProperties {
         &self.properties_stack[self.properties_stack.len() - 1]
     }
 
@@ -285,7 +285,12 @@ impl fmt::Display for Position {
             write!(f, "{} ", (b'A'+x) as char)?;
         }
         write!(f, "\nZobrist Key: {:x}", self.get_zobrist())?;
-        write!(f, "\nPlayer to move: {}", self.whos_turn)
+        let player_str = match self.whos_turn {
+            0 => "White",
+            1 => "Black",
+            _ => "Unknown",
+        };
+        write!(f, "\nPlayer to move: {player_str}")
     }
 }
 

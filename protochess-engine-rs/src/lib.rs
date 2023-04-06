@@ -35,7 +35,10 @@ pub struct Engine{
 impl Engine {
     /// Sets up the engine with a given game state
     pub fn set_state(&mut self, state: GameState) -> wrap_res!() {
-        self.position = self.factory.set_state(state)?;
+        let new_pos = self.factory.set_state(state, Some(&mut self.position))?;
+        if let Some(new_pos) = new_pos {
+            self.position = new_pos;
+        }
         Ok(())
     }
     /// Updates the engine by loading a fen string. The variant is unchanged.
@@ -212,7 +215,7 @@ impl Default for Engine {
         // Set up position using default GameState
         let state = GameState::default();
         let mut factory = PositionFactory::default();
-        let position = factory.set_state(state).unwrap();
+        let position = factory.set_state(state, None).unwrap().unwrap();
         // Use maximum number of threads (usually this is too many, the user should change this later)
         let num_threads = Self::get_max_threads();
         Engine { position, factory, num_threads }

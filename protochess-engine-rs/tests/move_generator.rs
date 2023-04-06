@@ -8,7 +8,7 @@ mod move_generator_test {
     #[test]
     fn capture_moves() {
         let gs = GameState::from_debug_fen("rnb1kbnr/ppppqppp/8/8/5P2/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
-        let mut pos = PositionFactory::default().set_state(gs).unwrap();
+        let mut pos = PositionFactory::default().set_state(gs, None).unwrap().unwrap();
         let z1 = pos.get_zobrist();
         assert!(MoveGen::in_check(&mut pos));
         let z2 = pos.get_zobrist();
