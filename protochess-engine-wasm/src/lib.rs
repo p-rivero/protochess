@@ -96,7 +96,7 @@ impl Protochess {
     #[wasm_bindgen(js_name = getStateDiff)]
     pub fn get_state_diff(&mut self) -> JsValue {
         let state = self.engine.get_state_diff();
-        StateDiffSer::to_js(state.clone())
+        StateDiffSer::to_js(state)
     }
     
     #[wasm_bindgen(js_name = legalMoves)]

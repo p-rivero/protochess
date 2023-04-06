@@ -121,7 +121,8 @@ impl Move {
         }
     }
 
-    /// Returns the squares that would explode if this move was made
+    /// Returns the squares that would explode if this move was made.
+    /// **Important**: Call this function **before** making the move
     pub fn get_potential_explosion(&self, pos: &Position) -> Vec<(BCoord, BCoord)> {
         let piece = pos.piece_at(self.get_from()).unwrap();
         if !piece.explodes() || !self.is_capture() {

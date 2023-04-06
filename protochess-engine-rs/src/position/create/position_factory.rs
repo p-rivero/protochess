@@ -65,13 +65,14 @@ impl PositionFactory {
                 // Redo the moves that were undone earlier
                 for mv2 in &current_state.move_history[reuse_count..] {
                     let result2 = reused_position.pub_make_move(mv2);
-                    if result2.flag == MakeMoveResultFlag::IllegalMove {
-                        panic!("Invalid move when attempting to rollback: {}", mv2);
-                    }
+                    assert!(result2.flag != MakeMoveResultFlag::IllegalMove, 
+                        "Invalid move when attempting to rollback: {}", mv2);
                 }
                 return Err(format!("Invalid move: {}", mv));
             }
         }
+        // Incremental update was successful, store the new state
+        self.current_state = Some(new_state);
         Ok(None)
     }
     

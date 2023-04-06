@@ -77,8 +77,11 @@ impl Engine {
 
     /// Attempts a move on the current board position
     pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
-        self.factory.add_move(target_move);
-        self.position.pub_make_move(target_move)
+        let result = self.position.pub_make_move(target_move);
+        if result.flag != MakeMoveResultFlag::IllegalMove {
+            self.factory.add_move(target_move);
+        }
+        result
     }
     
     /// Attempts a move on the current board position, given a string in the format "e2e4"
