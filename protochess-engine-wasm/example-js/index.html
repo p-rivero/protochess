@@ -10,15 +10,15 @@
   <p><b>Board state:</b></p>
   <span style="white-space: pre; font-family: monospace" id="boardDisplay"></span>
   <p style="white-space: pre; color: darkred" id="boardStatus"></p>
-  <br/>
+  <br>
   <form>
     <label for="manualMoveInput"><b>Make move (human):</b></label><br>
     <input type="text" id="manualMoveInput">
     <input type="button" id="manualMoveButton" value="Go"/>
-    <p>Examples: "e2e4", "e1h1" (short castle), "a7a8=Q (promote to queen)"</p>
+    <p>Examples: "e2e4", "e1h1" (short castle), "a7a8=Q (promote to white queen)"</p>
     <p style="color: red" id="manualMoveError"></p>
   </form> 
-  <br/>
+  <br>
   <form>
     <label for="engineMoveInput"><b>Make move (engine):</b></label><br>
     <input type="text" id="engineMoveInput" placeholder="Time to search (seconds)">
@@ -32,6 +32,13 @@
     <input type="button" id="fenButton" value="Load"/>
     <p style="color: red" id="fenError"></p>
   <br/>
+  <p>
+    <strong>Current fen:</strong>
+    <span id="currentFen"></span>
+  </p>
+  <p>
+    See <a href="https://github.com/p-rivero/protochess-engine/tree/master/docs/FEN.md">this document</a> for the custom FEN format.
+  </p>
 </body>
 
 </html>

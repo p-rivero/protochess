@@ -15,6 +15,7 @@ const engineDepth = document.getElementById('engineDepth')
 const fenInput = document.getElementById('fenInput')
 const fenButton = document.getElementById('fenButton')
 const fenError = document.getElementById('fenError')
+const currentFen = document.getElementById('currentFen')
 
 // Protochess object imported from rust
 let protochess
@@ -51,6 +52,8 @@ async function initUI() {
 
 async function updateBoard(resultFlag, winner, exploded) {
   boardDisplay.innerHTML = await protochess.toString()
+  const stateDiff = await protochess.getStateDiff()
+  currentFen.innerHTML = stateDiff.fen
   if (resultFlag !== 'Ok') {
     let winnerString
     if (winner === 'White') {
@@ -61,7 +64,7 @@ async function updateBoard(resultFlag, winner, exploded) {
       winnerString = 'Draw'
     }
     boardStatus.innerHTML = resultFlag + ', ' + winnerString
-  } else if (await protochess.toMoveInCheck()) {
+  } else if (stateDiff.inCheck) {
     boardStatus.innerHTML = 'Check!'
   } else {
     boardStatus.innerHTML = ' '
@@ -110,10 +113,14 @@ async function engineMoveButtonClick() {
       throw 'Timeout must be >= 0'
     }
     // Get the engine to make a move
-    const {makeMoveResult, depth} = await protochess.playBestMoveTimeout(timeout)
+    const {moveInfo, evaluation, depth} = await protochess.getBestMoveTimeout(timeout)
+    const makeMoveResult = await protochess.makeMove(moveInfo)
     const {flag, winner, exploded} = makeMoveResult
     await updateBoard(flag, winner, exploded)
-    engineDepth.innerHTML = 'Done! Search depth: ' + depth
+    
+    const toMove = await protochess.playerToMove()
+    const absoluteEval = toMove === 0 ? -evaluation : evaluation
+    engineDepth.innerHTML = `Done! Search depth: ${depth}, board evaluation: ${absoluteEval}cp`
   } catch (e) {
     engineMoveError.innerHTML = e
   }

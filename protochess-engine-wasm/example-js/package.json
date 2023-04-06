@@ -2,7 +2,9 @@
   "private": true,
   "scripts": {
     "start": "run-s build start-only",
-    "build": "make --directory .. && webpack --config webpack.config.js",
+    "build": "run-s build-wasm build-web",
+    "build-wasm": "make --directory ..",
+    "build-web": "webpack --config webpack.config.js",
     "start-only": "webpack-dev-server"
   },
   "devDependencies": {
