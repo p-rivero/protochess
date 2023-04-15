@@ -39,7 +39,7 @@ impl Position {
             }
             let in_check = MoveGen::in_check(self);
             // No legal moves, check if it's checkmate or stalemate
-            if MoveGen::count_legal_moves(self) == 0 {
+            if MoveGen::get_legal_moves(self).is_empty() {
                 if in_check {
                     return MakeMoveResult::checkmate(winner, exploded);
                 }

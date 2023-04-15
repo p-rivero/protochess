@@ -5,11 +5,11 @@ use super::{from_index, to_rank_file};
 
 /// Returns the number of possible moves from a board position up to a given depth
 /// See <https://www.chessprogramming.org/Perft>
-pub fn perft(position: &mut Position, depth: Depth) -> u64 {
+pub fn perft(position: &mut Position, depth: Depth) -> usize {
     let mut nodes = 0;
 
     if depth == 1 {
-        return MoveGen::count_legal_moves(position);
+        return MoveGen::get_legal_moves(position).len();
     }
     for mv in MoveGen::get_pseudo_moves(position, true) {
         if !MoveGen::make_move_if_legal(mv, position) {
@@ -31,7 +31,7 @@ pub fn perft(position: &mut Position, depth: Depth) -> u64 {
 }
 
 /// Like perft, but prints the moves at the first ply
-pub fn perft_divide(position: &mut Position, depth: Depth) -> u64 {
+pub fn perft_divide(position: &mut Position, depth: Depth) -> usize {
     let mut nodes = 0;
 
     let mut printing = Vec::new();

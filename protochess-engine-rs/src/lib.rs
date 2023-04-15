@@ -132,7 +132,7 @@ impl Engine {
             let piece_str = if has_leader { "leaders" } else { "pieces" };
             err!("All the {piece_str} of the player to move ({player_str}) have already been captured");
         }
-        err_assert!(MoveGen::count_legal_moves(&mut self.position) != 0, "The player to move ({player_str}) has no legal moves");
+        err_assert!(!MoveGen::get_legal_moves(&mut self.position).is_empty(), "The player to move ({player_str}) has no legal moves");
         Ok(())
     }
     
@@ -199,10 +199,10 @@ impl Engine {
     pub fn get_zobrist(&self) -> ZobKey {
         self.position.get_zobrist()
     }
-    pub fn perft(&mut self, depth: Depth) -> u64 {
+    pub fn perft(&mut self, depth: Depth) -> usize {
         utils::perft::perft(&mut self.position, depth)
     }
-    pub fn perft_divide(&mut self, depth: Depth) -> u64 {
+    pub fn perft_divide(&mut self, depth: Depth) -> usize {
         utils::perft::perft_divide(&mut self.position, depth)
     }
 }

@@ -124,20 +124,6 @@ impl MoveGen {
         }
         legal
     }
-
-
-    ///Returns the number of legal moves for a position
-    pub fn count_legal_moves(position: &mut Position) -> u64{
-        let mut nodes = 0u64;
-        for mv in MoveGen::get_pseudo_moves(position, true) {
-            if !MoveGen::is_move_legal(mv, position) {
-                continue;
-            }
-            nodes += 1;
-        }
-        nodes
-    }
-    
     
     /// Checks if a given square is attacked by the enemy
     fn index_in_check(index: BIndex, position: &mut Position) -> bool {

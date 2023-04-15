@@ -457,7 +457,7 @@ mod perft {
         ]);
     }
     
-    fn test_perft(fen: &str, results: Vec<u64>) {
+    fn test_perft(fen: &str, results: Vec<usize>) {
         let gs = GameState::from_debug_fen(fen);        
         let mut engine = Engine::default();
         engine.set_state(gs).expect("Invalid test FEN");
