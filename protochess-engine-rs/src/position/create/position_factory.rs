@@ -50,10 +50,10 @@ impl PositionFactory {
         let undo_count = current_state.move_history.len() - reuse_count;
         for _ in 0..undo_count {
             reused_position.unmake_move();
+            self.last_result = None;
         }
         
         // Apply the new moves
-        self.last_result = None;
         for (i, mv) in new_state.move_history[reuse_count..].iter().enumerate() {
             let result = reused_position.pub_make_move(mv);
             
@@ -107,6 +107,7 @@ impl PositionFactory {
         for m in &state.move_history {
             let result = pos.pub_make_move(m);
             err_assert!(result.flag != MakeMoveResultFlag::IllegalMove, "Invalid move: {}", m);
+            self.last_result = Some(result);
         }
         // Everything went well, store the new state
         self.current_state = Some(state);
@@ -122,7 +123,8 @@ impl PositionFactory {
         }
     }
     
-    /// Returns the result of the last move that was made, or `Ok` if no move was made
+    /// Returns the result of the last move in `state.move_history`, or `Ok` if
+    /// this information is not known
     pub fn get_last_result(&self) -> MakeMoveResult {
         if let Some(result) = &self.last_result {
             result.clone()
@@ -139,6 +141,7 @@ impl PositionFactory {
         } else {
             panic!("No current state, call make_position() first");
         }
+        self.last_result = None;
     }
     
     /// Removes the last move from the move history of the current `GameState`
@@ -149,6 +152,7 @@ impl PositionFactory {
         } else {
             panic!("No current state, call make_position() first");
         }
+        self.last_result = None;
     }
     
     /// Creates a new position from scratch, using the following data:
