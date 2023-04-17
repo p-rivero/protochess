@@ -4,7 +4,7 @@ extern crate protochess_engine_rs;
 
 #[cfg(test)]
 mod perft {
-    use protochess_engine_rs::{Engine, GameState};
+    use protochess_engine_rs::{Engine, GameState, MakeMoveResultFlag};
     // https://www.chessprogramming.org/Perft_Results
     
     #[test]
@@ -460,7 +460,8 @@ mod perft {
     fn test_perft(fen: &str, results: Vec<usize>) {
         let gs = GameState::from_debug_fen(fen);        
         let mut engine = Engine::default();
-        engine.set_state(gs).expect("Invalid test FEN");
+        let result = engine.set_state(gs).expect("Invalid test FEN");
+        assert!(result.flag == MakeMoveResultFlag::Ok);
         for (i, result) in results.iter().enumerate() {
             let depth = i as u8 + 1;
             assert_eq!(engine.perft(depth), *result);

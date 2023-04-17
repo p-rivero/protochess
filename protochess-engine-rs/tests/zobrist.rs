@@ -125,12 +125,8 @@ mod zobrist_test {
     
     #[test]
     fn add_one_piece() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.add_piece('Q', 3, 0, false).unwrap();
@@ -139,12 +135,8 @@ mod zobrist_test {
     
     #[test]
     fn add_pieces() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.add_piece('Q', 3, 0, false).unwrap();
@@ -155,12 +147,8 @@ mod zobrist_test {
     
     #[test]
     fn add_pieces_rook() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.add_piece('R', 0, 0, false).unwrap();
@@ -169,12 +157,8 @@ mod zobrist_test {
     }
     #[test]
     fn add_pieces_rook_2() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.add_piece('R', 0, 0, false).unwrap();
@@ -184,12 +168,8 @@ mod zobrist_test {
     
     #[test]
     fn add_pieces_king() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w DKq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w DKq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.add_piece('K', 3, 0, false).unwrap();
@@ -198,12 +178,8 @@ mod zobrist_test {
     
     #[test]
     fn remove_one_piece() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.remove_piece(3, 0).unwrap();
@@ -212,12 +188,8 @@ mod zobrist_test {
     
     #[test]
     fn remove_pieces() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb1r/pp1ppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.remove_piece(3, 0).unwrap();
@@ -228,12 +200,8 @@ mod zobrist_test {
     
     #[test]
     fn remove_pieces_rook() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb1r/8/8/8/8/8/8/RNB1KBNR w KQkq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.remove_piece(0, 0).unwrap();
@@ -243,12 +211,8 @@ mod zobrist_test {
     
     #[test]
     fn remove_pieces_king() {
-        let mut engine_start = Engine::default();
-        let state_start = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w Kq - 0 1");
-        engine_start.set_state(state_start).expect("Failed to set state");
-        let mut engine_end = Engine::default();
-        let state_end = GameState::from_debug_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
-        engine_end.set_state(state_end).expect("Failed to set state");
+        let mut engine_start = build_engine_from_fen("rnbqkb2/8/8/8/8/8/8/1NBKKBNR w Kq - 0 1");
+        let engine_end = build_engine_from_fen("rnbqkb2/8/8/8/8/8/8/1NB1KBNR w Kq - 0 1");
         
         assert!(engine_start.get_zobrist() != engine_end.get_zobrist());
         engine_start.remove_piece(3, 0).unwrap();
@@ -257,12 +221,8 @@ mod zobrist_test {
     
     #[test]
     fn add_and_remove_vs_move() {
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
-        let mut engine2 = Engine::default();
-        let state2 = GameState::from_debug_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine2.set_state(state2).expect("Failed to set state");
+        let mut engine1 = build_engine_from_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
+        let mut engine2 = build_engine_from_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         
         engine1.add_piece('P', 3, 2, true).unwrap();
         engine1.remove_piece(3, 1).unwrap();
@@ -273,9 +233,7 @@ mod zobrist_test {
     
     #[test]
     fn add_and_remove_vs_capture() {
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
+        let mut engine1 = build_engine_from_fen("rnbqkb1r/pp1p1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         let mut engine2 = engine1.clone();
         assert!(engine1.get_zobrist() == engine2.get_zobrist());
         
@@ -290,12 +248,8 @@ mod zobrist_test {
     
     #[test]
     fn add_and_remove_vs_move_rook() {
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR b KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
-        let mut engine2 = Engine::default();
-        let state2 = GameState::from_debug_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR w KQkq - 0 1");
-        engine2.set_state(state2).expect("Failed to set state");
+        let mut engine1 = build_engine_from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR b KQkq - 0 1");
+        let mut engine2 = build_engine_from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR w KQkq - 0 1");
         
         engine1.add_piece('R', 7, 4, true).unwrap();
         engine1.remove_piece(7, 0).unwrap();
@@ -306,12 +260,8 @@ mod zobrist_test {
     
     #[test]
     fn add_and_remove_vs_capture_rook() {
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR b KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
-        let mut engine2 = Engine::default();
-        let state2 = GameState::from_debug_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR w KQkq - 0 1");
-        engine2.set_state(state2).expect("Failed to set state");
+        let mut engine1 = build_engine_from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR b KQkq - 0 1");
+        let mut engine2 = build_engine_from_fen("rnbqkb1r/8/8/4p3/8/8/8/RNBQKBNR w KQkq - 0 1");
         
         engine1.remove_piece(7, 0).unwrap();
         engine1.remove_piece(7, 7).unwrap();
@@ -342,9 +292,7 @@ mod zobrist_test {
                 castling.push('-');
             }
             let fen = format!("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w {castling} - 0 1");
-            let mut engine = Engine::default();
-            let state = GameState::from_debug_fen(&fen);
-            engine.set_state(state).expect("Failed to set state");
+            let engine = build_engine_from_fen(&fen);
             zobrist.push(engine.get_zobrist());
         }
         for i in 0..16 {
@@ -358,36 +306,24 @@ mod zobrist_test {
     
     #[test]
     fn ep_square_affects_zobrist() {
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
-        let mut engine2 = Engine::default();
-        let state2 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e3 0 1");
-        engine2.set_state(state2).expect("Failed to set state");
+        let engine1 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine2 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e3 0 1");
         
         assert_ne!(engine1.get_zobrist(), engine2.get_zobrist());
     }
     
     #[test]
     fn player_to_move_affects_zobrist() {
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
-        let mut engine2 = Engine::default();
-        let state2 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
-        engine2.set_state(state2).expect("Failed to set state");
+        let engine1 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine2 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
         
         assert_ne!(engine1.get_zobrist(), engine2.get_zobrist());
     }
     
     #[test]
     fn turn_does_not_affect_zobrist() {
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
-        let mut engine2 = Engine::default();
-        let state2 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2");
-        engine2.set_state(state2).expect("Failed to set state");
+        let engine1 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine2 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2");
         
         assert_eq!(engine1.get_zobrist(), engine2.get_zobrist());
     }
@@ -395,12 +331,8 @@ mod zobrist_test {
     #[test]
     fn halfmove_clock_does_not_affect_zobrist() {
         // Halfmove clock is not implemented
-        let mut engine1 = Engine::default();
-        let state1 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        engine1.set_state(state1).expect("Failed to set state");
-        let mut engine2 = Engine::default();
-        let state2 = GameState::from_debug_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 1 1");
-        engine2.set_state(state2).expect("Failed to set state");
+        let engine1 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let engine2 = build_engine_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 1 1");
         
         assert_eq!(engine1.get_zobrist(), engine2.get_zobrist());
     }
@@ -420,9 +352,15 @@ mod zobrist_test {
             assert_eq!(zob_1, zob_2);
         }
         
-        let mut engine3 = Engine::default();
-        let state3 = GameState::from_debug_fen(expected_fen);
-        engine3.set_state(state3).expect("Failed to set state");
+        let engine3 = build_engine_from_fen(expected_fen);
         assert_eq!(engine1.get_zobrist(), engine3.get_zobrist());
+    }
+    
+    fn build_engine_from_fen(fen: &str) -> Engine {
+        let state = GameState::from_debug_fen(fen);
+        let mut engine = Engine::default();
+        let result = engine.set_state(state).expect("Failed to set state");
+        assert_eq!(result.flag, MakeMoveResultFlag::Ok);
+        engine
     }
 }
