@@ -33,13 +33,15 @@ pub struct Engine{
 }
 
 impl Engine {
-    /// Sets up the engine with a given game state
-    pub fn set_state(&mut self, state: GameState) -> wrap_res!() {
+    /// Sets up the engine with a given game state.
+    /// Returns the `MakeMoveResult` of the last move in `state.move_history`, or an `Ok` result
+    /// if `state.move_history` is empty.
+    pub fn set_state(&mut self, state: GameState) -> wrap_res!(MakeMoveResult) {
         let new_pos = self.factory.set_state(state, Some(&mut self.position))?;
         if let Some(new_pos) = new_pos {
             self.position = new_pos;
         }
-        Ok(())
+        Ok(self.factory.get_last_result())
     }
     /// Updates the engine by loading a fen string. The variant is unchanged.
     pub fn load_fen(&mut self, fen: &str) -> wrap_res!() {

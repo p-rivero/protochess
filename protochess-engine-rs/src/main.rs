@@ -38,7 +38,7 @@ pub fn main() {
     if args.len() > 2 && args[2] != "default" {
         let state = GameState::from_debug_fen(&args[2]);
         print_pgn_header(&args[2], &mut pgn_file);
-        engine.set_state(state).unwrap_or_else(|e| {
+        let _result = engine.set_state(state).unwrap_or_else(|e| {
             println!("Incorrect FEN: {e}");
             std::process::exit(1);
         });

@@ -75,10 +75,10 @@ impl Protochess {
     }
     
     #[wasm_bindgen(js_name = setState)]
-    pub fn set_state(&mut self, state: JsValue) -> Result<(), String> {
+    pub fn set_state(&mut self, state: JsValue) -> Result<JsValue, String> {
         let state = GameStateSer::from_js(state)?;
-        self.engine.set_state(state)?;
-        Ok(())
+        let result = self.engine.set_state(state)?;
+        Ok(MakeMoveResultSer::to_js(result))
     }
     
     #[wasm_bindgen(js_name = loadFen)]

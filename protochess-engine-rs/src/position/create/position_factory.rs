@@ -1,5 +1,5 @@
 use crate::position::position_properties::PositionProperties;
-use crate::{InitialState, Position, wrap_res, err_assert, MakeMoveResultFlag, MoveInfo};
+use crate::{InitialState, Position, wrap_res, err_assert, MakeMoveResultFlag, MoveInfo, MakeMoveResult};
 use crate::utils::to_index;
 use crate::types::BDimensions;
 
@@ -13,6 +13,7 @@ use super::game_state::GameState;
 #[derive(Debug, Clone, Default)]
 pub struct PositionFactory {
     current_state: Option<GameState>,
+    last_result: Option<MakeMoveResult>,
 }
 
 impl PositionFactory {    
@@ -52,6 +53,7 @@ impl PositionFactory {
         }
         
         // Apply the new moves
+        self.last_result = None;
         for (i, mv) in new_state.move_history[reuse_count..].iter().enumerate() {
             let result = reused_position.pub_make_move(mv);
             
@@ -65,11 +67,12 @@ impl PositionFactory {
                 // Redo the moves that were undone earlier
                 for mv2 in &current_state.move_history[reuse_count..] {
                     let result2 = reused_position.pub_make_move(mv2);
-                    assert!(result2.flag != MakeMoveResultFlag::IllegalMove, 
+                    err_assert!(result2.flag != MakeMoveResultFlag::IllegalMove, 
                         "Invalid move when attempting to rollback: {}", mv2);
                 }
                 return Err(format!("Invalid move: {}", mv));
             }
+            self.last_result = Some(result);
         }
         // Incremental update was successful, store the new state
         self.current_state = Some(new_state);
@@ -116,6 +119,15 @@ impl PositionFactory {
             state
         } else {
             panic!("No current state, call make_position() first");
+        }
+    }
+    
+    /// Returns the result of the last move that was made, or `Ok` if no move was made
+    pub fn get_last_result(&self) -> MakeMoveResult {
+        if let Some(result) = &self.last_result {
+            result.clone()
+        } else {
+            MakeMoveResult::ok(vec![])
         }
     }
     
