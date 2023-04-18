@@ -25,8 +25,8 @@ pub fn main() {
 
     
     let args: Vec<String> = std::env::args().collect();
-    let mut fixed_depth = true;
-    let mut depth = 12;
+    let mut depth_or_time = 12;
+    let mut use_depth = true;
     let mut max_ply = 500;
     if args.len() > 3 {
         max_ply = args[3].parse::<u32>().unwrap();
@@ -45,10 +45,10 @@ pub fn main() {
     }
     if args.len() > 1 {
         if args[1].contains('t') {
-            fixed_depth = false;
-            depth = args[1].replace('t', "").parse::<u8>().unwrap();
+            use_depth = false;
+            depth_or_time = args[1].replace('t', "").parse::<u8>().unwrap();
         } else {
-            depth = args[1].parse::<u8>().unwrap();
+            depth_or_time = args[1].parse::<u8>().unwrap();
         }
     }
     
@@ -58,10 +58,12 @@ pub fn main() {
     let start = instant::Instant::now();
     for ply in 0..max_ply {
         let mv = {
-            if fixed_depth {
-                engine.get_best_move(depth).unwrap().0
+            if use_depth {
+                engine.get_best_move(depth_or_time).unwrap().0
             } else {
-                engine.get_best_move_timeout(depth as u64).unwrap().0
+                let mut timeout_flag = false;
+                make_true_after_seconds(&mut timeout_flag, depth_or_time as u64);
+                engine.get_best_move_timeout(&timeout_flag).unwrap().0
             }
         };
         println!("\n========================================\n");
@@ -150,4 +152,21 @@ pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
         "Ke1a1" | "Ke8a8" => "O-O-O".to_string(),
         _ => move_string
     }
+}
+
+
+// Unsafe code to set a flag to true after a certain amount of seconds.
+// Used as a demo for the timeout feature. In production, the flag would be
+// set by the typescript frontend.
+struct SendPtr<T>(*mut T);
+unsafe impl<T> Send for SendPtr<T> {}
+unsafe impl<T> Sync for SendPtr<T> {}
+fn make_true_after_seconds(flag: &mut bool, seconds: u64) {
+    let timeout_flag_ptr: *mut bool = flag;
+    let timeout_flag_ptr = SendPtr(timeout_flag_ptr);
+    // Wait for depth_or_time seconds, then set the flag to true
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(seconds));
+        unsafe {*timeout_flag_ptr.0 = true};
+    });
 }

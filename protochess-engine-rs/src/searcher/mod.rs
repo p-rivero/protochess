@@ -5,8 +5,6 @@ use std::sync::{Arc, Mutex};
 #[cfg(feature = "parallel")]
 use std::sync::atomic::{Ordering, AtomicBool, AtomicU8};
 
-use instant::{Instant, Duration};
-
 use crate::types::{Move, Depth, Centipawns, SearchTimeout, ZobKey};
 use crate::Position;
 
@@ -17,7 +15,7 @@ pub mod eval;
 use transposition_table::{TranspositionTable, TranspositionHandle};
 
 #[derive(Debug, Clone)]
-pub struct Searcher {
+pub struct Searcher<'a> {
     // The position we are currently searching
     pos: Position,
     //We store two killer moves per ply,
@@ -29,7 +27,7 @@ pub struct Searcher {
     // Stats
     nodes_searched: u64,
     max_searching_depth: Depth,
-    end_time: Instant,
+    timeout_flag: &'a bool,
     principal_variation: [Move; Depth::MAX as usize + 1],
     known_checks: BTreeSet<ZobKey>,
     
@@ -44,8 +42,8 @@ pub struct Searcher {
 
 type SearchRes = (Vec<Move>, Centipawns, Depth);
 
-impl Searcher {
-    fn new(position: &Position, transposition_table: TranspositionHandle) -> Searcher {
+impl<'a> Searcher<'a> {
+    fn new(position: &Position, transposition_table: TranspositionHandle, timeout: &'a bool) -> Searcher<'a> {
         Searcher{
             pos: position.clone(),
             killer_moves: [[Move::null(); 2];256],
@@ -53,7 +51,7 @@ impl Searcher {
             transposition_table,
             nodes_searched: 0,
             max_searching_depth: 0,
-            end_time: Instant::now(),
+            timeout_flag: timeout,
             principal_variation: [Move::null(); Depth::MAX as usize + 1],
             known_checks: BTreeSet::new(),
             
@@ -69,30 +67,31 @@ impl Searcher {
     pub fn get_best_move(position: &Position, depth: Depth, num_threads: u32) -> SearchRes {
         // Create a new copy of the heuristics for each search
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
-        Searcher::get_best_move_impl(position, depth, 1_000_000, num_threads)
+        let dummy_timeout = false;
+        Searcher::get_best_move_impl(position, depth, &dummy_timeout, num_threads)
     }
 
-    pub fn get_best_move_timeout(position: &Position, time_sec: u64, num_threads: u32) -> SearchRes {
+    pub fn get_best_move_timeout(position: &Position, timeout: &'a bool, num_threads: u32) -> SearchRes {
         // Create a new copy of the heuristics for each search
-        Searcher::get_best_move_impl(position, Depth::MAX, time_sec, num_threads)
+        Searcher::get_best_move_impl(position, Depth::MAX, timeout, num_threads)
     }
     
     // Run for some time, then return the PV, the position score, and the depth
-    fn get_best_move_impl(position: &Position, max_depth: Depth, time_sec: u64, num_threads: u32) -> SearchRes {
+    fn get_best_move_impl(position: &Position, max_depth: Depth, timeout: &'a bool, num_threads: u32) -> SearchRes {
         // Limit the max depth to 127 to avoid overflow when doubling
         let max_depth = std::cmp::min(max_depth, 127);
         #[cfg(not(feature = "parallel"))] {
             assert!(num_threads == 1);
             let table = TranspositionTable::default();
-            Searcher::new(position, table.into()).search(max_depth, time_sec)
+            Searcher::new(position, table.into(), timeout).search(max_depth)
         }
         #[cfg(feature = "parallel")] {
-            Self::search_multi_thread(position, max_depth, time_sec, num_threads)
+            Self::search_multi_thread(position, max_depth, timeout, num_threads)
         }
     }
     
     #[cfg(feature = "parallel")]
-    fn search_multi_thread(position: &Position, max_depth: Depth, time_sec: u64, num_threads: u32) -> SearchRes {
+    fn search_multi_thread(position: &Position, max_depth: Depth, timeout: &'a bool, num_threads: u32) -> SearchRes {
         // Arc pointer to a vector of results
         let res = vec![Default::default(); num_threads as usize];
         let results_arc = Arc::new(Mutex::new(res));
@@ -111,11 +110,11 @@ impl Searcher {
                 // Spawn a new task in the thread pool, take ownership of the pointers
                 scope.spawn(move |_scope| {
                     // Create a new searcher (with cloned position) for each thread
-                    let mut searcher = Searcher::new(position, table.into());
+                    let mut searcher = Searcher::new(position, table.into(), timeout);
                     searcher.thread_num = thread_num;
                     searcher.stop_flag = stop_arc;
                     searcher.current_searched_depth = depth_arc;
-                    let thread_result = searcher.search(max_depth, time_sec);
+                    let thread_result = searcher.search(max_depth);
                     // When the thread is done, store the result in the results vector
                     let mut results_vec = results_arc.lock().unwrap();
                     results_vec[thread_num as usize] = thread_result;
@@ -141,12 +140,11 @@ impl Searcher {
         (best_pv, best_score, best_depth)
     }
     
-    fn search(&mut self, max_depth: Depth, time_sec: u64) -> SearchRes {
+    fn search(&mut self, max_depth: Depth) -> SearchRes {
         let mut pv = Vec::with_capacity(max_depth as usize);
         let mut pv_score: Centipawns = 0;
         let mut pv_depth: Depth = 0;
         self.known_checks.clear();
-        self.end_time = Instant::now() + Duration::from_secs(time_sec);
         
         let mut search_depth;
         #[cfg(not(feature = "parallel"))] {
@@ -192,7 +190,7 @@ impl Searcher {
                             pv.push(mv);
                         }
                     }
-                    // Clean up the temporary space for  the new pv
+                    // Clean up the temporary space for the new pv
                     for i in 0..self.max_searching_depth {
                         self.principal_variation[i as usize] = Move::null();
                     }
@@ -213,7 +211,7 @@ impl Searcher {
                 break;
             }
             
-            if Instant::now() >= self.end_time || search_depth == max_depth {
+            if *self.timeout_flag || search_depth == max_depth {
                 // Set stop flag to stop other threads
                 #[cfg(feature = "parallel")] {
                     self.stop_flag.store(true, Ordering::Relaxed);
