@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::piece::PieceId;
 use crate::Position;
-use crate::utils::{to_rank_file, from_index};
+use crate::utils::{to_rank_file, from_index, tuple_to_rank_file};
 
 use super::{BIndex, BCoord};
 
@@ -148,17 +148,18 @@ impl fmt::Display for Move {
         if self.is_null() {
             return write!(f, "[NULL]");
         }
-        let (x1, y1) = from_index(self.get_from());
-        let (x2, y2) = {
+        write!(f, "{}", tuple_to_rank_file(from_index(self.get_from())))?;
+        let to = {
             // Print castling moves as if the king moves to the rook square
-            if self.is_castling() { from_index(self.get_target()) }
-            else { from_index(self.get_to()) }
+            if self.is_castling() { self.get_target() }
+            else { self.get_to() }
         };
-        let suffix = {
-            if self.is_promotion() { format!("={}", self.promotion) }
-            else { "".to_string() }
-        };
-        write!(f, "{}{}{}", to_rank_file(x1, y1), to_rank_file(x2, y2), suffix)
+        write!(f, "{}", tuple_to_rank_file(from_index(to)))?;
+        
+        if self.is_promotion() { 
+            write!(f, "={}", self.promotion)?;
+        }
+        Ok(())
     }
 }
 impl fmt::Debug for Move {

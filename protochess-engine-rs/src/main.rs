@@ -2,7 +2,7 @@
 
 use std::io::Write;
 
-use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResultFlag, MakeMoveResultWinner, GameState};
+use protochess_engine_rs::{Engine, MoveInfo, MakeMoveResultFlag, MakeMoveResultWinner, GameState, SearchResult};
 use protochess_engine_rs::types::GameMode;
 use protochess_engine_rs::utils::debug::split_debug_fen;
 
@@ -57,18 +57,20 @@ pub fn main() {
     
     let start = instant::Instant::now();
     for ply in 0..max_ply {
-        let mv = {
-            if use_depth {
-                engine.get_best_move(depth_or_time).unwrap().0
-            } else {
-                let mut timeout_flag = false;
-                make_true_after_seconds(&mut timeout_flag, depth_or_time as u64);
-                engine.get_best_move_timeout(&timeout_flag).unwrap().0
-            }
-        };
+        let mut result = SearchResult::default();
+        if use_depth {
+            engine.get_best_move(depth_or_time, &mut result).unwrap();
+        } else {
+            let mut timeout_flag = false;
+            make_true_after_seconds(&mut timeout_flag, depth_or_time as u64);
+            engine.get_best_move_timeout(&timeout_flag, &mut result).unwrap();
+        }
+        println!("Returned result:\n{result}");
+        
         println!("\n========================================\n");
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {ply} Engine plays:\n");
+        let mv = result.pv[0].into();
         print_pgn(&mut pgn_file, ply, &to_long_algebraic_notation(&mv, &engine));
         let result = engine.make_move(&mv);
         println!("{engine}\n");
@@ -167,6 +169,7 @@ fn make_true_after_seconds(flag: &mut bool, seconds: u64) {
     // Wait for depth_or_time seconds, then set the flag to true
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(seconds));
+        println!("Timeout!");
         unsafe {*timeout_flag_ptr.0 = true};
     });
 }

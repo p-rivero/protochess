@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use position::create::position_factory::PositionFactory;
-use types::{BCoord, Centipawns, Depth, Player, ZobKey};
+use types::{BCoord, Depth, Player, ZobKey};
 use searcher::Searcher;
 use utils::{to_index, from_index};
 
@@ -23,6 +23,7 @@ pub use position::global_rules::GlobalRules;
 pub use move_generator::MoveGen;
 pub use piece::{Piece, PieceId, PieceDefinition};
 pub use types::{MoveInfo, MoveList, MakeMoveResult, MakeMoveResultFlag, MakeMoveResultWinner};
+pub use searcher::SearchResult;
 
 /// Starting point for the engine
 #[derive(Debug, Clone)]
@@ -108,21 +109,23 @@ impl Engine {
     }
     
     /// Returns the best move for the current position, along with the evaluation score
-    pub fn get_best_move(&mut self, depth: Depth) -> wrap_res!(MoveInfo, Centipawns) {
+    pub fn get_best_move(&mut self, depth: Depth, out: &mut SearchResult) -> wrap_res!() {
         self.validate_position()?;
         err_assert!(depth != 0, "Depth must be greater than 0");
-        let (pv, score, search_depth) = Searcher::get_best_move(&self.position, depth, self.num_threads);
-        err_assert!(search_depth == depth, "Search depth ({search_depth}) != requested depth ({depth})");
-        err_assert!(!pv.is_empty(), "No moves found");
-        Ok((pv[0].into(), score))
+        Searcher::get_best_move(&self.position, depth, self.num_threads, out);
+        err_assert!(out.depth == depth, "Search depth ({s}) != requested depth ({depth})", s=out.depth);
+        err_assert!(!out.pv.is_empty(), "No moves found");
+        Ok(())
     }
 
     /// Returns the best move for the current position, along with the evaluation score and the search depth
-    pub fn get_best_move_timeout(&mut self, timeout_flag: &bool) -> wrap_res!(MoveInfo, Centipawns, Depth) {
+    /// The search will stop when `timeout_flag` is externally set to `true`. The best move found at any
+    /// given time can is written to `out`.
+    pub fn get_best_move_timeout(&mut self, timeout_flag: &bool, out: &mut SearchResult) -> wrap_res!() {
         self.validate_position()?;
-        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, timeout_flag, self.num_threads);
-        err_assert!(!pv.is_empty(), "No moves found");
-        Ok((pv[0].into(), score, search_depth))
+        Searcher::get_best_move_timeout(&self.position, timeout_flag, self.num_threads, out);
+        err_assert!(!out.pv.is_empty(), "No moves found");
+        Ok(())
     }
     
     /// Returns an error if the current position is invalid
