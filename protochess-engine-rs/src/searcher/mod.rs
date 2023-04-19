@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{Ordering, AtomicBool, AtomicU8};
 
 use crate::types::{Move, Depth, Centipawns, SearchTimeout, ZobKey};
-use crate::Position;
+use crate::{Position, MoveInfo};
 
 mod alphabeta;
 mod search_result;
@@ -190,7 +190,7 @@ impl<'a> Searcher<'a> {
                     // Return PV info
                     on_result(SearchResult{
                         pv: pv.clone(),
-                        best_move_str: if pv.is_empty() { String::new() } else { pv[0].to_string() },
+                        best_move: if pv.is_empty() { MoveInfo::default() } else { pv[0].into() },
                         score,
                         depth: search_depth,
                         nodes_searched: self.nodes_searched,

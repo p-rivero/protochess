@@ -1,7 +1,7 @@
 mod utils;
 mod serialize_types;
 
-use protochess_engine_rs::Engine;
+use protochess_engine_rs::{Engine, SearchResult};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
@@ -24,6 +24,7 @@ pub fn greet() {
 pub struct Protochess {
     engine: Engine,
     stop_flag: bool,
+    current_result: SearchResult,
 }
 
 #[wasm_bindgen]
@@ -35,6 +36,7 @@ impl Protochess {
         Protochess {
             engine: Engine::default(),
             stop_flag: false,
+            current_result: SearchResult::default(),
         }
     }
 
@@ -68,13 +70,20 @@ impl Protochess {
 
     #[wasm_bindgen(js_name = getBestMove)]
     pub fn get_best_move(&mut self, depth: u8) -> Result<JsValue, String> {
-        let (best_move, eval) = self.engine.get_best_move(depth)?;
-        Ok(MoveInfoWithEvalSer::to_js(best_move, eval))
+        self.current_result.depth = 0;
+        self.engine.get_best_move(depth, &mut self.current_result)?;
+        let best_move = self.current_result.best_move;
+        let eval = self.current_result.score;
+        Ok(MoveInfoWithEvalDepthSer::to_js(best_move, eval, depth))
     }
     #[wasm_bindgen(js_name = getBestMoveTimeout)]
     pub fn get_best_move_timeout(&mut self) -> Result<JsValue, String> {
         self.stop_flag = false;
-        let (best_move, eval, depth) = self.engine.get_best_move_timeout(&self.stop_flag)?;
+        self.current_result.depth = 0;
+        self.engine.get_best_move_timeout(&self.stop_flag, &mut self.current_result)?;
+        let best_move = self.current_result.best_move;
+        let eval = self.current_result.score;
+        let depth = self.current_result.depth;
         Ok(MoveInfoWithEvalDepthSer::to_js(best_move, eval, depth))
     }
     
