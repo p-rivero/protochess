@@ -9,7 +9,7 @@ use crate::utils::{from_index, tuple_to_rank_file};
 
 use super::Move;
 
-/// WARNING: If you modify this struct, make sure to update frontend JS/TS code
+/// **WARNING:** If you modify this struct, make sure to update frontend JS/TS code
 /// that reads the WASM memory to get real-time move info.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[must_use]

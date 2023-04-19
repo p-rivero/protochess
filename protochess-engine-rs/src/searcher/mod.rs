@@ -196,6 +196,8 @@ impl<'a> Searcher<'a> {
                         nodes_searched: self.nodes_searched,
                         #[cfg(feature = "parallel")]
                         thread_num: self.thread_num,
+                        #[cfg(not(feature = "parallel"))]
+                        thread_num: 0,
                     });
                 },
                 Err(SearchTimeout) => {
