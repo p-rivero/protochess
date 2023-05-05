@@ -9,7 +9,7 @@ use crate::utils::{from_index, tuple_to_rank_file};
 
 use super::Move;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub struct MoveInfo {
     pub from: (BCoord, BCoord),

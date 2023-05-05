@@ -9,14 +9,10 @@ use crate::types::{Move, Depth, Centipawns, SearchTimeout, ZobKey};
 use crate::Position;
 
 mod alphabeta;
-mod search_result;
 pub mod transposition_table;
 pub mod eval;
 
 use transposition_table::{TranspositionTable, TranspositionHandle};
-pub use search_result::SearchResult;
-
-const DEBUG_PRINT: bool = true;
 
 #[derive(Debug, Clone)]
 pub struct Searcher<'a> {
@@ -44,6 +40,8 @@ pub struct Searcher<'a> {
     current_searched_depth: Arc<AtomicU8>,
 }
 
+type SearchRes = (Vec<Move>, Centipawns, Depth);
+
 impl<'a> Searcher<'a> {
     fn new(position: &Position, transposition_table: TranspositionHandle, timeout: &'a bool) -> Searcher<'a> {
         Searcher{
@@ -66,40 +64,37 @@ impl<'a> Searcher<'a> {
         }
     }
     
-    pub fn get_best_move(position: &Position, depth: Depth, num_threads: u32, out: &mut SearchResult) {
+    pub fn get_best_move(position: &Position, depth: Depth, num_threads: u32) -> SearchRes {
         // Create a new copy of the heuristics for each search
         // Cannot use u64::MAX due to overflow, 1_000_000 seconds is 11.5 days
         let dummy_timeout = false;
-        Searcher::get_best_move_impl(position, depth, &dummy_timeout, num_threads, out);
+        Searcher::get_best_move_impl(position, depth, &dummy_timeout, num_threads)
     }
 
-    pub fn get_best_move_timeout(position: &Position, timeout: &bool, num_threads: u32, out: &mut SearchResult) {
+    pub fn get_best_move_timeout(position: &Position, timeout: &'a bool, num_threads: u32) -> SearchRes {
         // Create a new copy of the heuristics for each search
-        Searcher::get_best_move_impl(position, Depth::MAX, timeout, num_threads, out);
+        Searcher::get_best_move_impl(position, Depth::MAX, timeout, num_threads)
     }
     
     // Run for some time, then return the PV, the position score, and the depth
-    fn get_best_move_impl(position: &Position, max_depth: Depth, timeout: &'a bool, num_threads: u32, out: &mut SearchResult) {
+    fn get_best_move_impl(position: &Position, max_depth: Depth, timeout: &'a bool, num_threads: u32) -> SearchRes {
         // Limit the max depth to 127 to avoid overflow when doubling
         let max_depth = std::cmp::min(max_depth, 127);
         #[cfg(not(feature = "parallel"))] {
             assert!(num_threads == 1);
             let table = TranspositionTable::default();
-            let mut on_result = |s: SearchResult| {
-                if DEBUG_PRINT { println!("{s}"); };
-                *out = s;
-            };
-            Searcher::new(position, table.into(), timeout).search(max_depth, &mut on_result);
+            Searcher::new(position, table.into(), timeout).search(max_depth)
         }
         #[cfg(feature = "parallel")] {
-            Self::search_multi_thread(position, max_depth, timeout, num_threads, out);
+            Self::search_multi_thread(position, max_depth, timeout, num_threads)
         }
     }
     
     #[cfg(feature = "parallel")]
-    fn search_multi_thread(position: &Position, max_depth: Depth, timeout: &bool, num_threads: u32, out: &mut SearchResult) {
-        // Protect the output (mutable ref) with a mutex, and use an Arc to share it
-        let out_arc = Arc::new(Mutex::new(out));
+    fn search_multi_thread(position: &Position, max_depth: Depth, timeout: &'a bool, num_threads: u32) -> SearchRes {
+        // Arc pointer to a vector of results
+        let res = vec![Default::default(); num_threads as usize];
+        let results_arc = Arc::new(Mutex::new(res));
         // Arc pointers to global search state
         let stop_arc = Arc::new(AtomicBool::new(false));
         let depth_arc = Arc::new(AtomicU8::new(0));
@@ -108,7 +103,7 @@ impl<'a> Searcher<'a> {
         rayon::scope(|scope| {
             for thread_num in 0..num_threads {
                 // Clone the pointers on each iteration
-                let out_arc = out_arc.clone();
+                let results_arc = results_arc.clone();
                 let stop_arc = stop_arc.clone();
                 let depth_arc = depth_arc.clone();
                 let table = table.clone();
@@ -119,24 +114,36 @@ impl<'a> Searcher<'a> {
                     searcher.thread_num = thread_num;
                     searcher.stop_flag = stop_arc;
                     searcher.current_searched_depth = depth_arc;
-                    
-                    let mut on_result = |s: SearchResult| {
-                        let mut out = out_arc.lock().expect("Mutex is poisoned");
-                        if DEBUG_PRINT { println!("{s}"); };
-                        // Update best result
-                        if s > **out { **out = s; }
-                    };
-                    searcher.search(max_depth, &mut on_result);
+                    let thread_result = searcher.search(max_depth);
+                    // When the thread is done, store the result in the results vector
+                    let mut results_vec = results_arc.lock().unwrap();
+                    results_vec[thread_num as usize] = thread_result;
                 });
             }
         });
+        let mut best_pv = Vec::new();
+        let mut best_score = -Centipawns::MAX;
+        let mut best_depth = 0;
+        // Consume the results vector, return the best result (prefer higher depth, then higher score, then longer PV)
+        let results_mutex = Arc::try_unwrap(results_arc).expect("Arc still has owners");
+        let results_vec = results_mutex.into_inner().expect("Mutex is poisoned");
+        for (pv, score, depth) in results_vec {
+            if depth > best_depth ||
+                (depth == best_depth && score > best_score) ||
+                (depth == best_depth && score == best_score && pv.len() > best_pv.len())
+            {
+                best_score = score;
+                best_depth = depth;
+                best_pv = pv;
+            }
+        }
+        (best_pv, best_score, best_depth)
     }
     
-    
-    /// Start the search, stopping when `max_depth` is reached or `self.timeout_flag` is set to true.
-    /// For each depth, call `on_result` with the current PV, score, and depth.
-    fn search(&mut self, max_depth: Depth, on_result: &mut dyn FnMut(SearchResult)) {
+    fn search(&mut self, max_depth: Depth) -> SearchRes {
         let mut pv = Vec::with_capacity(max_depth as usize);
+        let mut pv_score: Centipawns = 0;
+        let mut pv_depth: Depth = 0;
         self.known_checks.clear();
         
         let mut search_depth;
@@ -187,16 +194,10 @@ impl<'a> Searcher<'a> {
                     for i in 0..self.max_searching_depth {
                         self.principal_variation[i as usize] = Move::null();
                     }
-                    // Return PV info
-                    on_result(SearchResult{
-                        pv: pv.clone(),
-                        best_move_str: if pv.is_empty() { String::new() } else { pv[0].to_string() },
-                        score,
-                        depth: search_depth,
-                        nodes_searched: self.nodes_searched,
-                        #[cfg(feature = "parallel")]
-                        thread_num: self.thread_num,
-                    });
+                    pv_depth = search_depth;
+                    pv_score = score;
+                    // Print PV info
+                    println!("{}", self.format_result(score, &pv, search_depth));
                 },
                 Err(SearchTimeout) => {
                     // Thread timed out, return the best move found so far
@@ -227,6 +228,31 @@ impl<'a> Searcher<'a> {
                 search_depth = std::cmp::min(next_depth, max_depth);
             }
         }
+        (pv, pv_score, pv_depth)
+    }
+    
+    // Format the result as a string in order to print it all at once. This prevents 2 threads from printing at the same time.
+    fn format_result(&self, score: i32, pv: &Vec<Move>, depth: Depth) -> String {
+        #[cfg(feature = "parallel")]
+        let thread_str = format!("T{:<2} ", self.thread_num);
+        #[cfg(not(feature = "parallel"))]
+        let thread_str = String::new();
+        
+        let diff = -(score.abs() + alphabeta::GAME_OVER_SCORE);
+        let score_str = {
+            if diff < 200 {
+                let sign = if score > 0 { "" } else { "-" };
+                format!("MATE {}{}", sign, (diff+1) / 2)
+            } else {
+                format!("cp {:<4}", score)
+            }
+        };
+        let mut pv_str = String::new();
+        for m in pv {
+            pv_str.push_str(&format!("{} ", m));
+        }
+        
+        format!("{thread_str}Depth {depth:<2} Score: {score_str} [nodes: {n}] PV: {pv_str}", n=self.nodes_searched)
     }
 }
 
