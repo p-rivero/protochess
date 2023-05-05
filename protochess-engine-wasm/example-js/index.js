@@ -21,7 +21,6 @@ const currentFen = document.getElementById('currentFen')
 // Protochess object imported from rust
 let protochess
 let protochessMemory
-let stopPtr
 let mvFromPtr
 let mvToPtr
 let mvPromoPtr
@@ -48,7 +47,6 @@ async function init() {
   
   protochess = wasm.wasmObject
   protochessMemory = new Uint8Array(await wasm.memoryBuffer)
-  stopPtr = await protochess.getStopFlagPtr()
   mvFromPtr = await protochess.getMvFromPtr()
   mvToPtr = await protochess.getMvToPtr()
   mvPromoPtr = await protochess.getMvPromoPtr()
@@ -117,18 +115,19 @@ async function manualMoveButtonClick() {
 
 async function engineMoveButtonClick() {
   clearErrors()
+  engineStatus.innerHTML = 'Searching...'
   try {
     // Attempt to convert the input to a number
     const timeout = Number(engineMoveInput.value)
     if (isNaN(timeout)) {
       throw engineMoveInput.value + ' is not a valid number'
     }
-    if (timeout <= 0) {
-      throw 'Timeout must be > 0'
+    if (timeout < 0) {
+      throw 'Timeout must be >= 0'
     }
-    engineStatus.innerHTML = 'Searching...'
     // Get the best move from the engine
-    setTimeout(() => setStopFlag(), timeout)
+    const stopPtr = await protochess.getStopFlagPtr()
+    setTimeout(() => protochessMemory[stopPtr] = 1, timeout)
     startUpdatingResultText()
     const {moveInfo, evaluation, depth} = await protochess.getBestMoveTimeout()
     // Play the move
@@ -157,12 +156,14 @@ async function fenButtonClick() {
 }
 
 
-// UPDATE THE CURRENT RESULT UI
+
+// UPDATE THE CURRENT RESULT TEXT
 
 let updatingResultText = false
 async function startUpdatingResultText() {
   updatingResultText = true
   while (updatingResultText) {
+    console.log('.')
     const resultText = readSearchResult()
     engineCurrentResult.innerHTML = stringifySearchResult(resultText)
     await new Promise(resolve => setTimeout(resolve, 100))
@@ -182,13 +183,6 @@ function stringifySearchResult(searchResult) {
   return `[depth ${searchResult.depth}] ${fromStr}${toStr}${promotionStr}`
 }
 
-
-// DIRECT ACCESS TO THE WASM MEMORY
-
-function setStopFlag() {
-  protochessMemory[stopPtr] = 1
-}
-
 // See src/searcher/search_result.rs for the memory layout
 function readSearchResult() {
   const moveInfo = readMoveInfo()
@@ -196,7 +190,6 @@ function readSearchResult() {
   const depth = readU8(depthPtr)
   return {moveInfo, evaluation, depth}
 }
-
 // See src/types/move_info.rs for the memory layout
 function readMoveInfo() {
   const fromX = protochessMemory[mvFromPtr]
@@ -216,7 +209,6 @@ function readMoveInfo() {
     promotion,
   }
 }
-
 // Little-endian 32-bit integer
 function readI32(ptr) {
   return protochessMemory[ptr] +
@@ -224,7 +216,6 @@ function readI32(ptr) {
     (protochessMemory[ptr + 2] << 16) +
     (protochessMemory[ptr + 3] << 24)
 }
-
 // 8-bit unsigned integer
 function readU8(ptr) {
   return protochessMemory[ptr]
