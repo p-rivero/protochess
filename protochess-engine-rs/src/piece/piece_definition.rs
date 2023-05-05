@@ -16,7 +16,7 @@ pub struct PieceDefinition {
     pub castle_files: Option<(BCoord, BCoord)>,
     // True if this piece works as a rook for castling purposes
     pub is_castle_rook: bool,
-    pub explodes: bool,
+    pub explode_on_capture: bool,
     pub explosion_deltas: Vec<(i8, i8)>,
     pub immune_to_explosion: bool,
     
@@ -116,7 +116,7 @@ impl PieceDefinition {
         self.is_leader == other.is_leader &&
         self.castle_files == other.castle_files &&
         self.is_castle_rook == other.is_castle_rook &&
-        self.explodes == other.explodes &&
+        self.explode_on_capture == other.explode_on_capture &&
         eq_anyorder(&self.explosion_deltas, &other.explosion_deltas) &&
         self.immune_to_explosion == other.immune_to_explosion &&
         eq_anyorder(&self.promotion_squares, &other.promotion_squares) &&

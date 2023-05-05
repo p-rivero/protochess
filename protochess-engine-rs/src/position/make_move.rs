@@ -178,7 +178,7 @@ impl Position {
     fn explode_piece(&mut self, mv: Move, my_player_num: u8, new_props: &mut PositionProperties) {
         let from = mv.get_from();
         let moved_piece = self.pieces[my_player_num as usize].piece_at_mut(from).unwrap();
-        if !moved_piece.explodes() {
+        if !moved_piece.explodes_on_capture() {
             return;
         }
         // Clone explosion radius bitboard

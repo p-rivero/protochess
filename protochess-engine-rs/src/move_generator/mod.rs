@@ -153,7 +153,7 @@ impl MoveGen {
             // Found an enemy piece that might attack the last leader
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
-            let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, enemy_piece_index);
+            let kills_remaining_leaders = enemy_piece.explodes_on_capture() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, enemy_piece_index);
             if !kills_remaining_leaders && MoveGen::slide_targets_coords(x, y, enemy_piece, enemy_piece_index) {
                 return true;
             }
@@ -166,7 +166,7 @@ impl MoveGen {
             // Found an enemy piece that might attack the last leader
             let enemy_piece = enemy_pieces.piece_at(enemy_piece_index).unwrap();
             // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
-            let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, enemy_piece_index);
+            let kills_remaining_leaders = enemy_piece.explodes_on_capture() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, enemy_piece_index);
             if !kills_remaining_leaders && enemy_piece.get_capture_jumps(enemy_piece_index).get_bit(index) {
                 return true;
             }
@@ -190,7 +190,7 @@ impl MoveGen {
                     // Found an enemy piece that might attack the last leader
                     let enemy_piece = enemy_pieces.piece_at(to).unwrap();
                     // If this attack will kill the remaining enemy leaders, the move is illegal so it is not a check
-                    let kills_remaining_leaders = enemy_piece.explodes() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, to);
+                    let kills_remaining_leaders = enemy_piece.explodes_on_capture() && explosion_kills_enemy(index, enemy_pieces, enemy_piece, to);
                     if !kills_remaining_leaders && MoveGen::sliding_delta_targets_index(enemy_piece, to, index, occ_or_not_in_bounds) {
                         return true;
                     }

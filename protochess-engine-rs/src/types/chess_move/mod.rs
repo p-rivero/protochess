@@ -125,7 +125,7 @@ impl Move {
     /// **Important**: Call this function **before** making the move
     pub fn get_potential_explosion(&self, pos: &Position) -> Vec<(BCoord, BCoord)> {
         let piece = pos.piece_at(self.get_from()).unwrap();
-        if !piece.explodes() || !self.is_capture() {
+        if !piece.explodes_on_capture() || !self.is_capture() {
             return Vec::new();
         }
         let to = self.get_to();

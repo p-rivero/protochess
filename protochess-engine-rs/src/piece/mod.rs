@@ -129,8 +129,8 @@ impl Piece {
     }
     
     /// Returns `true` if this piece explodes when it makes a capture
-    pub fn explodes(&self) -> bool {
-        self.type_def.explodes
+    pub fn explodes_on_capture(&self) -> bool {
+        self.type_def.explode_on_capture
     }
     
     /// Returns `true` if one of the instances of this piece type is in a win square

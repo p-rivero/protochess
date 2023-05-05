@@ -100,7 +100,7 @@ generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     is_leader, bool,
     castle_files, Option<(u8, u8)>,
     is_castle_rook, bool,
-    explodes, bool,
+    explode_on_capture, bool,
     explosion_deltas, Vec<(i8, i8)>,
     immune_to_explosion, bool,
     promotion_squares, Vec<(u8, u8)>,
