@@ -60,6 +60,23 @@ generate_wrapper!(MakeMoveResultSer, MakeMoveResult, [
     exploded, SerVec<(u8, u8)>
 ]);
 
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveInfoWithEvalSer {
+    move_info: MoveInfoSer,
+    evaluation: i32,
+}
+impl MoveInfoWithEvalSer {
+    pub fn to_js(mv: MoveInfo, evaluation: i32) -> JsValue {
+        let val = MoveInfoWithEvalSer {
+            move_info: MoveInfoSer::from(mv),
+            evaluation
+        };
+        to_value(&val).unwrap()
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MoveInfoWithEvalDepthSer {

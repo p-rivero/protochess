@@ -1,4 +1,3 @@
-use crate::MoveInfo;
 use crate::types::{Move, Centipawns, Depth};
 use crate::searcher::alphabeta::GAME_OVER_SCORE;
 
@@ -17,7 +16,7 @@ pub struct SearchResult {
     /// The principal variation found by the search. Guaranteed to be non-empty.
     pub pv: Vec<Move>,
     /// String equivalent to `pv[0]`. For example, "e2e4".
-    pub best_move: MoveInfo,
+    pub best_move_str: String,
     /// The score of the position, in centipawns.
     pub score: Centipawns,
     /// The depth reached by the search.
