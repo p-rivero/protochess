@@ -10,8 +10,7 @@ const manualMoveError = document.getElementById('manualMoveError')
 const engineMoveInput = document.getElementById('engineMoveInput')
 const engineMoveButton = document.getElementById('engineMoveButton')
 const engineMoveError = document.getElementById('engineMoveError')
-const engineStatus = document.getElementById('engineStatus')
-const engineCurrentResult = document.getElementById('engineCurrentResult')
+const engineDepth = document.getElementById('engineDepth')
 
 const fenInput = document.getElementById('fenInput')
 const fenButton = document.getElementById('fenButton')
@@ -21,11 +20,6 @@ const currentFen = document.getElementById('currentFen')
 // Protochess object imported from rust
 let protochess
 let protochessMemory
-let mvFromPtr
-let mvToPtr
-let mvPromoPtr
-let scorePtr
-let depthPtr
 
 // Run init() when the page loads
 init()
@@ -47,12 +41,7 @@ async function init() {
   
   protochess = wasm.wasmObject
   protochessMemory = new Uint8Array(await wasm.memoryBuffer)
-  mvFromPtr = await protochess.getMvFromPtr()
-  mvToPtr = await protochess.getMvToPtr()
-  mvPromoPtr = await protochess.getMvPromoPtr()
-  scorePtr = await protochess.getScorePtr()
-  depthPtr = await protochess.getDepthPtr()
-  await protochess.setNumThreads(1)
+  protochess.setNumThreads(1)
   initUI()
 }
 
@@ -69,9 +58,9 @@ async function updateBoard(resultFlag, winner, exploded) {
   currentFen.innerHTML = stateDiff.fen
   if (resultFlag !== 'Ok') {
     let winnerString
-    if (winner === 'white') {
+    if (winner === 'White') {
       winnerString = 'White wins'
-    } else if (winner === 'black') {
+    } else if (winner === 'Black') {
       winnerString = 'Black wins'
     } else {
       winnerString = 'Draw'
@@ -115,7 +104,7 @@ async function manualMoveButtonClick() {
 
 async function engineMoveButtonClick() {
   clearErrors()
-  engineStatus.innerHTML = 'Searching...'
+  engineDepth.innerHTML = 'Searching...'
   try {
     // Attempt to convert the input to a number
     const timeout = Number(engineMoveInput.value)
@@ -125,20 +114,17 @@ async function engineMoveButtonClick() {
     if (timeout < 0) {
       throw 'Timeout must be >= 0'
     }
-    // Get the best move from the engine
-    const stopPtr = await protochess.getStopFlagPtr()
-    setTimeout(() => protochessMemory[stopPtr] = 1, timeout)
-    startUpdatingResultText()
+    const ptr = await protochess.getStopFlagPtr()
+    setTimeout(() => protochessMemory[ptr] = 1, timeout)
+    // Get the engine to make a move
     const {moveInfo, evaluation, depth} = await protochess.getBestMoveTimeout()
-    // Play the move
     const makeMoveResult = await protochess.makeMove(moveInfo)
     const {flag, winner, exploded} = makeMoveResult
     await updateBoard(flag, winner, exploded)
     
     const toMove = await protochess.playerToMove()
     const absoluteEval = toMove === 0 ? -evaluation : evaluation
-    engineStatus.innerHTML = `Done! Search depth: ${depth}, board evaluation: ${absoluteEval}cp`
-    stopUpdatingResultText()
+    engineDepth.innerHTML = `Done! Search depth: ${depth}, board evaluation: ${absoluteEval}cp`
   } catch (e) {
     engineMoveError.innerHTML = e
   }
@@ -153,70 +139,4 @@ async function fenButtonClick() {
   } catch (e) {
     fenError.innerHTML = e
   }
-}
-
-
-
-// UPDATE THE CURRENT RESULT TEXT
-
-let updatingResultText = false
-async function startUpdatingResultText() {
-  updatingResultText = true
-  while (updatingResultText) {
-    console.log('.')
-    const resultText = readSearchResult()
-    engineCurrentResult.innerHTML = stringifySearchResult(resultText)
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-}
-function stopUpdatingResultText() {
-  updatingResultText = false
-}
-
-function stringifySearchResult(searchResult) {
-  const from = searchResult.moveInfo.from
-  const to = searchResult.moveInfo.to
-  const promotion = searchResult.moveInfo.promotion
-  const fromStr = `${String.fromCharCode(from[0] + 97)}${from[1] + 1}`
-  const toStr = `${String.fromCharCode(to[0] + 97)}${to[1] + 1}`
-  const promotionStr = promotion ? `=${promotion}` : ''
-  return `[depth ${searchResult.depth}] ${fromStr}${toStr}${promotionStr}`
-}
-
-// See src/searcher/search_result.rs for the memory layout
-function readSearchResult() {
-  const moveInfo = readMoveInfo()
-  const evaluation = readI32(scorePtr)
-  const depth = readU8(depthPtr)
-  return {moveInfo, evaluation, depth}
-}
-// See src/types/move_info.rs for the memory layout
-function readMoveInfo() {
-  const fromX = protochessMemory[mvFromPtr]
-  const fromY = protochessMemory[mvFromPtr + 1]
-  const toX = protochessMemory[mvToPtr]
-  const toY = protochessMemory[mvToPtr + 1]
-  // Rust uses 0..MAX_UNICODE for Some(char) and MAX_UNICODE + 1 for None
-  const MAX_UNICODE = 0x10FFFF
-  const promo = readI32(mvPromoPtr)
-  const hasPromo = promo <= MAX_UNICODE
-  // Important: use String.fromCodePoint instead of String.fromCharCode
-  // because promotions can be any Unicode character
-  const promotion = hasPromo ? String.fromCodePoint(promo) : undefined
-  return {
-    from: [fromX, fromY],
-    to: [toX, toY],
-    promotion,
-  }
-}
-// Little-endian 32-bit integer
-function readI32(ptr) {
-  return protochessMemory[ptr] +
-    (protochessMemory[ptr + 1] << 8) +
-    (protochessMemory[ptr + 2] << 16) +
-    (protochessMemory[ptr + 3] << 24)
-}
-// 8-bit unsigned integer
-function readU8(ptr) {
-  return protochessMemory[ptr]
 }

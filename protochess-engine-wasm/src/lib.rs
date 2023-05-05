@@ -137,30 +137,8 @@ impl Protochess {
     
     
     
-    // Get pointers only to basic types, since in WASM the structs will have
-    // different order and alignments than in Rust.
     #[wasm_bindgen(js_name = getStopFlagPtr)]
     pub fn get_stop_flag_ptr(&mut self) -> *mut bool {
         &mut self.stop_flag
-    }
-    #[wasm_bindgen(js_name = getMvFromPtr)]
-    pub fn get_mv_from_ptr(&mut self) -> *mut u8 {
-        &mut self.current_result.best_move.from.0
-    }
-    #[wasm_bindgen(js_name = getMvToPtr)]
-    pub fn get_mv_to_ptr(&mut self) -> *mut u8 {
-        &mut self.current_result.best_move.to.0
-    }
-    #[wasm_bindgen(js_name = getMvPromoPtr)]
-    pub fn get_mv_promo_ptr(&mut self) -> *mut Option<char> {
-        &mut self.current_result.best_move.promotion
-    }
-    #[wasm_bindgen(js_name = getScorePtr)]
-    pub fn get_score_ptr(&mut self) -> *mut i32 {
-        &mut self.current_result.score
-    }
-    #[wasm_bindgen(js_name = getDepthPtr)]
-    pub fn get_depth_ptr(&mut self) -> *mut u8 {
-        &mut self.current_result.depth
     }
 }

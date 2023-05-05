@@ -11,9 +11,6 @@ use crate::searcher::alphabeta::GAME_OVER_SCORE;
 /// result of the function, but it allows the user to watch the value of the struct as it is being updated
 /// by the search in real time, while preserving full search speed (it's not being constantly interrupted).
 /// This is particularly useful for infinite searches (like in the Analysis Board GUI).
-/// 
-/// **WARNING:** If you modify this struct, make sure to update frontend JS/TS code
-/// that reads the WASM memory to get real-time move info.
 #[must_use]
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SearchResult {
@@ -29,6 +26,7 @@ pub struct SearchResult {
     /// Does not include other threads or previous depths in iterative deepening.
     pub nodes_searched: u64,
     /// The number of the thread that found this result, between `0` and `num_threads - 1`.
+    #[cfg(feature = "parallel")]
     pub thread_num: u32,
 }
 
