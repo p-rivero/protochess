@@ -1,3 +1,5 @@
+use instant::Instant;
+
 #[cfg(feature = "parallel")]
 use std::sync::atomic::Ordering;
 
@@ -10,7 +12,7 @@ use super::transposition_table::{Entry, EntryFlag};
 
 pub const GAME_OVER_SCORE: Centipawns = -1_000_000;
 
-impl Searcher<'_> {
+impl Searcher {
     /// Search for the best move to play at the current position.
     /// Populates the principal variation vector and returns the score of the position.
     /// Use the previous PV as a hint: begin the search by playing the PV, and the rest of the search attempts to refute it.
@@ -317,15 +319,15 @@ impl Searcher<'_> {
     #[inline]
     fn increment_num_nodes(&mut self) -> Result<(), SearchTimeout> {
         self.nodes_searched += 1;
-        // Check for timeout periodically (every 2^16 nodes)
+        // Check for timeout periodically (every 2^19 nodes)
         #[allow(clippy::collapsible_if)]
-        if self.nodes_searched.trailing_zeros() >= 16 {
+        if self.nodes_searched.trailing_zeros() >= 19 {
             #[cfg(feature = "parallel")]
             if self.stop_flag.load(Ordering::Relaxed) {
                 return Err(SearchTimeout);
             }
             // If this is the first search (depth 1, max_searching_depth 2), don't time out
-            if *self.timeout_flag && self.max_searching_depth > 2 {
+            if Instant::now() >= self.end_time && self.max_searching_depth > 2 {
                 // Signal other threads to stop
                 #[cfg(feature = "parallel")]
                 self.stop_flag.store(true, Ordering::Relaxed);

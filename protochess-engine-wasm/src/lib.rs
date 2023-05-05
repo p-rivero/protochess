@@ -11,7 +11,6 @@ use utils::{set_panic_hook, SerVec};
 #[cfg(feature = "parallel")]
 pub use wasm_bindgen_rayon::init_thread_pool;
 
-
 #[wasm_bindgen]
 pub fn greet() {
     #[cfg(feature = "parallel")]
@@ -22,8 +21,7 @@ pub fn greet() {
 
 #[wasm_bindgen]
 pub struct Protochess {
-    engine: Engine,
-    stop_flag: bool,
+    engine: Engine
 }
 
 #[wasm_bindgen]
@@ -33,8 +31,7 @@ impl Protochess {
     pub fn new() -> Protochess {
         set_panic_hook();
         Protochess {
-            engine: Engine::default(),
-            stop_flag: false,
+            engine: Engine::default()
         }
     }
 
@@ -72,9 +69,8 @@ impl Protochess {
         Ok(MoveInfoWithEvalSer::to_js(best_move, eval))
     }
     #[wasm_bindgen(js_name = getBestMoveTimeout)]
-    pub fn get_best_move_timeout(&mut self) -> Result<JsValue, String> {
-        self.stop_flag = false;
-        let (best_move, eval, depth) = self.engine.get_best_move_timeout(&self.stop_flag)?;
+    pub fn get_best_move_timeout(&mut self, time: usize) -> Result<JsValue, String> {
+        let (best_move, eval, depth) = self.engine.get_best_move_timeout(time as u64)?;
         Ok(MoveInfoWithEvalDepthSer::to_js(best_move, eval, depth))
     }
     
@@ -124,12 +120,5 @@ impl Protochess {
     #[wasm_bindgen(js_name = setNumThreads)]
     pub fn set_num_threads(&mut self, num_threads: u32) -> Result<(), String> {
         self.engine.set_num_threads(num_threads)
-    }
-    
-    
-    
-    #[wasm_bindgen(js_name = getStopFlagPtr)]
-    pub fn get_stop_flag_ptr(&mut self) -> *mut bool {
-        &mut self.stop_flag
     }
 }

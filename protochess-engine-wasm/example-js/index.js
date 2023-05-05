@@ -19,7 +19,6 @@ const currentFen = document.getElementById('currentFen')
 
 // Protochess object imported from rust
 let protochess
-let protochessMemory
 
 // Run init() when the page loads
 init()
@@ -33,14 +32,13 @@ async function init() {
     new Worker(new URL('./wasm-worker.js', import.meta.url), { type: 'module' })
   ).wasm
   
-  if (await wasm.supportsThreads) {
+  if (wasm.supportsThreads) {
     console.info('WebAssembly supports threads')
   } else {
     console.warn('WebAssembly does not support threads')
   }
   
   protochess = wasm.wasmObject
-  protochessMemory = new Uint8Array(await wasm.memoryBuffer)
   protochess.setNumThreads(1)
   initUI()
 }
@@ -114,10 +112,8 @@ async function engineMoveButtonClick() {
     if (timeout < 0) {
       throw 'Timeout must be >= 0'
     }
-    const ptr = await protochess.getStopFlagPtr()
-    setTimeout(() => protochessMemory[ptr] = 1, timeout)
     // Get the engine to make a move
-    const {moveInfo, evaluation, depth} = await protochess.getBestMoveTimeout()
+    const {moveInfo, evaluation, depth} = await protochess.getBestMoveTimeout(timeout)
     const makeMoveResult = await protochess.makeMove(moveInfo)
     const {flag, winner, exploded} = makeMoveResult
     await updateBoard(flag, winner, exploded)

@@ -118,9 +118,9 @@ impl Engine {
     }
 
     /// Returns the best move for the current position, along with the evaluation score and the search depth
-    pub fn get_best_move_timeout(&mut self, timeout_flag: &bool) -> wrap_res!(MoveInfo, Centipawns, Depth) {
+    pub fn get_best_move_timeout(&mut self, max_sec: u64) -> wrap_res!(MoveInfo, Centipawns, Depth) {
         self.validate_position()?;
-        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, timeout_flag, self.num_threads);
+        let (pv, score, search_depth) = Searcher::get_best_move_timeout(&self.position, max_sec, self.num_threads);
         err_assert!(!pv.is_empty(), "No moves found");
         Ok((pv[0].into(), score, search_depth))
     }
