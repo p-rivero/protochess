@@ -1,5 +1,6 @@
 use crate::{Position, MoveInfo, MoveGen, MakeMoveResult};
 use crate::types::{Move, MoveType};
+use crate::utils::notation::get_algebraic_notation;
 
 use super::position_properties::PositionProperties;
 
@@ -8,17 +9,16 @@ impl Position {
     /// Public interface for making a move. Checks if the move is legal, and if so, makes it.
     pub fn pub_make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
         let moves = MoveGen::get_pseudo_moves(self, true);
-        for mv in moves {
-            if target_move != &mv {
+        for mv in &moves {
+            if target_move != mv {
                 continue;
             }
             // Found the move, try to play it
             let exploded = mv.get_potential_explosion(self);
-            if !MoveGen::make_move_if_legal(mv, self) {
+            if !MoveGen::make_move_if_legal(*mv, self) {
                 continue;
             }
             
-            // Check if the game is over
             let winner = {
                 if self.global_rules.invert_win_conditions {
                     self.whos_turn
@@ -26,37 +26,39 @@ impl Position {
                     1 - self.whos_turn
                 }
             };
+            let move_notation = get_algebraic_notation(self, mv, &moves);
+            
             // Leader captured (atomic chess, or playing without a king)
             if self.leader_is_captured() {
                 if self.pieces[self.whos_turn as usize].get_leader().is_none() {
-                    return MakeMoveResult::all_pieces_captured(winner, exploded);
+                    return MakeMoveResult::all_pieces_captured(winner, exploded, move_notation);
                 }
-                return MakeMoveResult::leader_captured(winner, exploded);
+                return MakeMoveResult::leader_captured(winner, exploded, move_notation);
             }
             // Piece moved to winning square (king of the hill, racing kings)
             if self.piece_is_on_winning_square() {
-                return MakeMoveResult::piece_in_win_square(winner, exploded);
+                return MakeMoveResult::piece_in_win_square(winner, exploded, move_notation);
             }
             let in_check = MoveGen::in_check(self);
             // No legal moves, check if it's checkmate or stalemate
             if MoveGen::get_legal_moves(self).is_empty() {
                 if in_check {
-                    return MakeMoveResult::checkmate(winner, exploded);
+                    return MakeMoveResult::checkmate(winner, exploded, move_notation);
                 }
                 if self.global_rules.stalemated_player_loses {
-                    return MakeMoveResult::stalemate(Some(winner), exploded);
+                    return MakeMoveResult::stalemate(Some(winner), exploded, move_notation);
                 }
-                return MakeMoveResult::stalemate(None, exploded);
+                return MakeMoveResult::stalemate(None, exploded, move_notation);
             }
             if in_check && self.increment_num_checks() {
                 // Checked N times (N=3 in 3-check)
-                return MakeMoveResult::check_limit(winner, exploded);
+                return MakeMoveResult::check_limit(winner, exploded, move_notation);
             }
             if self.draw_by_repetition() {
                 // Threefold Repetition
-                return MakeMoveResult::repetition();
+                return MakeMoveResult::repetition(move_notation);
             }
-            return MakeMoveResult::ok(exploded);
+            return MakeMoveResult::ok(exploded, move_notation);
         }
         MakeMoveResult::illegal_move()
     }

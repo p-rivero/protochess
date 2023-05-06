@@ -1,6 +1,7 @@
 mod board;
 pub mod perft;
 pub mod debug;
+pub mod notation;
 
 pub use board::*;
 

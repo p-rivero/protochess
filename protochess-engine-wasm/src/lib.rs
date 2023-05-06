@@ -99,6 +99,12 @@ impl Protochess {
         StateDiffSer::to_js(state)
     }
     
+    #[wasm_bindgen(js_name = getMoveHistory)]
+    pub fn get_move_history(&mut self) -> JsValue {
+        let hist = self.engine.get_move_history();
+        to_value(hist).unwrap()
+    }
+    
     #[wasm_bindgen(js_name = legalMoves)]
     pub fn legal_moves(&mut self) -> Result<JsValue, String> {
         let moves: SerVec<MoveListSer> = self.engine.legal_moves().into();

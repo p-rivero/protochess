@@ -24,9 +24,14 @@ pub enum MakeMoveResultWinner {
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[must_use]
 pub struct MakeMoveResult {
+    /// The result of attempting the move
     pub flag: MakeMoveResultFlag,
+    /// Contains the winner of the game. If `None`, the game is still ongoing or ended in a draw
     pub winner: MakeMoveResultWinner,
+    /// List of board coordinates that exploded
     pub exploded: Vec<(BCoord, BCoord)>,
+    /// If `flag != IllegalMove`, contains the move in algebraic notation
+    pub move_notation: Option<String>,
 }
 
 
@@ -86,11 +91,12 @@ impl From<String> for MakeMoveResultWinner {
 
 
 impl MakeMoveResult {
-    pub fn ok(exploded: Vec<(BCoord, BCoord)>) -> Self {
+    pub fn ok(exploded: Vec<(BCoord, BCoord)>, move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::Ok,
             winner: None.into(),
             exploded,
+            move_notation: Some(move_notation),
         }
     }
     pub fn illegal_move() -> Self {
@@ -98,56 +104,64 @@ impl MakeMoveResult {
             flag: MakeMoveResultFlag::IllegalMove,
             winner: None.into(),
             exploded: Vec::new(),
+            move_notation: None,
         }
     }
-    pub fn checkmate(winner: Player, exploded: Vec<(BCoord, BCoord)>) -> Self {
+    pub fn checkmate(winner: Player, exploded: Vec<(BCoord, BCoord)>, move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::Checkmate,
             winner: Some(winner).into(),
             exploded,
+            move_notation: Some(move_notation),
         }
     }
-    pub fn leader_captured(winner: Player, exploded: Vec<(BCoord, BCoord)>) -> Self {
+    pub fn leader_captured(winner: Player, exploded: Vec<(BCoord, BCoord)>, move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::LeaderCaptured,
             winner: Some(winner).into(),
             exploded,
+            move_notation: Some(move_notation),
         }
     }
-    pub fn all_pieces_captured(winner: Player, exploded: Vec<(BCoord, BCoord)>) -> Self {
+    pub fn all_pieces_captured(winner: Player, exploded: Vec<(BCoord, BCoord)>, move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::AllPiecesCaptured,
             winner: Some(winner).into(),
             exploded,
+            move_notation: Some(move_notation),
         }
     }
-    pub fn piece_in_win_square(winner: Player, exploded: Vec<(BCoord, BCoord)>) -> Self {
+    pub fn piece_in_win_square(winner: Player, exploded: Vec<(BCoord, BCoord)>, move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::PieceInWinSquare,
             winner: Some(winner).into(),
             exploded,
+            move_notation: Some(move_notation),
         }
     }
-    pub fn check_limit(winner: Player, exploded: Vec<(BCoord, BCoord)>) -> Self {
+    pub fn check_limit(winner: Player, exploded: Vec<(BCoord, BCoord)>, move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::CheckLimit,
             winner: Some(winner).into(),
             exploded,
+            move_notation: Some(move_notation),
         }
     }
-    pub fn stalemate(winner: Option<Player>, exploded: Vec<(BCoord, BCoord)>) -> Self {
+    pub fn stalemate(winner: Option<Player>, exploded: Vec<(BCoord, BCoord)>, move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::Stalemate,
             winner: winner.into(),
             exploded,
+            move_notation: Some(move_notation),
         }
     }
-    pub fn repetition() -> Self {
+    pub fn repetition(move_notation: String) -> Self {
         Self {
             flag: MakeMoveResultFlag::Repetition,
             winner: None.into(),
             // Since this is a repetition, this move cannot be a capture, so there is no explosion
             exploded: Vec::new(),
+            move_notation: Some(move_notation),
         }
     }
 }

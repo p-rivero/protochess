@@ -83,6 +83,16 @@ impl Piece {
         self.id
     }
     
+    /// Get the prefix of this piece type in algebraic notation
+    pub fn get_notation_prefix(&self) -> String {
+        let prefix = self.type_def.notation_prefix[self.player_num as usize].clone();
+        if prefix.is_some() {
+            prefix.unwrap()
+        } else {
+            self.id.to_string()
+        }
+    }
+    
     /// Get the player number of this piece
     pub fn get_player(&self) -> Player {
         self.player_num

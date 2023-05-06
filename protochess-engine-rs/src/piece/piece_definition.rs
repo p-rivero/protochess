@@ -10,6 +10,8 @@ use super::PieceId;
 pub struct PieceDefinition {
     // The id of this piece for white and black. None if this piece is not available for that color.
     pub ids: [Option<PieceId>; 2],
+    // Override the id of the piece when printing the algebraic notation
+    pub notation_prefix: [Option<String>; 2],
     
     pub is_leader: bool,
     // Either None (no castle) or (queenside, kingside) (files where this piece moves when castling)

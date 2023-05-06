@@ -14,6 +14,7 @@ use super::game_state::GameState;
 pub struct PositionFactory {
     current_state: Option<GameState>,
     last_result: Option<MakeMoveResult>,
+    move_notation: Vec<String>,
 }
 
 impl PositionFactory {    
@@ -50,6 +51,7 @@ impl PositionFactory {
         let undo_count = current_state.move_history.len() - reuse_count;
         for _ in 0..undo_count {
             reused_position.unmake_move();
+            self.move_notation.pop();
             self.last_result = None;
         }
         
@@ -63,15 +65,19 @@ impl PositionFactory {
                 // Undo i new moves
                 for _ in 0..i {
                     reused_position.unmake_move();
+                    self.move_notation.pop();
                 }
                 // Redo the moves that were undone earlier
                 for mv2 in &current_state.move_history[reuse_count..] {
                     let result2 = reused_position.pub_make_move(mv2);
                     err_assert!(result2.flag != MakeMoveResultFlag::IllegalMove, 
                         "Invalid move when attempting to rollback: {}", mv2);
+                    self.move_notation.push(result2.move_notation.clone().unwrap());
                 }
                 return Err(format!("Invalid move: {}", mv));
             }
+            
+            self.move_notation.push(result.move_notation.clone().unwrap());
             self.last_result = Some(result);
         }
         // Incremental update was successful, store the new state
@@ -107,6 +113,7 @@ impl PositionFactory {
         for m in &state.move_history {
             let result = pos.pub_make_move(m);
             err_assert!(result.flag != MakeMoveResultFlag::IllegalMove, "Invalid move: {}", m);
+            self.move_notation.push(result.move_notation.clone().unwrap());
             self.last_result = Some(result);
         }
         // Everything went well, store the new state
@@ -123,13 +130,18 @@ impl PositionFactory {
         }
     }
     
+    /// Returns the current move history in algebraic notation
+    pub fn get_notation(&self) -> &Vec<String> {
+        &self.move_notation
+    }
+    
     /// Returns the result of the last move in `state.move_history`, or `Ok` if
     /// this information is not known
     pub fn get_last_result(&self) -> MakeMoveResult {
         if let Some(result) = &self.last_result {
             result.clone()
         } else {
-            MakeMoveResult::ok(vec![])
+            MakeMoveResult::ok(vec![], "??".to_string())
         }
     }
     

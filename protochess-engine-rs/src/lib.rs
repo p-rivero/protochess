@@ -56,6 +56,10 @@ impl Engine {
     pub fn get_state_diff(&mut self) -> StateDiff {
         StateDiff::from(&mut self.position)
     }
+    /// Returns the current move history in algebraic notation
+    pub fn get_move_history(&mut self) -> &Vec<String> {
+        self.factory.get_notation()
+    }
     
     /// Returns the id (can be uppercase or lowercase) of the piece at the given coordinates
     pub fn get_piece_at(&self, position: (BCoord, BCoord)) -> wrap_res!(PieceId) {

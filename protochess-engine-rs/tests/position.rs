@@ -55,6 +55,7 @@ mod position_test {
             .expect("set_state() returned None");
         
         assert_eq!(pos1, pos2);
+        assert_eq!(factory.get_notation(), &vec!["e4", "e5"]);
     }
     
     #[test]
@@ -75,6 +76,7 @@ mod position_test {
             .expect("set_state() returned None");
         
         assert_eq!(pos1, pos2);
+        assert_eq!(factory.get_notation(), &vec!["e4", "e5", "Nf3", "Nc6", "Bb5", "Nf6", "O-O"]);
     }
     
     #[test]
@@ -95,6 +97,19 @@ mod position_test {
             .expect("set_state() returned None");
         
         assert_eq!(pos1, pos2);
+        // assert_eq!(factory.get_notation(), &vec![
+        //     "e4", "e5",
+        //     "Nf3", "Nc6",
+        //     "Bb5", "Nf6",
+        //     "O-O", "Nxe4",
+        //     "Re1", "Nd6",
+        //     "Nxe5", "Be7",
+        //     "Bf1", "Nxe5",
+        //     "Re5", "O-O",
+        //     "d4", "Ne8",
+        //     "d5", "Nc5",
+        //     "Rxe8", "Rxe8"
+        // ]);
     }
     
     #[test]

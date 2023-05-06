@@ -51,6 +51,7 @@ impl PieceFactory {
         
         PieceDefinition {
             ids,
+            notation_prefix: [Some("".to_string()), Some("".to_string())],
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -87,6 +88,7 @@ impl PieceFactory {
     pub fn make_knight(&self) -> PieceDefinition {
         PieceDefinition {
             ids: [Some('N'), Some('n')],
+            notation_prefix: [Some("N".to_string()), Some("N".to_string())],
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -123,6 +125,7 @@ impl PieceFactory {
     pub fn make_bishop(&self) -> PieceDefinition {
         PieceDefinition {
             ids: [Some('B'), Some('b')],
+            notation_prefix: [Some("B".to_string()), Some("B".to_string())],
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,
@@ -159,6 +162,7 @@ impl PieceFactory {
     pub fn make_rook(&self) -> PieceDefinition {
         PieceDefinition {
             ids: [Some('R'), Some('r')],
+            notation_prefix: [Some("R".to_string()), Some("R".to_string())],
             is_leader: false,
             castle_files: None,
             is_castle_rook: true,
@@ -213,6 +217,7 @@ impl PieceFactory {
         };
         PieceDefinition {
             ids,
+            notation_prefix: [Some("K".to_string()), Some("K".to_string())],
             is_leader: self.mode != GameMode::Antichess,
             castle_files: if can_castle { Some((2, 6)) } else { None },
             is_castle_rook: false,
@@ -249,6 +254,7 @@ impl PieceFactory {
     pub fn make_queen(&self) -> PieceDefinition {
         PieceDefinition {
             ids: [Some('Q'), Some('q')],
+            notation_prefix: [Some("Q".to_string()), Some("Q".to_string())],
             is_leader: false,
             castle_files: None,
             is_castle_rook: false,

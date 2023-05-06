@@ -1,7 +1,8 @@
 use regex::Regex;
 use scan_fmt::scan_fmt;
 
-use crate::utils::{from_index, to_index, tuple_to_rank_file};
+use crate::utils::{from_index, to_index};
+use crate::utils::notation::tuple_to_rank_file;
 use crate::{wrap_res, err_assert, err, PieceId, Position};
 use crate::types::{BCoord, Player};
 

@@ -5,7 +5,8 @@ use scan_fmt::scan_fmt;
 
 use crate::{PieceId, err_assert, wrap_res, err};
 use crate::types::BCoord;
-use crate::utils::{from_index, tuple_to_rank_file};
+use crate::utils::from_index;
+use crate::utils::notation::tuple_to_rank_file;
 
 use super::Move;
 

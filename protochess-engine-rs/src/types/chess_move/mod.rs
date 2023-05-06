@@ -2,7 +2,8 @@ use std::fmt;
 
 use crate::piece::PieceId;
 use crate::Position;
-use crate::utils::{to_rank_file, from_index};
+use crate::utils::from_index;
+use crate::utils::notation::to_rank_file;
 
 use super::{BIndex, BCoord};
 

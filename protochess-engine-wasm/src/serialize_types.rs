@@ -57,7 +57,8 @@ generate_wrapper!(MoveListSer, MoveList, [
 generate_wrapper!(MakeMoveResultSer, MakeMoveResult, [
     flag, String,
     winner, String,
-    exploded, SerVec<(u8, u8)>
+    exploded, SerVec<(u8, u8)>,
+    move_notation, Option<String>
 ]);
 
 
@@ -97,6 +98,7 @@ impl MoveInfoWithEvalDepthSer {
 
 generate_wrapper!(PieceDefinitionSer, PieceDefinition, [
     ids, [Option<char>; 2],
+    notation_prefix, [Option<String>; 2],
     is_leader, bool,
     castle_files, Option<(u8, u8)>,
     is_castle_rook, bool,
