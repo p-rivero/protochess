@@ -177,6 +177,14 @@ impl Position {
     pub fn player_piece_at(&self, player: Player, index: BIndex) -> Option<&Piece> {
         self.pieces[player as usize].piece_at(index)
     }
+    pub fn lookup_piece(&self, piece_id: PieceId) -> Option<&Piece> {
+        for ps in &self.pieces {
+            if let Some(piece) = ps.lookup_piece(piece_id) {
+                return Some(piece);
+            }
+        }
+        None
+    }
     
     /// Returns if the point is in bounds
     pub fn in_bounds(&self, x: BCoord, y: BCoord) -> bool {

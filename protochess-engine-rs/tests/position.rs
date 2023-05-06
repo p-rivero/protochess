@@ -97,19 +97,19 @@ mod position_test {
             .expect("set_state() returned None");
         
         assert_eq!(pos1, pos2);
-        // assert_eq!(factory.get_notation(), &vec![
-        //     "e4", "e5",
-        //     "Nf3", "Nc6",
-        //     "Bb5", "Nf6",
-        //     "O-O", "Nxe4",
-        //     "Re1", "Nd6",
-        //     "Nxe5", "Be7",
-        //     "Bf1", "Nxe5",
-        //     "Re5", "O-O",
-        //     "d4", "Ne8",
-        //     "d5", "Nc5",
-        //     "Rxe8", "Rxe8"
-        // ]);
+        assert_eq!(factory.get_notation(), &vec![
+            "e4", "e5",
+            "Nf3", "Nc6",
+            "Bb5", "Nf6",
+            "O-O", "Nxe4",
+            "Re1", "Nd6",
+            "Nxe5", "Be7",
+            "Bf1", "Nxe5",
+            "Rxe5", "O-O",
+            "d4", "Ne8",
+            "d5", "Bc5",
+            "Rxe8", "Rxe8"
+        ]);
     }
     
     #[test]
@@ -221,6 +221,56 @@ mod position_test {
         let ret = factory.set_state(state2_moves, Some(&mut pos));
         assert_eq!(ret, Err("Invalid move: a8a7".to_string()));
         assert_eq!(pos, pos_before);
+    }
+    
+    #[test]
+    fn disambiguate_move_notation_1() {
+        let mut factory = PositionFactory::default();
+        let mut state = GameState::default();
+        state.move_history = build_move_history(vec!["g1f3", "e7e6", "b1c3", "d7d6", "c3e4", "d6d5", "e4g5"]);
+        factory.set_state(state, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        assert_eq!(factory.get_notation(), &vec![
+            "Nf3", "e6",
+            "Nc3", "d6",
+            "Ne4", "d5",
+            "Neg5", // 2 knights can go to g5
+        ]);
+    }
+    
+    #[test]
+    fn disambiguate_move_notation_2() {
+        let mut factory = PositionFactory::default();
+        let mut state = GameState::default();
+        state.initial_fen = Some("rnbqkbnr/ppp2ppp/4p3/3p4/8/1K6/PPPPPPPP/R6R w kq - 0 4".to_string());
+        state.move_history = build_move_history(vec!["h1e1", "d8h4", "a1b1", "h4b4"]);
+        factory.set_state(state, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        assert_eq!(factory.get_notation(), &vec![
+            "Rhe1", "Qh4",
+            "Rab1", "Qb4#",
+        ]);
+    }
+    
+    #[test]
+    fn disambiguate_move_notation_3() {
+        let mut factory = PositionFactory::default();
+        let mut state = GameState::default();
+        state.initial_fen = Some("3r3r/1K6/3k4/R7/4Q2Q/8/8/R6Q b - - 0 1".to_string());
+        state.move_history = build_move_history(vec!["d8f8", "a1a3", "d6d7", "h4e1"]);
+        factory.set_state(state, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        assert_eq!(factory.get_notation(), &vec![
+            "Rdf8",
+            "R1a3", "Kd7",
+            "Qh4e1", // 3 queens can go to e1
+        ]);
     }
     
     

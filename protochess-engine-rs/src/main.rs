@@ -67,8 +67,9 @@ pub fn main() {
         println!("\n========================================\n");
         println!("(Time since start: {:?})", start.elapsed());
         println!("PLY: {ply} Engine plays:\n");
-        print_pgn(&mut pgn_file, ply, &to_long_algebraic_notation(&mv, &engine));
         let result = engine.make_move(&mv);
+        let move_str = result.move_notation.unwrap_or("!!!".to_string());
+        print_pgn(&mut pgn_file, ply, &fix_notation(move_str, &mv));
         println!("{engine}\n");
         match result.flag {
             MakeMoveResultFlag::Ok => {
@@ -131,23 +132,15 @@ fn print_pgn(pgn_file: &mut std::fs::File, ply: u32, move_str: &str) {
     pgn_file.write_all(b" ").expect("write failed");
 }
 
-pub fn to_long_algebraic_notation(mv: &MoveInfo, engine: &Engine) -> String {
-    // Long algebraic notation for mv ("e2e4")
-    let mut move_string = mv.to_string();
-    // Append the moved piece letter (uppercase) at the beginning
-    let moved_piece = engine
-        .get_piece_at(mv.from).expect("No piece at the from square")
-        .to_uppercase()
-        .next().expect("Uppercase char is empty");
-    
-    if moved_piece != 'P' {
-        // If the piece is not a pawn, write the piece letter
-        move_string = format!("{moved_piece}{move_string}");
-    }
-    
-    match move_string.as_str() {
-        "Ke1h1" | "Ke8h8" => "O-O".to_string(),
-        "Ke1a1" | "Ke8a8" => "O-O-O".to_string(),
-        _ => move_string
+
+// Algebraic notation specifies that a pawn capture includes the file of the capturing pawn,
+// even if the capture is unambiguous without it. This is not generalizable at all, so
+// the engine does not include the file in the notation.
+// If we want Lichess to accept our PGNs, we need to add the file back in.
+fn fix_notation(move_str: String, mv: &MoveInfo) -> String {
+    if move_str.starts_with('x') {
+        format!("{}{}", (b'a' + mv.from.0) as char, move_str)
+    } else {
+        move_str
     }
 }

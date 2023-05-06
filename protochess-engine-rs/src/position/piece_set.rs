@@ -72,8 +72,11 @@ impl PieceSet {
         Ok(())
     }
     
+    pub fn lookup_piece(&self, piece_id: PieceId) -> Option<&Piece> {
+        self.pieces.iter().find(|p| p.get_piece_id() == piece_id)
+    }
     pub fn contains_piece(&self, piece_id: PieceId) -> bool {
-        self.pieces.iter().any(|p| p.get_piece_id() == piece_id)
+        self.lookup_piece(piece_id).is_some()
     }
     
     pub fn iter(&self) -> Iter<Piece> {

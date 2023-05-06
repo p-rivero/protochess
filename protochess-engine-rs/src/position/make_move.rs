@@ -1,6 +1,6 @@
 use crate::{Position, MoveInfo, MoveGen, MakeMoveResult};
 use crate::types::{Move, MoveType};
-use crate::utils::notation::get_algebraic_notation;
+use crate::utils::notation::{get_algebraic_notation, add_suffix};
 
 use super::position_properties::PositionProperties;
 
@@ -15,6 +15,7 @@ impl Position {
             }
             // Found the move, try to play it
             let exploded = mv.get_potential_explosion(self);
+            let mut move_notation = get_algebraic_notation(self, mv, &moves);
             if !MoveGen::make_move_if_legal(*mv, self) {
                 continue;
             }
@@ -26,10 +27,10 @@ impl Position {
                     1 - self.whos_turn
                 }
             };
-            let move_notation = get_algebraic_notation(self, mv, &moves);
             
             // Leader captured (atomic chess, or playing without a king)
             if self.leader_is_captured() {
+                move_notation = add_suffix(move_notation, "#");
                 if self.pieces[self.whos_turn as usize].get_leader().is_none() {
                     return MakeMoveResult::all_pieces_captured(winner, exploded, move_notation);
                 }
@@ -37,26 +38,35 @@ impl Position {
             }
             // Piece moved to winning square (king of the hill, racing kings)
             if self.piece_is_on_winning_square() {
+                move_notation = add_suffix(move_notation, "#");
                 return MakeMoveResult::piece_in_win_square(winner, exploded, move_notation);
             }
             let in_check = MoveGen::in_check(self);
             // No legal moves, check if it's checkmate or stalemate
             if MoveGen::get_legal_moves(self).is_empty() {
                 if in_check {
+                    move_notation = add_suffix(move_notation, "#");
                     return MakeMoveResult::checkmate(winner, exploded, move_notation);
                 }
                 if self.global_rules.stalemated_player_loses {
+                    move_notation = add_suffix(move_notation, "#");
                     return MakeMoveResult::stalemate(Some(winner), exploded, move_notation);
                 }
+                // Don't add "#" since it's a draw
                 return MakeMoveResult::stalemate(None, exploded, move_notation);
             }
+            // Checked N times (N=3 in 3-check)
             if in_check && self.increment_num_checks() {
-                // Checked N times (N=3 in 3-check)
+                move_notation = add_suffix(move_notation, "#");
                 return MakeMoveResult::check_limit(winner, exploded, move_notation);
             }
+            // Threefold Repetition
             if self.draw_by_repetition() {
-                // Threefold Repetition
                 return MakeMoveResult::repetition(move_notation);
+            }
+            
+            if in_check {
+                move_notation = add_suffix(move_notation, "+");
             }
             return MakeMoveResult::ok(exploded, move_notation);
         }

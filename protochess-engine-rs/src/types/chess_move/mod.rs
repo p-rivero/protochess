@@ -89,6 +89,10 @@ impl Move {
         ((self.move_fields >> 24) & 1) != 0
     }
     
+    pub fn is_en_passant(&self) -> bool {
+        self.get_move_type() == MoveType::Capture && self.get_target() != self.get_to()
+    }
+    
     pub fn is_promotion(&self) -> bool {
         let move_type = self.get_move_type();
         move_type == MoveType::Promotion || move_type == MoveType::PromotionCapture
