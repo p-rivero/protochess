@@ -101,6 +101,7 @@ impl PositionFactory {
     fn set_state_impl(&mut self, state: GameState) -> wrap_res!(Position) {
         // Parse the variant's default starting position
         let mut fen_data = FenData::parse_fen(&state.initial_state.fen)?;
+        fen_data.player_to_move = state.initial_state.player_to_move;
         // Apply the user-proveded initial fen, if any
         if let Some(initial_fen) = &state.initial_fen {
             let old_fen = fen_data;
