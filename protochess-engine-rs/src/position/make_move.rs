@@ -15,7 +15,7 @@ impl Position {
             }
             // Found the move, try to play it
             let exploded = mv.get_potential_explosion(self);
-            let mut move_notation = get_algebraic_notation(self, mv, &moves);
+            let mut move_notation = get_algebraic_notation(self, *mv, &moves);
             if !MoveGen::make_move_if_legal(*mv, self) {
                 continue;
             }

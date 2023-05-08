@@ -15,7 +15,7 @@ pub fn tuple_to_rank_file((x, y): (BCoord, BCoord)) -> String {
 
 /// Converts the move to user-friendly algebraic notation
 /// **IMPORTANT:** Call this **before** making the move
-pub fn get_algebraic_notation(pos: &mut Position, mv: &Move, all_moves: &[Move]) -> String {
+pub fn get_algebraic_notation(pos: &mut Position, mv: Move, all_moves: &[Move]) -> String {
     if mv.is_castling() {
         return castling_notation(mv, all_moves);
     }
@@ -39,7 +39,7 @@ pub fn get_algebraic_notation(pos: &mut Position, mv: &Move, all_moves: &[Move])
     
     let ep = if mv.is_en_passant() { " e.p." } else { "" };
     
-    return format!("{prefix}{disamb}{capture}{to}{promo}{ep}");
+    format!("{prefix}{disamb}{capture}{to}{promo}{ep}")
 }
 pub fn add_suffix(mv: String, suf: &str) -> String {
     if mv.ends_with(" e.p.") {
@@ -49,7 +49,7 @@ pub fn add_suffix(mv: String, suf: &str) -> String {
     }
 }
 
-fn castling_notation(mv: &Move, all_moves: &[Move]) -> String {
+fn castling_notation(mv: Move, all_moves: &[Move]) -> String {
     let mut kingside_castles = 0;
     let mut queenside_castles = 0;
     for m in all_moves {
@@ -65,15 +65,17 @@ fn castling_notation(mv: &Move, all_moves: &[Move]) -> String {
     if mv.get_move_type() == MoveType::KingsideCastle {
         if kingside_castles > 1 { format!("O-O({})", mv_rank+1) }
         else { "O-O".to_string() }
-    } else {
+    } else if mv.get_move_type() == MoveType::QueensideCastle {
         if queenside_castles > 1 { format!("O-O-O({})", mv_rank+1) }
         else { "O-O-O".to_string() }
+    } else {
+        panic!("Not a castling move");
     }
 }
 
 /// Returns the necessary disambiguation for the move
-fn disambiguate(pos: &mut Position, mv: &Move, all_moves: &[Move]) -> String {
-    let mv_from = from_index(mv.get_from());
+fn disambiguate(pos: &mut Position, mv: Move, all_moves: &[Move]) -> String {
+    let from = from_index(mv.get_from());
     let mv_piece = pos.piece_at(mv.get_from()).unwrap().get_piece_id();
     let mut print_rank = false;
     let mut print_file = false;
@@ -83,7 +85,7 @@ fn disambiguate(pos: &mut Position, mv: &Move, all_moves: &[Move]) -> String {
         && pos.piece_at(m.get_from()).unwrap().get_piece_id() == mv_piece {
             // Got a match, determine if we need to disambiguate rank or file
             let m_from = from_index(m.get_from());
-            if m_from.0 == mv_from.0 {
+            if m_from.0 == from.0 {
                 print_rank = true;
             } else {
                 print_file = true;
@@ -93,10 +95,10 @@ fn disambiguate(pos: &mut Position, mv: &Move, all_moves: &[Move]) -> String {
     
     let mut result = String::new();
     if print_file {
-        result.push((b'a' + mv_from.0) as char);
+        result.push((b'a' + from.0) as char);
     }
     if print_rank {
-        result.push((b'1' + mv_from.1) as char);
+        result.push((b'1' + from.1) as char);
     }
     result
 }

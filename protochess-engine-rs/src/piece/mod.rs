@@ -86,8 +86,8 @@ impl Piece {
     /// Get the prefix of this piece type in algebraic notation
     pub fn get_notation_prefix(&self) -> String {
         let prefix = self.type_def.notation_prefix[self.player_num as usize].clone();
-        if prefix.is_some() {
-            prefix.unwrap()
+        if let Some(prefix) = prefix {
+            prefix
         } else {
             self.id.to_string()
         }
