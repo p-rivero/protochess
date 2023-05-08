@@ -85,7 +85,7 @@ impl Engine {
     pub fn make_move(&mut self, target_move: &MoveInfo) -> MakeMoveResult {
         let result = self.position.pub_make_move(target_move);
         if result.flag != MakeMoveResultFlag::IllegalMove {
-            self.factory.add_move(target_move);
+            self.factory.add_move(target_move, &result);
         }
         result
     }

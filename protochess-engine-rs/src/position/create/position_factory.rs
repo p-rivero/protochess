@@ -148,13 +148,16 @@ impl PositionFactory {
     
     /// Adds a new move to the move history of the current `GameState`
     /// Call this whenever a move is made to keep the stored `GameState` in sync
-    pub fn add_move(&mut self, m: &MoveInfo) {
+    pub fn add_move(&mut self, m: &MoveInfo, result: &MakeMoveResult) {
         if let Some(state) = &mut self.current_state {
             state.move_history.push(*m);
         } else {
             panic!("No current state, call make_position() first");
         }
-        self.last_result = None;
+        self.last_result = Some(result.clone());
+        if let Some(mv) = &result.move_notation {
+            self.move_notation.push(mv.clone());
+        }
     }
     
     /// Removes the last move from the move history of the current `GameState`
