@@ -189,9 +189,11 @@ mod position_test {
         let mut pos = factory.set_state(state1_moves, None)
             .expect("Cannot load GameState")
             .expect("set_state() returned None");
+        assert_eq!(factory.get_notation().len(), 22);
         
         let ret = factory.set_state(state2_moves, Some(&mut pos));
         assert_eq!(ret, Ok(None));
+        assert!(factory.get_notation().is_empty());
         
         let pos_target = factory.set_state(state2_fen, None)
             .expect("Cannot load GameState")
@@ -271,6 +273,54 @@ mod position_test {
             "R1a3", "Kd7",
             "Qh4e1", // 3 queens can go to e1
         ]);
+    }
+    
+    
+    #[test]
+    fn changing_fen_clears_move_notation() {
+        let mut factory = PositionFactory::default();
+        
+        let mut state1 = GameState::default();
+        state1.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6"]);
+        
+        // Set a position with different starting FEN
+        let mut state2 = GameState::default();
+        state2.initial_fen = Some("3r3r/1K6/3k4/R7/4Q2Q/8/8/R6Q b - - 0 1".to_string());
+        
+        let mut pos = factory.set_state(state1, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        factory.set_state(state2, Some(&mut pos))
+            .expect("Unexpected error while loading GameState")
+            .expect("set_state() should not reuse the same position and instead should create a new one");
+        
+        let move_notation = factory.get_notation();
+        assert!(move_notation.is_empty());
+    }
+    
+    #[test]
+    fn changing_fen_clears_move_notation_2() {
+        let mut factory = PositionFactory::default();
+        
+        let mut state1 = GameState::default();
+        state1.move_history = build_move_history(vec!["e2e4", "e7e5", "g1f3", "b8c6"]);
+        
+        // Set a position with different starting FEN
+        let mut state2 = GameState::default();
+        state2.initial_fen = Some("3r3r/1K6/3k4/R7/4Q2Q/8/8/R6Q b - - 0 1".to_string());
+        state2.move_history = build_move_history(vec!["d8f8", "a1a3"]);
+        
+        let mut pos = factory.set_state(state1, None)
+            .expect("Cannot load GameState")
+            .expect("set_state() returned None");
+        
+        factory.set_state(state2, Some(&mut pos))
+            .expect("Unexpected error while loading GameState")
+            .expect("set_state() should not reuse the same position and instead should create a new one");
+        
+        let move_notation = factory.get_notation();
+        assert_eq!(move_notation.len(), 2);
     }
     
     

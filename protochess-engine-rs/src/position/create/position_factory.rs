@@ -110,7 +110,9 @@ impl PositionFactory {
             fen_data.walls = old_fen.walls;
         }
         let mut pos = Self::create_new_position(&state.initial_state, fen_data)?;
+        
         // Apply the move history
+        self.move_notation.clear();
         for m in &state.move_history {
             let result = pos.pub_make_move(m);
             err_assert!(result.flag != MakeMoveResultFlag::IllegalMove, "Invalid move: {}", m);
@@ -121,6 +123,7 @@ impl PositionFactory {
         self.current_state = Some(state);
         Ok(pos)
     }
+    
     
     /// Returns the current `GameState`
     pub fn get_state(&self) -> &GameState {
