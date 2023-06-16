@@ -189,7 +189,7 @@ impl PositionFactory {
     
         // Assert that all pieces are placed on valid squares
         for p in &fen.piece_placements {
-            err_assert!(dims.in_bounds(p.x, p.y), "The piece at ({}, {}) is inside a wall", p.x, p.y);
+            err_assert!(dims.in_bounds(p.x, p.y), "The piece at ({}, {}) is out of bounds", p.x, p.y);
         }
         
         // Update props
