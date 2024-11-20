@@ -1,10 +1,10 @@
 [package]
 name = "protochess-engine-rs"
 description = "A chess engine with user-defined piece movement rules, written in Rust"
-repository = "https://github.com/p-rivero/protochess-engine"
+repository = "https://github.com/pol-rivero/protochess-engine"
 license = "GPL-3.0"
 version = "1.0.0"
-authors = ["raytr <ray.tran120@gmail.com>", "p-rivero"]
+authors = ["raytr <ray.tran120@gmail.com>", "pol-rivero"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

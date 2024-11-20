@@ -10,7 +10,7 @@ use super::variant_factory::VariantFactory;
 /// - **Initial state:** Defines the rules of the game and starting position.
 /// - **Initial fen (optional):** User-provided fen that further defines the starting position, overriding 
 /// the initial state. It's applied to the initial state before playing the moves in `move_history`.
-/// See [this document](https://github.com/p-rivero/protochess-engine/tree/master/docs/FEN.md) for the custom FEN format.
+/// See [this document](https://github.com/pol-rivero/protochess-engine/tree/master/docs/FEN.md) for the custom FEN format.
 /// - **Move history:** Defines the current position and allows enforcing the repetition rules.
 /// 
 /// All games of a given chess variant have the same initial state, but can have different initial FENs.

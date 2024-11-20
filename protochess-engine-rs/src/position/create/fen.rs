@@ -16,7 +16,7 @@ pub struct PiecePlacement {
 
 /// Summary of the data encoded in a FEN string. Used as an intermediate step when converting between FEN and Position.
 /// 
-/// See [this document](https://github.com/p-rivero/protochess-engine/tree/master/docs/FEN.md) for the custom FEN format.
+/// See [this document](https://github.com/pol-rivero/protochess-engine/tree/master/docs/FEN.md) for the custom FEN format.
 /// 
 /// **FEN -> Position**: Don't use this class directly, use `PositionFactory::set_state()` or `PositionFactory::load_fen()`,
 /// both of which call `FenData::parse_fen()` internally.
